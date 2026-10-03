@@ -1,0 +1,24 @@
+{% set route_courante = app.request.attributes.get('_route') %}
+{% for section in navigation() %}
+    {% if section.titre %}
+        <div class="text-uppercase text-body-secondary small fw-semibold px-2 mt-3 mb-1">{{ section.titre }}</div>
+    {% endif %}
+    <ul class="nav nav-pills flex-column gap-1">
+        {% for element in section.elements %}
+            <li class="nav-item">
+                {% if element.disponible %}
+                    {% set actif = route_courante == element.route %}
+                    <a class="nav-link d-flex align-items-center gap-2 {{ actif ? 'active' : 'link-body-emphasis' }}"
+                       href="{{ path(element.route) }}"{% if actif %} aria-current="page"{% endif %}>
+                        <i class="bi bi-{{ element.icone }}"></i> {{ element.libelle }}
+                    </a>
+                {% else %}
+                    <span class="nav-link d-flex align-items-center gap-2 disabled" aria-disabled="true">
+                        <i class="bi bi-{{ element.icone }}"></i> {{ element.libelle }}
+                        <span class="badge text-bg-light border ms-auto fw-normal">Bientôt</span>
+                    </span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endfor %}

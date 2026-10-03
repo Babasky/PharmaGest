@@ -1,0 +1,56 @@
+{#
+    Gabarit des pages connectées : sidebar (selon le rôle) + barre supérieure + contenu.
+    Sur grand écran la sidebar est fixe ; sur tablette / petit écran de caisse elle devient un offcanvas.
+#}
+{% extends 'base.html.twig' %}
+
+{% block body_class %}layout-app{% endblock %}
+
+{% block body %}
+    <header class="navbar navbar-dark bg-success sticky-top shadow-sm px-2 py-1 layout-topbar">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-success d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Ouvrir le menu">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+            <a class="navbar-brand fw-semibold d-flex align-items-center gap-2 py-0" href="{{ path('app_tableau_de_bord') }}">
+                <i class="bi bi-capsule-pill"></i> {{ app_name }}
+            </a>
+        </div>
+        {% if app.user %}
+            <div class="dropdown">
+                <button class="btn btn-success dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i>
+                    <span class="d-none d-sm-inline text-truncate" style="max-width: 14rem">{{ app.user.userIdentifier }}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% block menu_utilisateur %}{% endblock %}
+                </ul>
+            </div>
+        {% endif %}
+    </header>
+
+    <div class="d-flex layout-wrapper">
+        <nav id="sidebar" class="offcanvas-lg offcanvas-start bg-body-tertiary border-end layout-sidebar" tabindex="-1" aria-label="Menu principal">
+            <div class="offcanvas-header border-bottom d-lg-none">
+                <span class="offcanvas-title fw-semibold">Menu</span>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Fermer"></button>
+            </div>
+            <div class="offcanvas-body d-block p-2">
+                {% include 'layout/_sidebar.html.twig' %}
+            </div>
+        </nav>
+
+        <main class="flex-grow-1 p-3 p-md-4 layout-main">
+            {% include 'layout/_flashes.html.twig' %}
+
+            {% block page_header %}
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h1 class="h4 mb-0">{{ block('title') }}</h1>
+                    <div class="d-flex gap-2">{% block page_actions %}{% endblock %}</div>
+                </div>
+            {% endblock %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+{% endblock %}

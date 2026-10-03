@@ -1,0 +1,17 @@
+twig:
+    file_name_pattern: '*.twig'
+    form_themes: ['bootstrap_5_layout.html.twig']
+    date:
+        format: 'd/m/Y H:i'
+        interval_format: '%%d jours'
+        timezone: '%app.timezone%'
+    number_format:
+        decimals: 0
+        decimal_point: ','
+        thousands_separator: ' '
+    globals:
+        app_name: '%app.name%'
+
+when@test:
+    twig:
+        strict_variables: true

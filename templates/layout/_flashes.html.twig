@@ -1,0 +1,9 @@
+{% set classes = {success: 'success', error: 'danger', danger: 'danger', warning: 'warning', info: 'info'} %}
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ classes[type] ?? 'secondary' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    {% endfor %}
+{% endfor %}

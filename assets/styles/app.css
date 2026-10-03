@@ -1,0 +1,55 @@
+/* PharmaGest — styles applicatifs (le reste vient de Bootstrap 5.3). */
+
+:root {
+    --pg-sidebar-width: 16rem;
+    --pg-topbar-height: 3.25rem;
+}
+
+body {
+    background-color: var(--bs-body-bg);
+}
+
+.layout-topbar {
+    min-height: var(--pg-topbar-height);
+}
+
+@media (min-width: 992px) {
+    .layout-sidebar {
+        width: var(--pg-sidebar-width);
+        flex-shrink: 0;
+        position: sticky;
+        top: var(--pg-topbar-height);
+        height: calc(100vh - var(--pg-topbar-height));
+        overflow-y: auto;
+    }
+}
+
+.layout-main {
+    min-width: 0;
+    background-color: var(--bs-secondary-bg-subtle);
+    min-height: calc(100vh - var(--pg-topbar-height));
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+.chart-container {
+    position: relative;
+    height: 16rem;
+}
+
+/* Montants : chiffres à chasse fixe pour l'alignement dans les tableaux. */
+.montant {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-align: end;
+}
+
+.layout-sidebar .nav-pills {
+    --bs-nav-pills-link-active-bg: var(--bs-success);
+}
+
+.layout-sidebar .nav-link {
+    white-space: nowrap;
+}

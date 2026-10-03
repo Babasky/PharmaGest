@@ -1,0 +1,35 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block content %}
+    <div class="row g-3 mb-4">
+        {% for indicateur in indicateurs %}
+            <div class="col-6 col-xl-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i class="bi bi-{{ indicateur.icone }} fs-2 text-success"></i>
+                        <div class="min-w-0">
+                            <div class="small text-body-secondary">{{ indicateur.libelle }}</div>
+                            <div class="fs-5 fw-semibold text-nowrap">
+                                {{ indicateur.montant ? indicateur.valeur|fcfa : indicateur.valeur|number_format }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-body d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Ventes des 7 derniers jours</span>
+            <span class="small text-body-secondary">{{ 'now'|date('d/m/Y H:i') }} (heure de Bamako)</span>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas {{ stimulus_controller('chart', {config: graphique, devise: true}) }} aria-label="Graphique des ventes"></canvas>
+            </div>
+        </div>
+    </div>
+{% endblock %}
