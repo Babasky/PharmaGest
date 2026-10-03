@@ -4,8 +4,9 @@ framework:
         csrf_protection:
             token_id: submit
 
+    # La déconnexion passe par un simple lien : son jeton doit être un vrai jeton de session.
+    # (Les jetons « sans état » ne sont complétés par JavaScript que dans les formulaires.)
     csrf_protection:
         stateless_token_ids:
             - submit
             - authenticate
-            - logout
