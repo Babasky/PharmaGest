@@ -1,0 +1,13 @@
+{% extends 'email/base.html.twig' %}
+
+{% block contenu %}
+    <p>
+        {% if pharmacie %}Un compte PharmaGest vient d'être créé pour vous à <strong>{{ pharmacie.nom }}</strong>.{% else %}Un compte PharmaGest vient d'être créé pour vous.{% endif %}
+        Votre identifiant de connexion est <strong>{{ utilisateur.email }}</strong>.
+    </p>
+    <p>Pour activer votre compte, choisissez votre mot de passe en cliquant sur le bouton ci-dessous. Le lien est valable 72 heures.</p>
+    <p style="text-align:center;margin:28px 0;">
+        <a href="{{ lien }}" style="background:#198754;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:5px;display:inline-block;font-weight:bold;">Activer mon compte</a>
+    </p>
+    <p style="font-size:13px;color:#6c757d;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br><span style="word-break:break-all;">{{ lien }}</span></p>
+{% endblock %}

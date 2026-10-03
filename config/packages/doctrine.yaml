@@ -24,6 +24,12 @@ doctrine:
                 alias: App
         controller_resolver:
             auto_mapping: false
+        # Activé à chaque requête par App\Tenant\TenantRequestListener (jamais en dur ici :
+        # les commandes et les tests choisissent explicitement leur pharmacie).
+        filters:
+            tenant:
+                class: App\Tenant\TenantFilter
+                enabled: false
 
 when@test:
     doctrine:

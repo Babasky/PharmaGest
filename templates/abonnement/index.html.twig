@@ -1,0 +1,58 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Mon abonnement{% endblock %}
+
+{% block content %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <div class="small text-body-secondary">Offre</div>
+                            <div class="fs-5 fw-semibold">{{ pharmacie.offre.nom }}</div>
+                        </div>
+                        <span class="badge text-bg-{{ etat.statut.couleur }}">{{ etat.statut.libelle }}</span>
+                    </div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-6 fw-normal text-body-secondary">{{ etat.statut.value == 'essai' ? "Fin de l'essai" : 'Échéance' }}</dt>
+                        <dd class="col-6 text-end">{{ etat.echeance ? etat.echeance|date('d/m/Y') : '—' }}</dd>
+                        <dt class="col-6 fw-normal text-body-secondary">Utilisateurs</dt>
+                        <dd class="col-6 text-end">{{ pharmacie.offre.maxUtilisateurs ?? 'Illimités' }}</dd>
+                        <dt class="col-6 fw-normal text-body-secondary">Pharmacies</dt>
+                        <dd class="col-6 text-end">{{ pharmacie.offre.maxPharmacies }}</dd>
+                    </dl>
+                    <hr>
+                    <p class="small text-body-secondary mb-0">
+                        Le renouvellement se paie hors de l'application (espèces, virement, Orange Money, Moov Money) auprès de l'éditeur,
+                        qui active ensuite la nouvelle période de 12 mois. La facture apparaît ici.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Paiements et factures</div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th class="ps-3">Facture</th><th>Période</th><th class="text-end">Montant</th><th class="pe-3"></th></tr>
+                        </thead>
+                        <tbody>
+                            {% for paiement in paiements %}
+                                <tr>
+                                    <td class="ps-3"><div class="fw-semibold">{{ paiement.numeroFacture }}</div><div class="small text-body-secondary">{{ paiement.datePaiement|date('d/m/Y') }} · {{ paiement.moyen.libelle }}</div></td>
+                                    <td class="small">{{ paiement.dateDebut|date('d/m/Y') }} → {{ paiement.dateFin|date('d/m/Y') }}</td>
+                                    <td class="montant">{{ paiement.montant|fcfa }}</td>
+                                    <td class="pe-3 text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ path('app_mon_abonnement_facture', {id: paiement.id}) }}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="4" class="text-center text-body-secondary py-4">Aucun paiement enregistré pour l'instant.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

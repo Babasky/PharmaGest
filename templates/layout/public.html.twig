@@ -1,0 +1,27 @@
+{#
+    Pages publiques (connexion, mot de passe) : carte centrée, sans menu.
+#}
+{% extends 'base.html.twig' %}
+
+{% block body_class %}layout-public{% endblock %}
+
+{% block body %}
+    <main class="layout-public-main d-flex align-items-start justify-content-center px-3 py-5">
+        <div class="w-100" style="max-width: 26rem">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center gap-2 fs-3 fw-semibold text-success">
+                    <i class="bi bi-capsule-pill"></i> {{ app_name }}
+                </div>
+                <div class="text-body-secondary small">Gestion d'officine</div>
+            </div>
+            {% include 'layout/_flashes.html.twig' %}
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h5 mb-3">{{ block('title') }}</h1>
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+            {% block apres_carte %}{% endblock %}
+        </div>
+    </main>
+{% endblock %}

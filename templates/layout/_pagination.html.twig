@@ -1,0 +1,15 @@
+{# Pagination serveur. Paramètres : page (App\Util\Page), route, params (facultatif). #}
+{% if page.nombreDePages > 1 %}
+    {% set params = params|default({}) %}
+    <nav aria-label="Pagination" class="d-flex justify-content-between align-items-center mt-3 small">
+        <span class="text-body-secondary">{{ page.total }} résultat{{ page.total > 1 ? 's' }} · page {{ page.page }} / {{ page.nombreDePages }}</span>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item{{ page.aPrecedente ? '' : ' disabled' }}">
+                <a class="page-link" href="{{ path(route, params|merge({page: page.page - 1})) }}">Précédente</a>
+            </li>
+            <li class="page-item{{ page.aSuivante ? '' : ' disabled' }}">
+                <a class="page-link" href="{{ path(route, params|merge({page: page.page + 1})) }}">Suivante</a>
+            </li>
+        </ul>
+    </nav>
+{% endif %}

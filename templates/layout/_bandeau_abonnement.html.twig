@@ -1,0 +1,26 @@
+{# Bandeaux du cycle de vie de l'abonnement (§ 3.2). #}
+{% set etat = etat_abonnement() %}
+{% if etat %}
+    {% set lien = is_granted('ROLE_PROPRIETAIRE') ? ' <a href="' ~ path('app_mon_abonnement') ~ '" class="alert-link">Voir mon abonnement</a>' : '' %}
+    {% if etat.statut.value == 'essai' %}
+        <div class="alert alert-info py-2 d-flex gap-2 align-items-center" role="status">
+            <i class="bi bi-hourglass-split"></i>
+            <div>Période d'essai : il reste {{ etat.joursRestants }} jour{{ etat.joursRestants > 1 ? 's' }} (jusqu'au {{ etat.echeance|date('d/m/Y') }}).{{ lien|raw }}</div>
+        </div>
+    {% elseif etat.statut.value == 'alerte' %}
+        <div class="alert alert-warning py-2 d-flex gap-2 align-items-center" role="status">
+            <i class="bi bi-calendar-event"></i>
+            <div>Votre abonnement se termine le {{ etat.echeance|date('d/m/Y') }} ({{ etat.joursRestants == 0 ? "aujourd'hui" : 'dans ' ~ etat.joursRestants ~ ' jour' ~ (etat.joursRestants > 1 ? 's') }}). Pensez à le renouveler.{{ lien|raw }}</div>
+        </div>
+    {% elseif etat.statut.value == 'grace' %}
+        <div class="alert alert-danger py-2 d-flex gap-2 align-items-center" role="alert">
+            <i class="bi bi-exclamation-octagon"></i>
+            <div><strong>Abonnement échu depuis le {{ etat.echeance|date('d/m/Y') }}.</strong> L'application reste utilisable encore {{ etat.joursDeGraceRestants }} jour{{ etat.joursDeGraceRestants > 1 ? 's' }}, puis passera en lecture seule. Renouvelez dès maintenant.{{ lien|raw }}</div>
+        </div>
+    {% elseif etat.statut.value == 'expire' %}
+        <div class="alert alert-danger py-2 d-flex gap-2 align-items-center" role="alert">
+            <i class="bi bi-lock"></i>
+            <div><strong>Lecture seule.</strong> {{ etat.echeance ? "L'abonnement a expiré le " ~ etat.echeance|date('d/m/Y') ~ '.' : "Aucun abonnement n'est encore actif." }} Vous pouvez consulter et exporter vos données ; la vente et les modifications sont bloquées jusqu'au renouvellement.{{ lien|raw }}</div>
+        </div>
+    {% endif %}
+{% endif %}

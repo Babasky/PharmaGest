@@ -1,0 +1,38 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Nouvelle pharmacie{% endblock %}
+
+{% block content %}
+    {{ form_start(formulaire) }}
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Officine</div>
+                <div class="card-body">
+                    {{ form_widget(formulaire.pharmacie) }}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6 d-flex flex-column gap-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-body fw-semibold">Pharmacien titulaire</div>
+                <div class="card-body">
+                    {{ form_row(formulaire.nomProprietaire) }}
+                    {{ form_row(formulaire.emailProprietaire) }}
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-header bg-body fw-semibold">Abonnement</div>
+                <div class="card-body">
+                    {{ form_row(formulaire.offre) }}
+                    {{ form_row(formulaire.joursEssai) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-success" type="submit">Créer la pharmacie</button>
+        <a class="btn btn-outline-secondary" href="{{ path('admin_pharmacie_index') }}">Annuler</a>
+    </div>
+    {{ form_end(formulaire) }}
+{% endblock %}

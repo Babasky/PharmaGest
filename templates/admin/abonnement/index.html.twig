@@ -1,0 +1,49 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Abonnements{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-body fw-semibold">Échéances : 7 derniers jours et 60 prochains</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th class="ps-3">Pharmacie</th><th>Offre</th><th>Échéance</th><th class="text-end">Jours</th><th class="pe-3">Statut</th></tr></thead>
+                <tbody>
+                    {% for ligne in echeances %}
+                        <tr>
+                            <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('admin_pharmacie_voir', {id: ligne.pharmacie.id}) }}#paiement">{{ ligne.pharmacie.nom }}</a><div class="small text-body-secondary">{{ ligne.pharmacie.ville }} · {{ ligne.pharmacie.telephone|telephone }}</div></td>
+                            <td>{{ ligne.pharmacie.offre.nom }}</td>
+                            <td class="text-nowrap">{{ ligne.etat.echeance|date('d/m/Y') }}</td>
+                            <td class="text-end">{{ ligne.etat.joursRestants }}</td>
+                            <td class="pe-3"><span class="badge text-bg-{{ ligne.etat.statut.couleur }}">{{ ligne.etat.statut.libelle }}</span></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-body-secondary py-4">Aucune échéance sur cette période.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-body fw-semibold">Paiements récents</div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light"><tr><th class="ps-3">Date</th><th>Pharmacie</th><th>Facture</th><th>Moyen</th><th class="text-end pe-3">Montant</th></tr></thead>
+                <tbody>
+                    {% for paiement in paiements %}
+                        <tr>
+                            <td class="ps-3">{{ paiement.datePaiement|date('d/m/Y') }}</td>
+                            <td><a href="{{ path('admin_pharmacie_voir', {id: paiement.pharmacie.id}) }}">{{ paiement.pharmacie.nom }}</a></td>
+                            <td><a href="{{ path('admin_abonnement_facture', {id: paiement.id}) }}" target="_blank" rel="noopener">{{ paiement.numeroFacture }}</a></td>
+                            <td>{{ paiement.moyen.libelle }}</td>
+                            <td class="montant pe-3">{{ paiement.montant|fcfa }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-body-secondary py-3">Aucun paiement enregistré.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

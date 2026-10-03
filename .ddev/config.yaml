@@ -16,10 +16,10 @@ web_environment:
     - MAILER_DSN=smtp://localhost:1025
     - DEFAULT_URI=https://pharmagest.ddev.site
 # Mailpit est fourni par DDEV : https://pharmagest.ddev.site:8026 (ou `ddev launch -m`).
-# Envoi asynchrone des emails (Messenger) : worker lancé en tâche de fond.
+# Worker en tâche de fond : emails asynchrones (async) et tâches planifiées (scheduler_default).
 web_extra_daemons:
     - name: messenger
-      command: "sleep 5 && php bin/console messenger:consume async --time-limit=3600 -vv"
+      command: "sleep 5 && php bin/console messenger:consume async scheduler_default --time-limit=3600 -vv"
       directory: /var/www/html
 hooks:
     post-start:

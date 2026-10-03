@@ -7,23 +7,52 @@
 {% block body_class %}layout-app{% endblock %}
 
 {% block body %}
+    {% set courante = pharmacie_courante() %}
     <header class="navbar navbar-dark bg-success sticky-top shadow-sm px-2 py-1 layout-topbar">
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 min-w-0">
             <button class="btn btn-success d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Ouvrir le menu">
                 <i class="bi bi-list fs-4"></i>
             </button>
             <a class="navbar-brand fw-semibold d-flex align-items-center gap-2 py-0" href="{{ path('app_tableau_de_bord') }}">
-                <i class="bi bi-capsule-pill"></i> {{ app_name }}
+                <i class="bi bi-capsule-pill"></i> <span class="d-none d-sm-inline">{{ app_name }}</span>
             </a>
+            {% if courante %}
+                {% set pharmacies = pharmacies_accessibles() %}
+                {% if pharmacies|length > 1 %}
+                    <div class="dropdown min-w-0">
+                        <button class="btn btn-sm btn-outline-light dropdown-toggle text-truncate mw-100" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Changer de pharmacie">
+                            <i class="bi bi-shop"></i> {{ courante.nom }}
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for p in pharmacies %}
+                                <li>
+                                    <form method="post" action="{{ path('app_pharmacie_basculer') }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('basculer-pharmacie') }}">
+                                        <input type="hidden" name="pharmacie" value="{{ p.id }}">
+                                        <button class="dropdown-item{{ p.id == courante.id ? ' active' : '' }}" type="submit">{{ p.nom }} <span class="text-body-secondary small">· {{ p.ville }}</span></button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% else %}
+                    <span class="text-white text-opacity-75 small text-truncate d-none d-md-inline"><i class="bi bi-shop"></i> {{ courante.nom }}</span>
+                {% endif %}
+            {% endif %}
         </div>
         {% if app.user %}
             <div class="dropdown">
                 <button class="btn btn-success dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-person-circle"></i>
-                    <span class="d-none d-sm-inline text-truncate" style="max-width: 14rem">{{ app.user.userIdentifier }}</span>
+                    <span class="d-none d-sm-inline text-truncate" style="max-width: 14rem">{{ app.user.nom }}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    {% block menu_utilisateur %}{% endblock %}
+                    <li><span class="dropdown-item-text small text-body-secondary">{{ app.user.email }}<br>{{ app.user.libelleRole }}</span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    {% if is_granted('ROLE_PROPRIETAIRE') %}
+                        <li><a class="dropdown-item" href="{{ path('app_mon_abonnement') }}"><i class="bi bi-patch-check"></i> Mon abonnement</a></li>
+                    {% endif %}
+                    <li><a class="dropdown-item" href="{{ logout_path() }}"><i class="bi bi-box-arrow-right"></i> Se déconnecter</a></li>
                 </ul>
             </div>
         {% endif %}
@@ -41,12 +70,13 @@
         </nav>
 
         <main class="flex-grow-1 p-3 p-md-4 layout-main">
+            {% include 'layout/_bandeau_abonnement.html.twig' %}
             {% include 'layout/_flashes.html.twig' %}
 
             {% block page_header %}
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                     <h1 class="h4 mb-0">{{ block('title') }}</h1>
-                    <div class="d-flex gap-2">{% block page_actions %}{% endblock %}</div>
+                    <div class="d-flex flex-wrap gap-2">{% block page_actions %}{% endblock %}</div>
                 </div>
             {% endblock %}
 

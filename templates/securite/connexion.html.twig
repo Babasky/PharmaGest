@@ -1,0 +1,28 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Connexion{% endblock %}
+
+{% block content %}
+    {% if erreur %}
+        <div class="alert alert-danger py-2" role="alert">
+            {{ erreur.messageKey|trans(erreur.messageData, 'security') }}
+        </div>
+    {% endif %}
+
+    <form method="post" action="{{ path('app_connexion') }}" class="d-grid gap-3">
+        <div>
+            <label for="email" class="form-label">Email</label>
+            <input type="email" name="email" id="email" value="{{ dernier_email }}" class="form-control" autocomplete="email" required autofocus>
+        </div>
+        <div>
+            <label for="mot_de_passe" class="form-label">Mot de passe</label>
+            <input type="password" name="mot_de_passe" id="mot_de_passe" class="form-control" autocomplete="current-password" required>
+        </div>
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+        <button class="btn btn-success" type="submit"><i class="bi bi-box-arrow-in-right"></i> Se connecter</button>
+    </form>
+{% endblock %}
+
+{% block apres_carte %}
+    <p class="text-center mt-3 small"><a href="{{ path('app_mot_de_passe_oublie') }}">Mot de passe oublié ?</a></p>
+{% endblock %}

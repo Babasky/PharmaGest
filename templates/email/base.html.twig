@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f5f4;font-family:Arial,Helvetica,sans-serif;color:#1f2a24;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f4;padding:24px 12px;">
+        <tr><td align="center">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:6px;">
+                <tr><td style="background:#198754;color:#ffffff;padding:14px 24px;font-size:18px;font-weight:bold;border-radius:6px 6px 0 0;">PharmaGest</td></tr>
+                <tr><td style="padding:24px;font-size:15px;line-height:1.5;">
+                    <p style="margin-top:0;">Bonjour {{ utilisateur.nom }},</p>
+                    {% block contenu %}{% endblock %}
+                    <p style="margin-bottom:0;">L'équipe PharmaGest</p>
+                </td></tr>
+            </table>
+            <p style="font-size:12px;color:#6c757d;max-width:560px;">Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+        </td></tr>
+    </table>
+</body>
+</html>

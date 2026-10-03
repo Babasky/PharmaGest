@@ -2,16 +2,18 @@
 
 namespace App\Tests\Functional;
 
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Security\Core\User\UserProviderInterface;
+use App\Tests\Support\AppWebTestCase;
 
-final class LayoutTest extends WebTestCase
+/**
+ * Socle : layout en français, montants en FCFA, menu selon le rôle (matrice des droits § 2).
+ */
+final class LayoutTest extends AppWebTestCase
 {
     public function testLaPageEstEnFrancaisAvecMontantsEnFcfa(): void
     {
-        $client = self::createClient();
-        $client->request('GET', '/');
+        $officine = $this->creerOfficine();
+
+        $this->connecter($officine->proprietaire)->request('GET', '/');
 
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('html[lang="fr"]');
@@ -22,65 +24,66 @@ final class LayoutTest extends WebTestCase
 
     public function testLeFuseauHoraireEstBamako(): void
     {
-        self::bootKernel();
-
         self::assertSame('Africa/Bamako', date_default_timezone_get());
     }
 
-    public function testSidebarDuVendeur(): void
+    public function testMenuDuVendeur(): void
     {
-        $client = $this->connecter('vendeur@test.ml');
-        $sidebar = $client->request('GET', '/')->filter('#sidebar')->text();
+        $officine = $this->creerOfficine();
+        $menu = $this->connecter($officine->vendeur)->request('GET', '/')->filter('#sidebar')->text();
 
-        self::assertStringContainsString('Nouvelle vente', $sidebar);
-        self::assertStringContainsString('Produits', $sidebar);
-        self::assertStringContainsString('Clients', $sidebar);
-        self::assertStringNotContainsString('Rapports', $sidebar);
-        self::assertStringNotContainsString('Dépenses', $sidebar);
-        self::assertStringNotContainsString('Vendeurs', $sidebar);
-        self::assertStringNotContainsString('Pharmacies', $sidebar);
+        foreach (['Caisse', 'Clients', 'Produits', 'Commandes', 'Fournisseurs'] as $present) {
+            self::assertStringContainsString($present, $menu);
+        }
+        foreach (['Inventaires', 'AMO', 'Dépenses', 'Rapports', 'Équipe', 'Abonnement', 'Pharmacies'] as $absent) {
+            self::assertStringNotContainsString($absent, $menu);
+        }
+        self::assertSelectorTextNotContains('main', "Chiffre d'affaires", 'Le CA est une donnée financière réservée au propriétaire.');
     }
 
-    public function testSidebarDuProprietaire(): void
+    public function testMenuDeLAdjoint(): void
     {
-        $client = $this->connecter('proprietaire@test.ml');
-        $sidebar = $client->request('GET', '/')->filter('#sidebar')->text();
+        $officine = $this->creerOfficine();
+        $menu = $this->connecter($officine->adjoint)->request('GET', '/')->filter('#sidebar')->text();
 
-        self::assertStringContainsString('Nouvelle vente', $sidebar, 'Le propriétaire hérite des droits du vendeur.');
-        self::assertStringContainsString('Rapports', $sidebar);
-        self::assertStringContainsString('Dépenses', $sidebar);
-        self::assertStringContainsString('Vendeurs', $sidebar);
-        self::assertStringContainsString('Paramètres', $sidebar);
-        self::assertStringNotContainsString('Abonnements', $sidebar);
+        foreach (['Caisse', 'Inventaires', 'AMO', 'Rapports'] as $present) {
+            self::assertStringContainsString($present, $menu);
+        }
+        foreach (['Dépenses', 'Équipe', 'Paramètres', 'Abonnement'] as $absent) {
+            self::assertStringNotContainsString($absent, $menu);
+        }
     }
 
-    public function testSidebarDuSuperAdminNeMontrePasLesDonneesDesPharmacies(): void
+    public function testMenuDuProprietaire(): void
     {
-        $client = $this->connecter('admin@test.ml');
-        $sidebar = $client->request('GET', '/')->filter('#sidebar')->text();
+        $officine = $this->creerOfficine();
+        $menu = $this->connecter($officine->proprietaire)->request('GET', '/')->filter('#sidebar')->text();
 
-        self::assertStringContainsString('Pharmacies', $sidebar);
-        self::assertStringContainsString('Abonnements', $sidebar);
-        self::assertStringNotContainsString('Nouvelle vente', $sidebar);
-        self::assertStringNotContainsString('Rapports', $sidebar);
+        foreach (['Caisse', 'Inventaires', 'Dépenses', 'Rapports', 'Équipe', 'Paramètres', 'Abonnement', "Journal d'audit"] as $present) {
+            self::assertStringContainsString($present, $menu);
+        }
+        self::assertStringNotContainsString('Pharmacies', $menu);
+        self::assertSelectorTextContains('main', "Chiffre d'affaires");
     }
 
-    public function testLesModulesNonLivresSontMarquesBientot(): void
+    public function testMenuDuSuperAdmin(): void
     {
-        $client = $this->connecter('vendeur@test.ml');
-        $crawler = $client->request('GET', '/');
+        $menu = $this->connecter($this->creerSuperAdmin())->request('GET', '/admin')->filter('#sidebar')->text();
 
-        self::assertSelectorExists('#sidebar a[href="/"].active');
+        foreach (['Vue globale', 'Pharmacies', 'Abonnements', 'Offres'] as $present) {
+            self::assertStringContainsString($present, $menu);
+        }
+        foreach (['Caisse', 'Clients', 'Rapports'] as $absent) {
+            self::assertStringNotContainsString($absent, $menu);
+        }
+    }
+
+    public function testEntreeActiveEtModulesAVenir(): void
+    {
+        $officine = $this->creerOfficine();
+        $crawler = $this->connecter($officine->proprietaire)->request('GET', '/equipe/nouveau');
+
+        self::assertSelectorExists('#sidebar a[href="/equipe"].active');
         self::assertGreaterThan(0, $crawler->filter('#sidebar .nav-link.disabled')->count());
-    }
-
-    private function connecter(string $email): KernelBrowser
-    {
-        $client = self::createClient();
-        /** @var UserProviderInterface<\Symfony\Component\Security\Core\User\UserInterface> $fournisseur */
-        $fournisseur = self::getContainer()->get('security.user_providers');
-        $client->loginUser($fournisseur->loadUserByIdentifier($email));
-
-        return $client;
     }
 }
