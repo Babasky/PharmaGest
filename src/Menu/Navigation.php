@@ -56,7 +56,7 @@ final class Navigation
         [
             'titre' => 'Administration',
             'elements' => [
-                ['libelle' => 'Tableau de bord global', 'icone' => 'globe2', 'route' => 'admin_tableau_de_bord', 'role' => 'ROLE_SUPER_ADMIN'],
+                ['libelle' => 'Vue globale', 'icone' => 'globe2', 'route' => 'admin_tableau_de_bord', 'role' => 'ROLE_SUPER_ADMIN'],
                 ['libelle' => 'Pharmacies', 'icone' => 'hospital', 'route' => 'admin_pharmacie_index', 'role' => 'ROLE_SUPER_ADMIN'],
                 ['libelle' => 'Abonnements', 'icone' => 'calendar-check', 'route' => 'admin_abonnement_index', 'role' => 'ROLE_SUPER_ADMIN'],
             ],
