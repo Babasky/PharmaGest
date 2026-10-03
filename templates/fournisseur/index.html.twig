@@ -1,0 +1,39 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Fournisseurs{% endblock %}
+
+{% block page_actions %}
+    {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+        <a class="btn btn-outline-secondary" href="{{ path('app_import', {type: 'fournisseurs'}) }}"><i class="bi bi-file-earmark-arrow-up"></i> Importer</a>
+        <a class="btn btn-success" href="{{ path('app_fournisseur_nouveau') }}"><i class="bi bi-plus-lg"></i> Nouveau fournisseur</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% include 'referentiel/_filtres.html.twig' with {q: q, archives: archives, placeholder: 'Nom, contact ou téléphone'} %}
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th class="ps-3">Fournisseur</th><th>Téléphone</th><th class="d-none d-md-table-cell">Email</th><th class="d-none d-lg-table-cell">Livraison</th><th class="pe-3"></th></tr></thead>
+                <tbody>
+                    {% for fournisseur in fournisseurs %}
+                        <tr>
+                            <td class="ps-3"><div class="fw-semibold">{{ fournisseur.nom }}</div>{% if fournisseur.contact %}<div class="small text-body-secondary">{{ fournisseur.contact }}</div>{% endif %}</td>
+                            <td class="text-nowrap">{{ fournisseur.telephone ? fournisseur.telephone|telephone : '—' }}</td>
+                            <td class="d-none d-md-table-cell text-break">{{ fournisseur.email ?? '—' }}</td>
+                            <td class="d-none d-lg-table-cell small">{{ fournisseur.delaiLivraison is not null ? fournisseur.delaiLivraison ~ ' j' : '—' }}{{ fournisseur.conditionsPaiement ? ' · ' ~ fournisseur.conditionsPaiement }}</td>
+                            <td class="pe-3 text-end">
+                                {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_fournisseur_modifier', {id: fournisseur.id}) }}" title="Modifier"><i class="bi bi-pencil"></i><span class="visually-hidden">Modifier {{ fournisseur.nom }}</span></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-body-secondary py-4">{{ q ? 'Aucun fournisseur ne correspond à « ' ~ q ~ ' ».' : (archives ? 'Aucun fournisseur archivé.' : 'Aucun fournisseur pour l\'instant.') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: fournisseurs, route: 'app_fournisseur_index', params: {q: q, archives: archives ? 1 : null}} %}
+{% endblock %}

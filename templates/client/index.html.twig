@@ -1,0 +1,51 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Clients{% endblock %}
+
+{% block page_actions %}
+    {% if ecriture_autorisee() %}
+        {% if is_granted('ROLE_ADJOINT') %}
+            <a class="btn btn-outline-secondary" href="{{ path('app_import', {type: 'clients'}) }}"><i class="bi bi-file-earmark-arrow-up"></i> Importer</a>
+        {% endif %}
+        <a class="btn btn-success" href="{{ path('app_client_nouveau') }}"><i class="bi bi-person-plus"></i> Nouveau client</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set filtre_privilegies %}
+        <div class="form-check form-switch align-self-center">
+            <input class="form-check-input" type="checkbox" role="switch" id="privilegies" name="privilegies" value="1" {{ privilegies ? 'checked' }} onchange="this.form.requestSubmit()">
+            <label class="form-check-label small" for="privilegies">Privilégiés</label>
+        </div>
+    {% endset %}
+    {% include 'referentiel/_filtres.html.twig' with {q: q, archives: archives, placeholder: 'Nom, téléphone ou n° d\'assuré', extra: filtre_privilegies} %}
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th class="ps-3">Client</th><th>Téléphone</th><th class="d-none d-md-table-cell">AMO</th><th class="pe-3"></th></tr></thead>
+                <tbody>
+                    {% for client in clients %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="fw-semibold">{{ client.nom }}</span>
+                                {% if client.privilegie %}<span class="badge text-bg-success ms-1"><i class="bi bi-star-fill"></i> Privilégié</span>{% endif %}
+                                {% if client.entreprise %}<div class="small text-body-secondary">{{ client.entreprise }}</div>{% endif %}
+                            </td>
+                            <td class="text-nowrap">{{ client.telephone ? client.telephone|telephone : '—' }}</td>
+                            <td class="d-none d-md-table-cell small">{{ client.assureAmo ? client.organismeAmo.code ~ ' · ' ~ client.numeroAssure : '—' }}</td>
+                            <td class="pe-3 text-end">
+                                {% if ecriture_autorisee() %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_client_modifier', {id: client.id}) }}" title="Modifier"><i class="bi bi-pencil"></i><span class="visually-hidden">Modifier {{ client.nom }}</span></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-body-secondary py-4">{{ q ? 'Aucun client ne correspond à « ' ~ q ~ ' ».' : (archives ? 'Aucun client archivé.' : 'Aucun client pour l\'instant.') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: clients, route: 'app_client_index', params: {q: q, privilegies: privilegies ? 1 : null, archives: archives ? 1 : null}} %}
+{% endblock %}

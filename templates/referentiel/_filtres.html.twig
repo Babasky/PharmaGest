@@ -1,0 +1,12 @@
+{# Barre de recherche des listes. Paramètres : route, q, archives, placeholder, extra (bloc HTML facultatif). #}
+<form method="get" class="d-flex flex-wrap gap-2 mb-3" role="search">
+    <div class="input-group" style="max-width: 26rem">
+        <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="{{ placeholder }}" aria-label="{{ placeholder }}" autofocus>
+        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i><span class="visually-hidden">Rechercher</span></button>
+    </div>
+    {{ extra|default('')|raw }}
+    <div class="form-check form-switch align-self-center ms-1">
+        <input class="form-check-input" type="checkbox" role="switch" id="archives" name="archives" value="1" {{ archives ? 'checked' }} onchange="this.form.requestSubmit()">
+        <label class="form-check-label small" for="archives">Archivés</label>
+    </div>
+</form>

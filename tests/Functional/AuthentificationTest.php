@@ -95,7 +95,9 @@ final class AuthentificationTest extends AppWebTestCase
         $officine = $this->creerOfficine();
         $crawler = $this->connecter($officine->vendeur)->request('GET', '/');
 
-        $this->client->click($crawler->selectLink('Se déconnecter')->link());
+        $lien = $crawler->selectLink('Se déconnecter')->link();
+        self::assertStringNotContainsString('csrf-token', $lien->getUri(), 'Le lien doit porter un vrai jeton de session.');
+        $this->client->click($lien);
         self::assertResponseRedirects('/connexion');
 
         $this->client->request('GET', '/');

@@ -65,7 +65,7 @@ final class EquipeController extends AbstractAppController
             'formulaire' => $formulaire,
             'titre' => 'Ajouter un membre',
             'places_restantes' => $this->equipe->placesRestantes($this->pharmacie()),
-        ]);
+        ], self::reponseRefusSiSoumis($formulaire));
     }
 
     #[Route('/{id}/modifier', name: 'app_equipe_modifier', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
@@ -95,7 +95,7 @@ final class EquipeController extends AbstractAppController
             'titre' => 'Modifier '.$avant['nom'],
             'affectation' => $affectation,
             'places_restantes' => null,
-        ]);
+        ], self::reponseRefusSiSoumis($formulaire));
     }
 
     #[Route('/{id}/desactiver', name: 'app_equipe_desactiver', requirements: ['id' => '\d+'], methods: ['POST'])]

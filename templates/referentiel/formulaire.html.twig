@@ -1,0 +1,20 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 44rem">
+        <div class="card-body">
+            {{ form_start(formulaire) }}
+                {{ form_widget(formulaire) }}
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-success" type="submit">Enregistrer</button>
+                    <a class="btn btn-outline-secondary" href="{{ retour }}">Annuler</a>
+                </div>
+            {{ form_end(formulaire) }}
+        </div>
+    </div>
+    {% if entite|default(null) and route_archiver|default(null) and ecriture_autorisee() %}
+        {% include 'referentiel/_archiver.html.twig' with {entite: entite, route: route_archiver} %}
+    {% endif %}
+{% endblock %}

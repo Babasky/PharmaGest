@@ -1,0 +1,54 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+    {{ form_start(formulaire) }}
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Identification</div>
+                <div class="card-body">
+                    {{ form_row(formulaire.nomCommercial) }}
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.dci) }}</div>
+                        <div class="col-6 col-md-3">{{ form_row(formulaire.dosage) }}</div>
+                        <div class="col-6 col-md-3">{{ form_row(formulaire.forme) }}</div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.conditionnement) }}</div>
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.codeBarres) }}</div>
+                    </div>
+                    {{ form_row(formulaire.categorie) }}
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.etagere) }}</div>
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.fournisseurHabituel) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Prix, stock et réglementation</div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-6 col-md-4">{{ form_row(formulaire.prixAchat) }}</div>
+                        <div class="col-6 col-md-4">{{ form_row(formulaire.prixVente) }}</div>
+                        <div class="col-12 col-md-4">{{ form_row(formulaire.tauxTva) }}</div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">{{ form_row(formulaire.seuilAlerte) }}</div>
+                        <div class="col-6">{{ form_row(formulaire.stockMax) }}</div>
+                    </div>
+                    {{ form_row(formulaire.ordonnanceObligatoire) }}
+                    {{ form_row(formulaire.remboursableAmo) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-success" type="submit">Enregistrer</button>
+        <a class="btn btn-outline-secondary" href="{{ produit.id ? path('app_produit_voir', {id: produit.id}) : path('app_produit_index') }}">Annuler</a>
+    </div>
+    {{ form_end(formulaire) }}
+{% endblock %}

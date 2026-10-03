@@ -73,7 +73,58 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 
 ### Report à un lot ultérieur
 
-- **SA-07** (référentiels communs : organismes AMO, formes galéniques, catégories de dépenses par défaut) : traité au
-  **Lot 2** avec les autres référentiels.
+- **SA-07** (référentiels communs) : traité au Lot 2 (voir ci-dessous).
 - **PH-04, code PIN** : le champ et le changement rapide de vendeur arrivent au **Lot 4** (caisse).
 - **Consultation du journal d'audit** (AU-02) : **Lot 8**. Les actions sensibles du Lot 1 sont déjà journalisées.
+
+## Décisions — Lot 2 (référentiels)
+
+### Paramètres de la pharmacie
+
+- **Politique par défaut pour un produit « ordonnance obligatoire » vendu sans ordonnance : blocage**
+  (point ouvert § 11.2). C'est le choix le plus prudent ; le propriétaire peut passer à « confirmation par le
+  propriétaire » dans Paramètres › Règles de gestion.
+- **Plafond de remise par défaut : 10 %**, délai d'alerte péremption par défaut : **90 jours**.
+- **Taux AMO** : un taux par organisme et par pharmacie, en **pourcentage entier**, avec une **date d'effet**. Changer
+  de taux crée une nouvelle ligne (historique conservé) ; un taux à date future s'appliquera à cette date. Sans taux
+  saisi, 70 % s'applique (H1).
+- **Logo** : PNG ou JPEG, 500 Ko maximum, stocké hors du dossier public (`var/fichiers/pharmacie-{id}/logo/`) sous un
+  nom aléatoire et servi par un contrôleur qui ne donne accès qu'au logo de la pharmacie courante.
+
+### Référentiels communs (SA-07)
+
+- **Organismes AMO** initiaux : INPS et CMSS (glossaire § 11.3). **Formes galéniques** : 20 formes courantes.
+  **Catégories de dépenses** : la liste du FI-02. Le super admin les complète ; rien n'est supprimé, une valeur
+  désactivée n'est plus proposée.
+- Les catégories de dépenses par défaut seront **copiées dans chaque pharmacie** au Lot 7 (dépenses), qui pourra
+  ensuite adapter sa liste (FI-02).
+
+### Catalogue
+
+- **Rien n'est supprimé** (RG-15) : catégories, étagères, fournisseurs, produits et clients s'**archivent**. Archivés,
+  ils disparaissent des listes de choix et de la liste principale (filtre « Archivés » pour les retrouver).
+- **Catégories** sur deux niveaux exactement : une sous-catégorie ne peut pas avoir de sous-catégorie.
+- **Code-barres** unique **dans une pharmacie** (deux pharmacies peuvent avoir le même produit).
+- **TVA** : choix entre 0 % et 18 % (point ouvert § 11.2 : à confirmer avec un fiscaliste).
+- **Prix d'achat** sur la fiche produit = **prix de référence** (pour les commandes et la marge indicative) ; le prix
+  réellement payé sera porté par chaque **lot** (Lot 3, ST-01). Il n'est pas affiché au vendeur.
+- **Stock** : jamais stocké sur le produit ; il sera calculé à partir des lots (RG-03, Lot 3).
+- **Clients** : le téléphone est normalisé (`+223…`) ; un assuré AMO doit avoir **à la fois** un numéro d'assuré et
+  un organisme. Le vendeur crée et modifie un client mais ne peut ni le marquer « privilégié » ni l'archiver.
+- **Entreprise de rattachement** : simple texte pour l'instant ; les clients conventionnés (VE-12) arriveront en V2.
+- **Cohérence entre pharmacies** : en plus du filtre, un contrôle à l'enregistrement refuse tout lien vers une donnée
+  d'une autre pharmacie (ex. un produit rangé dans la catégorie d'une autre officine).
+
+### Import Excel / CSV (RF-08)
+
+- **Deux temps** : l'analyse vérifie tout le fichier **sans rien enregistrer** et affiche les erreurs avec leur
+  numéro de ligne Excel ; la confirmation importe les **lignes valides** et ignore les autres, en une seule
+  transaction.
+- **Reconnaissance d'un élément existant** (mise à jour plutôt que doublon) : produit par **code-barres** (sinon nom
+  commercial + dosage), fournisseur par **nom**, client par **téléphone** (deux homonymes restent distincts).
+- **Produits** : les catégories (« Principale > Sous-catégorie »), étagères et fournisseurs inconnus sont **créés** ;
+  une forme galénique inconnue est une **erreur** (référentiel commun).
+- **Tolérances** : en-têtes sans tenir compte des majuscules, accents ou astérisques ; montants « 1 500 » ou
+  « 1500,00 » ; « oui/non », « o/n », « 1/0 », « x » ; CSV à virgule ou point-virgule, en UTF-8 ou Windows-1252 (export
+  Excel français). Limites : 2 Mo et 5 000 lignes par fichier.
+- Réservé au **propriétaire et à l'adjoint** (y compris l'import de clients, qui est une opération de masse).

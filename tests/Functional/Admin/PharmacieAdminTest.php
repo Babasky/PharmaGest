@@ -93,7 +93,7 @@ final class PharmacieAdminTest extends AppWebTestCase
 
         $this->soumettreCreation('Seconde officine', $officine->proprietaire->getEmail(), Offre::STANDARD);
 
-        self::assertResponseIsSuccessful();
+        self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('.alert-danger', 'L\'offre Standard permet 1 pharmacie(s) par propriétaire');
     }
 
