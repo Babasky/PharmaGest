@@ -25,6 +25,7 @@
         "symfony/framework-bundle": "7.4.*",
         "symfony/http-client": "7.4.*",
         "symfony/intl": "7.4.*",
+        "symfony/lock": "7.4.*",
         "symfony/mailer": "7.4.*",
         "symfony/mime": "7.4.*",
         "symfony/monolog-bundle": "^3.0|^4.0",
@@ -32,7 +33,9 @@
         "symfony/process": "7.4.*",
         "symfony/property-access": "7.4.*",
         "symfony/property-info": "7.4.*",
+        "symfony/rate-limiter": "7.4.*",
         "symfony/runtime": "7.4.*",
+        "symfony/scheduler": "7.4.*",
         "symfony/security-bundle": "7.4.*",
         "symfony/serializer": "7.4.*",
         "symfony/stimulus-bundle": "^2.36",
@@ -43,7 +46,6 @@
         "symfony/validator": "7.4.*",
         "symfony/web-link": "7.4.*",
         "symfony/yaml": "7.4.*",
-        "symfonycasts/reset-password-bundle": "^1.25",
         "twig/extra-bundle": "^2.12|^3.0",
         "twig/twig": "^2.12|^3.0"
     },
@@ -97,6 +99,12 @@
             "@cs",
             "@phpstan",
             "@test"
+        ],
+        "demo": [
+            "php bin/console doctrine:database:drop --force --if-exists",
+            "php bin/console doctrine:database:create",
+            "php bin/console doctrine:migrations:migrate --no-interaction",
+            "php bin/console foundry:load-fixtures main --append --no-interaction"
         ]
     },
     "conflict": {

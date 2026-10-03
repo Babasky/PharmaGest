@@ -1,0 +1,29 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 40rem">
+        <div class="card-body">
+            {% if places_restantes is same as(0) %}
+                <div class="alert alert-warning">La limite d'utilisateurs de votre offre est atteinte : désactivez un compte avant d'en créer un nouveau.</div>
+            {% endif %}
+            {{ form_start(formulaire) }}
+                {{ form_row(formulaire.nom) }}
+                {{ form_row(formulaire.email) }}
+                {{ form_row(formulaire.role) }}
+                <div class="form-text mb-3 mt-n2">
+                    L'adjoint gère le stock, les commandes et l'AMO, sans accès aux paramètres ni aux finances.
+                    Le vendeur travaille au comptoir.
+                </div>
+                {% if formulaire.motDePasseInitial is defined %}
+                    {{ form_row(formulaire.motDePasseInitial) }}
+                {% endif %}
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" type="submit">Enregistrer</button>
+                    <a class="btn btn-outline-secondary" href="{{ path('app_equipe_index') }}">Annuler</a>
+                </div>
+            {{ form_end(formulaire) }}
+        </div>
+    </div>
+{% endblock %}

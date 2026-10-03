@@ -1,0 +1,17 @@
+{% extends 'email/base.html.twig' %}
+
+{% block contenu %}
+    <p>
+        {% if etat.statut.value == 'essai' %}La période d'essai{% else %}L'abonnement{% endif %}
+        PharmaGest de <strong>{{ pharmacie.nom }}</strong> (offre {{ pharmacie.offre.nom }}) se termine le
+        <strong>{{ etat.echeance|date('d/m/Y') }}</strong>, dans {{ etat.joursRestants }} jours.
+    </p>
+    <p>
+        Pour continuer à vendre sans interruption, réglez le renouvellement auprès de l'éditeur (espèces, virement, Orange Money ou Moov Money).
+        Une fois le paiement enregistré, l'accès est prolongé de 12 mois et la facture apparaît dans « Mon abonnement ».
+    </p>
+    <p>
+        Sans renouvellement, l'application reste utilisable 7 jours après l'échéance, puis passe en lecture seule :
+        vos données restent consultables et exportables, mais la caisse est bloquée.
+    </p>
+{% endblock %}

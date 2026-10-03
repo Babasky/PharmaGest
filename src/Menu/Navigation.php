@@ -25,7 +25,7 @@ final class Navigation
         [
             'titre' => 'Comptoir',
             'elements' => [
-                ['libelle' => 'Nouvelle vente', 'icone' => 'cart-plus', 'route' => 'app_vente_caisse', 'role' => 'ROLE_VENDEUR'],
+                ['libelle' => 'Caisse', 'icone' => 'cart-plus', 'route' => 'app_caisse', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Ventes', 'icone' => 'receipt', 'route' => 'app_vente_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Clients', 'icone' => 'people', 'route' => 'app_client_index', 'role' => 'ROLE_VENDEUR'],
             ],
@@ -35,22 +35,25 @@ final class Navigation
             'elements' => [
                 ['libelle' => 'Produits', 'icone' => 'capsule', 'route' => 'app_produit_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Commandes', 'icone' => 'truck', 'route' => 'app_commande_index', 'role' => 'ROLE_VENDEUR'],
-                ['libelle' => 'Fournisseurs', 'icone' => 'building', 'route' => 'app_fournisseur_index', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => 'Fournisseurs', 'icone' => 'building', 'route' => 'app_fournisseur_index', 'role' => 'ROLE_VENDEUR'],
+                ['libelle' => 'Inventaires', 'icone' => 'clipboard-check', 'route' => 'app_inventaire_index', 'role' => 'ROLE_ADJOINT'],
             ],
         ],
         [
             'titre' => 'Gestion',
             'elements' => [
-                ['libelle' => 'AMO', 'icone' => 'shield-plus', 'route' => 'app_amo_index', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => 'AMO', 'icone' => 'shield-plus', 'route' => 'app_amo_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Dépenses', 'icone' => 'wallet2', 'route' => 'app_depense_index', 'role' => 'ROLE_PROPRIETAIRE'],
-                ['libelle' => 'Rapports', 'icone' => 'bar-chart-line', 'route' => 'app_rapport_index', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => 'Rapports', 'icone' => 'bar-chart-line', 'route' => 'app_rapport_index', 'role' => 'ROLE_ADJOINT'],
             ],
         ],
         [
             'titre' => 'Pharmacie',
             'elements' => [
-                ['libelle' => 'Vendeurs', 'icone' => 'person-badge', 'route' => 'app_vendeur_index', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => 'Équipe', 'icone' => 'person-badge', 'route' => 'app_equipe_index', 'role' => 'ROLE_PROPRIETAIRE'],
                 ['libelle' => 'Paramètres', 'icone' => 'gear', 'route' => 'app_parametres', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => 'Abonnement', 'icone' => 'patch-check', 'route' => 'app_mon_abonnement', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => "Journal d'audit", 'icone' => 'journal-text', 'route' => 'app_audit_index', 'role' => 'ROLE_PROPRIETAIRE'],
             ],
         ],
         [
@@ -59,6 +62,7 @@ final class Navigation
                 ['libelle' => 'Vue globale', 'icone' => 'globe2', 'route' => 'admin_tableau_de_bord', 'role' => 'ROLE_SUPER_ADMIN'],
                 ['libelle' => 'Pharmacies', 'icone' => 'hospital', 'route' => 'admin_pharmacie_index', 'role' => 'ROLE_SUPER_ADMIN'],
                 ['libelle' => 'Abonnements', 'icone' => 'calendar-check', 'route' => 'admin_abonnement_index', 'role' => 'ROLE_SUPER_ADMIN'],
+                ['libelle' => 'Offres', 'icone' => 'tags', 'route' => 'admin_offre_index', 'role' => 'ROLE_SUPER_ADMIN'],
             ],
         ],
     ];
@@ -70,7 +74,7 @@ final class Navigation
     }
 
     /**
-     * @return list<array{titre: string, elements: list<array{libelle: string, icone: string, route: string, disponible: bool}>}>
+     * @return list<array{titre: string, elements: list<array{libelle: string, icone: string, route: string, disponible: bool, prefixe: string}>}>
      */
     public function sections(): array
     {
@@ -88,6 +92,8 @@ final class Navigation
                     'icone' => $element['icone'],
                     'route' => $element['route'],
                     'disponible' => null !== $routes->get($element['route']),
+                    // Les pages d'un module (app_equipe_nouveau…) gardent l'entrée du menu active.
+                    'prefixe' => preg_replace('/_index$/', '_', $element['route']) ?? $element['route'],
                 ];
             }
 

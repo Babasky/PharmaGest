@@ -10,6 +10,14 @@ parameters:
     app.name: 'PharmaGest'
     app.timezone: 'Africa/Bamako'
     app.currency: 'FCFA'
+    # Déconnexion automatique après inactivité (secondes), § 6 Sécurité.
+    app.session_inactivite: 1800
+    # Coordonnées de l'éditeur : factures d'abonnement et page « compte suspendu ».
+    app.editeur:
+        nom: 'PharmaGest'
+        adresse: 'Bamako, Mali'
+        telephone: '+223 00 00 00 00'
+        email: 'contact@pharmagest.ml'
 
 services:
     # default configuration for services in *this* file

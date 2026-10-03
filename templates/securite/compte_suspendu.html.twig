@@ -1,0 +1,20 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Accès suspendu{% endblock %}
+
+{% block content %}
+    <p>
+        {% if etat.statut.value == 'archive' %}
+            Le compte de <strong>{{ pharmacie.nom }}</strong> est archivé depuis le {{ pharmacie.archiveeLe|date('d/m/Y') }}.
+        {% else %}
+            L'accès de <strong>{{ pharmacie.nom }}</strong> à PharmaGest est suspendu.
+        {% endif %}
+    </p>
+    <p class="mb-3">Pour le rétablir, contactez l'éditeur :</p>
+    <ul class="list-unstyled d-grid gap-1 mb-4">
+        <li><i class="bi bi-building"></i> {{ editeur.nom }}, {{ editeur.adresse }}</li>
+        <li><i class="bi bi-telephone"></i> <span class="user-select-all">{{ editeur.telephone }}</span></li>
+        <li><i class="bi bi-envelope"></i> <span class="user-select-all">{{ editeur.email }}</span></li>
+    </ul>
+    <a class="btn btn-outline-secondary w-100" href="{{ logout_path() }}"><i class="bi bi-box-arrow-right"></i> Se déconnecter</a>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ pharmacie.nom }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('admin_pharmacie_modifier', {id: pharmacie.id}) }}"><i class="bi bi-pencil"></i> Modifier la fiche</a>
+{% endblock %}
+
+{% block content %}
+    {% set jeton = csrf_token('pharmacie-' ~ pharmacie.id) %}
+    <div class="row g-3">
+        <div class="col-12 col-xl-5 d-flex flex-column gap-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div class="small text-body-secondary">{{ pharmacie.ville }} · autorisation {{ pharmacie.numeroAutorisation }}</div>
+                        <span class="badge text-bg-{{ etat.statut.couleur }} text-nowrap">{{ etat.statut.libelle }}</span>
+                    </div>
+                    <dl class="row small mb-0">
+                        <dt class="col-5 fw-normal text-body-secondary">Adresse</dt><dd class="col-7">{{ pharmacie.adresse }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Téléphone</dt><dd class="col-7 text-nowrap">{{ pharmacie.telephone|telephone }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Email</dt><dd class="col-7 text-break">{{ pharmacie.email ?? '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Offre</dt><dd class="col-7">{{ pharmacie.offre.nom }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Fin d'essai</dt><dd class="col-7">{{ pharmacie.finEssai ? pharmacie.finEssai|date('d/m/Y') : '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Fin d'abonnement</dt><dd class="col-7">{{ pharmacie.finAbonnement ? pharmacie.finAbonnement|date('d/m/Y') : '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Créée le</dt><dd class="col-7">{{ pharmacie.creeLe|date('d/m/Y') }}</dd>
+                        {% if pharmacie.suspendue %}
+                            <dt class="col-5 fw-normal text-body-secondary">Motif de suspension</dt><dd class="col-7">{{ pharmacie.motifSuspension }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-body fw-semibold">Équipe</div>
+                <ul class="list-group list-group-flush">
+                    {% for affectation in equipe %}
+                        {% set membre = affectation.utilisateur %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                            <div class="min-w-0">
+                                <div class="fw-semibold">{{ membre.nom }}</div>
+                                <div class="small text-body-secondary text-break">{{ membre.email }} · {{ membre.libelleRole }}</div>
+                            </div>
+                            {% if not affectation.accesOuvert %}
+                                <span class="badge text-bg-secondary">Désactivé</span>
+                            {% elseif not membre.active %}
+                                <span class="badge text-bg-warning">Activation en attente</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                {% if equipe|filter(a => a.utilisateur.proprietaire and not a.utilisateur.active)|length > 0 %}
+                    <div class="card-footer bg-body">
+                        <form method="post" action="{{ path('admin_pharmacie_renvoyer_activation', {id: pharmacie.id}) }}">
+                            <input type="hidden" name="_token" value="{{ jeton }}">
+                            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-envelope"></i> Renvoyer le lien d'activation au propriétaire</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="card shadow-sm border-danger-subtle">
+                <div class="card-header bg-body fw-semibold">Accès</div>
+                <div class="card-body d-grid gap-2">
+                    {% if pharmacie.suspendue or pharmacie.archivee %}
+                        <form method="post" action="{{ path('admin_pharmacie_reactiver', {id: pharmacie.id}) }}">
+                            <input type="hidden" name="_token" value="{{ jeton }}">
+                            <button class="btn btn-outline-success w-100"><i class="bi bi-unlock"></i> Réactiver l'accès</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{{ path('admin_pharmacie_suspendre', {id: pharmacie.id}) }}" class="d-grid gap-2">
+                            <input type="hidden" name="_token" value="{{ jeton }}">
+                            <label for="motif" class="form-label small mb-0">Motif de suspension (impayé, fraude…)</label>
+                            <input type="text" id="motif" name="motif" class="form-control form-control-sm" required maxlength="255">
+                            <button class="btn btn-outline-danger"><i class="bi bi-slash-circle"></i> Suspendre l'accès</button>
+                        </form>
+                    {% endif %}
+                    {% if not pharmacie.archivee %}
+                        <form method="post" action="{{ path('admin_pharmacie_archiver', {id: pharmacie.id}) }}">
+                            <input type="hidden" name="_token" value="{{ jeton }}">
+                            <button class="btn btn-sm btn-link text-danger px-0"><i class="bi bi-archive"></i> Archiver la pharmacie</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-7 d-flex flex-column gap-3">
+            <div class="card shadow-sm" id="paiement">
+                <div class="card-header bg-body fw-semibold">Enregistrer un paiement</div>
+                <div class="card-body">
+                    <p class="small text-body-secondary">
+                        Nouvelle période : du <strong>{{ periode[0]|date('d/m/Y') }}</strong> au <strong>{{ periode[1]|date('d/m/Y') }}</strong>
+                        (la prolongation part de la fin en cours si l'abonnement est encore actif).
+                    </p>
+                    {{ form_start(formulaire) }}
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.offre) }}</div>
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.montant) }}</div>
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.moyen) }}</div>
+                        <div class="col-12 col-md-6">{{ form_row(formulaire.datePaiement) }}</div>
+                        <div class="col-12">{{ form_row(formulaire.reference) }}</div>
+                    </div>
+                    <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle"></i> Enregistrer et générer la facture</button>
+                    {{ form_end(formulaire) }}
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-body fw-semibold">Historique des paiements</div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light"><tr><th class="ps-3">Facture</th><th>Période</th><th>Offre</th><th class="text-end pe-3">Montant</th></tr></thead>
+                        <tbody>
+                            {% for paiement in paiements %}
+                                <tr>
+                                    <td class="ps-3"><a href="{{ path('admin_abonnement_facture', {id: paiement.id}) }}" target="_blank" rel="noopener">{{ paiement.numeroFacture }}</a><div class="small text-body-secondary">{{ paiement.datePaiement|date('d/m/Y') }} · {{ paiement.moyen.libelle }}{{ paiement.reference ? ' · ' ~ paiement.reference }}</div></td>
+                                    <td class="small text-nowrap">{{ paiement.dateDebut|date('d/m/Y') }} → {{ paiement.dateFin|date('d/m/Y') }}</td>
+                                    <td>{{ paiement.offre.nom }}</td>
+                                    <td class="montant pe-3">{{ paiement.montant|fcfa }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="4" class="text-center text-body-secondary py-3">Aucun paiement.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

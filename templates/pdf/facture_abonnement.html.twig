@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture {{ abonnement.numeroFacture }}</title>
+    <style>
+        @page { margin: 18mm 16mm; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; color: #1f2a24; }
+        h1 { font-size: 16pt; margin: 0 0 4mm; color: #198754; }
+        .entete td { vertical-align: top; }
+        .petit { font-size: 8.5pt; color: #555; }
+        table.lignes { width: 100%; border-collapse: collapse; margin-top: 8mm; }
+        table.lignes th { background: #e9f3ee; text-align: left; padding: 2.5mm; border-bottom: 1px solid #198754; }
+        table.lignes td { padding: 2.5mm; border-bottom: 1px solid #ddd; }
+        .droite { text-align: right; }
+        .total td { font-weight: bold; font-size: 11pt; border-bottom: none; }
+        .cadre { border: 1px solid #ccc; padding: 3mm; }
+    </style>
+</head>
+<body>
+    <table class="entete" width="100%">
+        <tr>
+            <td width="55%">
+                <h1>{{ editeur.nom }}</h1>
+                <div class="petit">{{ editeur.adresse }}<br>{{ editeur.telephone }} · {{ editeur.email }}</div>
+            </td>
+            <td width="45%" class="droite">
+                <div style="font-size: 14pt; font-weight: bold;">FACTURE</div>
+                <div>N° <strong>{{ abonnement.numeroFacture }}</strong></div>
+                <div>Date : {{ abonnement.datePaiement|date('d/m/Y') }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <table width="100%" style="margin-top: 8mm;">
+        <tr>
+            <td width="50%"></td>
+            <td width="50%" class="cadre">
+                <div class="petit">Facturé à</div>
+                <strong>{{ pharmacie.nom }}</strong><br>
+                {% for proprietaire in proprietaires %}{{ proprietaire.nom }}<br>{% endfor %}
+                {{ pharmacie.adresse }}, {{ pharmacie.ville }}<br>
+                Tél. {{ pharmacie.telephone|telephone }}<br>
+                <span class="petit">Autorisation n° {{ pharmacie.numeroAutorisation }}</span>
+            </td>
+        </tr>
+    </table>
+
+    <table class="lignes">
+        <thead>
+            <tr><th>Désignation</th><th>Période</th><th class="droite">Montant</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Abonnement annuel PharmaGest — offre {{ abonnement.offre.nom }}</td>
+                <td>du {{ abonnement.dateDebut|date('d/m/Y') }} au {{ abonnement.dateFin|date('d/m/Y') }}</td>
+                <td class="droite">{{ abonnement.montant|fcfa }}</td>
+            </tr>
+            <tr class="total">
+                <td colspan="2" class="droite">Total payé</td>
+                <td class="droite">{{ abonnement.montant|fcfa }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p style="margin-top: 8mm;">
+        Réglé le {{ abonnement.datePaiement|date('d/m/Y') }} par {{ abonnement.moyen.libelle|lower }}{{ abonnement.reference ? ' (réf. ' ~ abonnement.reference ~ ')' }}.
+    </p>
+    <p class="petit">Montants en francs CFA (XOF). Facture acquittée.</p>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Mot de passe oublié{% endblock %}
+
+{% block content %}
+    <p class="text-body-secondary small">Saisissez l'email de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe.</p>
+    {{ form_start(formulaire, {attr: {class: 'd-grid gap-1'}}) }}
+        {{ form_row(formulaire.email) }}
+        <button class="btn btn-success" type="submit">Recevoir le lien</button>
+    {{ form_end(formulaire) }}
+{% endblock %}
+
+{% block apres_carte %}
+    <p class="text-center mt-3 small"><a href="{{ path('app_connexion') }}"><i class="bi bi-arrow-left"></i> Retour à la connexion</a></p>
+{% endblock %}

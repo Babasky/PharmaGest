@@ -1,0 +1,18 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}{{ activation ? 'Activez votre compte' : 'Nouveau mot de passe' }}{% endblock %}
+
+{% block content %}
+    <p class="text-body-secondary small">
+        {% if activation %}
+            Bienvenue {{ utilisateur.nom }}. Choisissez le mot de passe de votre compte <strong>{{ utilisateur.email }}</strong>.
+        {% else %}
+            Choisissez un nouveau mot de passe pour <strong>{{ utilisateur.email }}</strong>.
+        {% endif %}
+    </p>
+    {{ form_start(formulaire, {attr: {class: 'd-grid gap-1'}}) }}
+        {{ form_row(formulaire.motDePasse.first) }}
+        {{ form_row(formulaire.motDePasse.second) }}
+        <button class="btn btn-success" type="submit">Enregistrer le mot de passe</button>
+    {{ form_end(formulaire) }}
+{% endblock %}

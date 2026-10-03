@@ -1,0 +1,85 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Équipe{% endblock %}
+
+{% block page_actions %}
+    {% if not ecriture_autorisee() %}
+        <button class="btn btn-success" disabled title="Abonnement expiré : lecture seule"><i class="bi bi-person-plus"></i> Ajouter un membre</button>
+    {% elseif places_restantes is same as(0) %}
+        <button class="btn btn-success" disabled title="Limite de l'offre atteinte"><i class="bi bi-person-plus"></i> Ajouter un membre</button>
+    {% else %}
+        <a class="btn btn-success" href="{{ path('app_equipe_nouveau') }}"><i class="bi bi-person-plus"></i> Ajouter un membre</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <p class="text-body-secondary small">
+        Offre {{ offre.nom }} :
+        {% if offre.maxUtilisateurs is null %}
+            utilisateurs illimités.
+        {% else %}
+            {{ offre.maxUtilisateurs }} utilisateurs actifs au maximum, propriétaire compris —
+            <strong>{{ places_restantes }} place{{ places_restantes > 1 ? 's' }} disponible{{ places_restantes > 1 ? 's' }}</strong>.
+        {% endif %}
+    </p>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Nom</th>
+                        <th>Rôle</th>
+                        <th class="d-none d-md-table-cell">Dernière connexion</th>
+                        <th>Statut</th>
+                        <th class="pe-3 text-end"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for affectation in membres %}
+                        {% set membre = affectation.utilisateur %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-semibold">{{ membre.nom }}</div>
+                                <div class="small text-body-secondary">{{ membre.email }}</div>
+                            </td>
+                            <td>{{ membre.libelleRole }}</td>
+                            <td class="d-none d-md-table-cell small">{{ membre.derniereConnexion ? membre.derniereConnexion|date('d/m/Y H:i') : '—' }}</td>
+                            <td>
+                                {% if not affectation.accesOuvert %}
+                                    <span class="badge text-bg-secondary">Désactivé</span>
+                                {% elseif not membre.active %}
+                                    <span class="badge text-bg-warning">Activation en attente</span>
+                                {% else %}
+                                    <span class="badge text-bg-success">Actif</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3 text-end text-nowrap">
+                                {% if ecriture_autorisee() and is_granted('EQUIPE_GERER', affectation) %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_equipe_modifier', {id: affectation.id}) }}" title="Modifier"><i class="bi bi-pencil"></i><span class="visually-hidden">Modifier</span></a>
+                                    {% if affectation.actif %}
+                                        {% if not membre.active %}
+                                            <form method="post" action="{{ path('app_equipe_renvoyer_activation', {id: affectation.id}) }}" class="d-inline">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('equipe-' ~ affectation.id) }}">
+                                                <button class="btn btn-sm btn-outline-secondary" title="Renvoyer le lien d'activation"><i class="bi bi-envelope"></i><span class="visually-hidden">Renvoyer le lien</span></button>
+                                            </form>
+                                        {% endif %}
+                                        <form method="post" action="{{ path('app_equipe_desactiver', {id: affectation.id}) }}" class="d-inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('equipe-' ~ affectation.id) }}">
+                                            <button class="btn btn-sm btn-outline-danger">Désactiver</button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{{ path('app_equipe_reactiver', {id: affectation.id}) }}" class="d-inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('equipe-' ~ affectation.id) }}">
+                                            <button class="btn btn-sm btn-outline-success">Réactiver</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

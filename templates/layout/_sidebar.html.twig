@@ -7,7 +7,7 @@
         {% for element in section.elements %}
             <li class="nav-item">
                 {% if element.disponible %}
-                    {% set actif = route_courante == element.route %}
+                    {% set actif = route_courante == element.route or (element.prefixe != element.route and route_courante starts with element.prefixe) %}
                     <a class="nav-link d-flex align-items-center gap-2 {{ actif ? 'active' : 'link-body-emphasis' }}"
                        href="{{ path(element.route) }}"{% if actif %} aria-current="page"{% endif %}>
                         <i class="bi bi-{{ element.icone }}"></i> <span class="text-truncate min-w-0">{{ element.libelle }}</span>
