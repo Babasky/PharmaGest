@@ -12,3 +12,6 @@ parameters:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
     doctrine:
         objectManagerLoader: tests/object-manager.php
+        # Champs obligatoires en base mais nullables en PHP le temps de la saisie d'un formulaire
+        # (la contrainte NotNull du validateur garantit qu'ils sont remplis avant l'enregistrement).
+        allowNullablePropertyForRequiredField: true

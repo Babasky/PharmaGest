@@ -1,0 +1,52 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Produits{% endblock %}
+
+{% block page_actions %}
+    {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+        <a class="btn btn-outline-secondary" href="{{ path('app_import', {type: 'produits'}) }}"><i class="bi bi-file-earmark-arrow-up"></i> Importer</a>
+        <a class="btn btn-success" href="{{ path('app_produit_nouveau') }}"><i class="bi bi-plus-lg"></i> Nouveau produit</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set choix_categorie %}
+        <select name="categorie" class="form-select" style="max-width: 16rem" aria-label="Filtrer par catégorie" onchange="this.form.requestSubmit()">
+            <option value="">Toutes les catégories</option>
+            {% for c in categories %}
+                <option value="{{ c.id }}"{{ categorie == c.id ? ' selected' }}>{{ c.parent ? '— ' }}{{ c.nom }}</option>
+            {% endfor %}
+        </select>
+    {% endset %}
+    {% include 'referentiel/_filtres.html.twig' with {q: q, archives: archives, placeholder: 'Nom, DCI ou code-barres', extra: choix_categorie} %}
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th class="ps-3">Produit</th><th class="d-none d-md-table-cell">Catégorie</th><th>Étagère</th><th class="text-end pe-3">Prix de vente</th></tr>
+                </thead>
+                <tbody>
+                    {% for produit in produits %}
+                        <tr>
+                            <td class="ps-3">
+                                <a class="fw-semibold text-decoration-none" href="{{ path('app_produit_voir', {id: produit.id}) }}">{{ produit.nomCommercial }}</a>
+                                {% if produit.ordonnanceObligatoire %}<span class="badge text-bg-warning ms-1" title="Ordonnance obligatoire">Ord.</span>{% endif %}
+                                {% if produit.remboursableAmo %}<span class="badge text-bg-info ms-1" title="Remboursable AMO">AMO</span>{% endif %}
+                                <div class="small text-body-secondary">{{ [produit.dci, produit.dosage, produit.forme ? produit.forme.nom|lower : null]|filter(v => v)|join(' · ') }}</div>
+                            </td>
+                            <td class="d-none d-md-table-cell small">{{ produit.categorie ? produit.categorie.nomComplet : '—' }}</td>
+                            <td class="text-nowrap">{{ produit.etagere ? produit.etagere.code : '—' }}</td>
+                            <td class="montant pe-3">{{ produit.prixVente|fcfa }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-body-secondary py-4">
+                            {% if q %}Aucun produit ne correspond à « {{ q }} ».{% elseif archives %}Aucun produit archivé.{% else %}Le catalogue est vide. Ajoutez un produit ou importez votre fichier Excel.{% endif %}
+                        </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: produits, route: 'app_produit_index', params: {q: q, categorie: categorie, archives: archives ? 1 : null}} %}
+{% endblock %}

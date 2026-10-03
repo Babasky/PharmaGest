@@ -69,6 +69,7 @@ final class EquipeTest extends AppWebTestCase
             'membre_equipe[email]' => 'trop@test.ml',
             'membre_equipe[role]' => Utilisateur::ROLE_VENDEUR,
         ]);
+        self::assertResponseStatusCodeSame(422, 'Turbo n\'affiche la réponse d\'un formulaire que si c\'est une redirection ou une erreur.');
         self::assertSelectorTextContains('.alert-danger', 'limitée à 3 utilisateurs actifs');
 
         // Désactiver le vendeur libère une place.

@@ -72,7 +72,7 @@ final class PharmacieController extends AbstractController
             }
         }
 
-        return $this->render('admin/pharmacie/nouvelle.html.twig', ['formulaire' => $formulaire]);
+        return $this->render('admin/pharmacie/nouvelle.html.twig', ['formulaire' => $formulaire], new Response(status: $formulaire->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     #[Route('/{id}', name: 'admin_pharmacie_voir', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]

@@ -51,6 +51,10 @@ class Pharmacie
     #[Assert\Length(max: 60)]
     private string $numeroAutorisation = '';
 
+    /** Nom du fichier logo, stocké hors du dossier public (voir App\Stockage\StockageFichiers). */
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $logo = null;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private Offre $offre;
@@ -163,6 +167,18 @@ class Pharmacie
     public function setNumeroAutorisation(string $numeroAutorisation): static
     {
         $this->numeroAutorisation = trim($numeroAutorisation);
+
+        return $this;
+    }
+
+    public function getLogo(): ?string
+    {
+        return $this->logo;
+    }
+
+    public function setLogo(?string $logo): static
+    {
+        $this->logo = $logo;
 
         return $this;
     }

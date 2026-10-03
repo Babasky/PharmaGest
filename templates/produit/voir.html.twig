@@ -1,0 +1,58 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ produit.nomCommercial }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_produit_index') }}"><i class="bi bi-arrow-left"></i> Catalogue</a>
+    {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+        <a class="btn btn-success" href="{{ path('app_produit_modifier', {id: produit.id}) }}"><i class="bi bi-pencil"></i> Modifier</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if not produit.actif %}<div class="alert alert-secondary py-2"><i class="bi bi-archive"></i> Produit archivé : il n'est plus proposé à la vente ni dans les commandes.</div>{% endif %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Identification</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5 fw-normal text-body-secondary">DCI</dt><dd class="col-7">{{ produit.dci ?? '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Forme</dt><dd class="col-7">{{ produit.forme ?? '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Dosage</dt><dd class="col-7">{{ produit.dosage ?? '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Conditionnement</dt><dd class="col-7">{{ produit.conditionnement ?? '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Code-barres</dt><dd class="col-7 font-monospace">{{ produit.codeBarres ?? '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Catégorie</dt><dd class="col-7">{{ produit.categorie ? produit.categorie.nomComplet : '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Étagère</dt><dd class="col-7">{{ produit.etagere ? produit.etagere.code ~ ' (' ~ produit.etagere.zone.libelle|lower ~ ')' : '—' }}</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Fournisseur habituel</dt><dd class="col-7">{{ produit.fournisseurHabituel ?? '—' }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Prix et stock</div>
+                <div class="card-body">
+                    <dl class="row mb-3">
+                        <dt class="col-6 fw-normal text-body-secondary">Prix de vente</dt><dd class="col-6 montant fs-5 fw-semibold">{{ produit.prixVente|fcfa }}</dd>
+                        {% if is_granted('ROLE_ADJOINT') %}
+                            <dt class="col-6 fw-normal text-body-secondary">Prix d'achat de référence</dt><dd class="col-6 montant">{{ produit.prixAchat|fcfa }}</dd>
+                            <dt class="col-6 fw-normal text-body-secondary">Marge brute</dt><dd class="col-6 montant">{{ produit.margeReference|fcfa }}</dd>
+                        {% endif %}
+                        <dt class="col-6 fw-normal text-body-secondary">TVA</dt><dd class="col-6 text-end">{{ produit.tauxTva }} %</dd>
+                        <dt class="col-6 fw-normal text-body-secondary">Seuil d'alerte</dt><dd class="col-6 text-end">{{ produit.seuilAlerte }}</dd>
+                        <dt class="col-6 fw-normal text-body-secondary">Stock maximum</dt><dd class="col-6 text-end">{{ produit.stockMax ?? '—' }}</dd>
+                    </dl>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge text-bg-{{ produit.ordonnanceObligatoire ? 'warning' : 'light border' }}">{{ produit.ordonnanceObligatoire ? 'Ordonnance obligatoire' : 'Sans ordonnance' }}</span>
+                        <span class="badge text-bg-{{ produit.remboursableAmo ? 'info' : 'light border' }}">{{ produit.remboursableAmo ? 'Remboursable AMO' : 'Non remboursable' }}</span>
+                    </div>
+                    <p class="small text-body-secondary mt-3 mb-0"><i class="bi bi-info-circle"></i> Le stock par lot et l'historique des mouvements arrivent avec le module Stock (Lot 3).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+        {% include 'referentiel/_archiver.html.twig' with {entite: produit, route: 'app_produit_archiver'} %}
+    {% endif %}
+{% endblock %}

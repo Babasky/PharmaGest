@@ -12,6 +12,8 @@ parameters:
     app.currency: 'FCFA'
     # Déconnexion automatique après inactivité (secondes), § 6 Sécurité.
     app.session_inactivite: 1800
+    # Fichiers des pharmacies (logos, justificatifs, ordonnances) : hors du dossier public.
+    app.dossier_fichiers: '%kernel.project_dir%/var/fichiers'
     # Coordonnées de l'éditeur : factures d'abonnement et page « compte suspendu ».
     app.editeur:
         nom: 'PharmaGest'
@@ -32,3 +34,7 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+when@test:
+    parameters:
+        app.dossier_fichiers: '%kernel.cache_dir%/fichiers'

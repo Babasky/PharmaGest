@@ -23,7 +23,7 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 | Compte | Rôle | Situation |
 |---|---|---|
 | `admin@pharmagest.ml` | Super admin | Espace plateforme |
-| `a.traore@fleuve.ml` | Propriétaire | Pharmacie du Fleuve, abonnement actif, équipe complète |
+| `a.traore@fleuve.ml` | Propriétaire | Pharmacie du Fleuve, abonnement actif, équipe complète, catalogue de 10 produits |
 | `f.keita@fleuve.ml` / `m.coulibaly@fleuve.ml` | Adjoint / vendeur | Pharmacie du Fleuve |
 | `o.guindo@kanaga.ml` | Propriétaire | Échéance dans 12 jours (bandeau d'alerte) |
 | `k.sangare@djoliba.ml` | Propriétaire | Période d'essai |
@@ -57,6 +57,12 @@ composer cs-fix     # corrige le style
 
 L'intégration continue (GitHub Actions, `.github/workflows/ci.yml`) lance les mêmes contrôles à chaque push.
 
+## Import de données
+
+Produits, fournisseurs et clients s'importent depuis Excel ou CSV (menu de chaque liste › « Importer »).
+Un fichier modèle est téléchargeable sur la page d'import. L'analyse ne modifie rien et liste les erreurs ligne par
+ligne ; la confirmation importe les lignes valides.
+
 ## Architecture multi-tenant
 
 - Toute entité métier implémente `App\Tenant\TenantAwareInterface` (en pratique : `use TenantAwareTrait`).
@@ -66,6 +72,8 @@ L'intégration continue (GitHub Actions, `.github/workflows/ci.yml`) lance les m
 - En seconde ligne : les Voters, et `AbstractAppController::exigerMemePharmacie()` qui renvoie un **404**.
 - Hors requête HTTP (commandes, tâches planifiées), utiliser `TenantContext::forcer($pharmacie)` ou
   `TenantContext::sansFiltre(fn () => …)`.
+- À l'enregistrement, `TenantCoherenceListener` refuse tout lien entre deux pharmacies.
+- Fichiers des pharmacies : `App\Stockage\StockageFichiers` (hors du dossier public, rangés par pharmacie).
 
 ## Conventions
 

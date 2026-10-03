@@ -1,0 +1,90 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Paramètres{% endblock %}
+
+{% block content %}
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        {% for cle, libelle in {fiche: 'Fiche de la pharmacie', regles: 'Règles de gestion', amo: 'Taux AMO'} %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link{{ onglet == cle ? ' active' }}" href="{{ path('app_parametres', {onglet: cle}) }}"{% if onglet == cle %} aria-current="page"{% endif %}>{{ libelle }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% if onglet == 'fiche' %}
+        <div class="card shadow-sm" style="max-width: 46rem">
+            <div class="card-body">
+                {{ form_start(fiche) }}
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    {% if pharmacie.logo %}
+                        <img src="{{ path('app_parametres_logo') }}" alt="Logo de {{ pharmacie.nom }}" class="border rounded bg-white p-1" style="max-height: 4.5rem; max-width: 10rem">
+                    {% else %}
+                        <div class="border rounded d-flex align-items-center justify-content-center text-body-secondary small bg-body" style="height: 4.5rem; width: 7rem">Pas de logo</div>
+                    {% endif %}
+                    <div class="flex-grow-1">{{ form_row(fiche.logo) }}</div>
+                </div>
+                {{ form_widget(fiche) }}
+                <button class="btn btn-success" type="submit">Enregistrer la fiche</button>
+                {{ form_end(fiche) }}
+            </div>
+        </div>
+    {% elseif onglet == 'regles' %}
+        <div class="card shadow-sm" style="max-width: 46rem">
+            <div class="card-body">
+                {{ form_start(regles) }}
+                {{ form_widget(regles) }}
+                <button class="btn btn-success" type="submit">Enregistrer les règles</button>
+                {{ form_end(regles) }}
+            </div>
+        </div>
+    {% else %}
+        <div class="row g-3">
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-body fw-semibold">Taux en vigueur aujourd'hui</div>
+                    <ul class="list-group list-group-flush">
+                        {% for ligne in taux_en_vigueur %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="min-w-0">{{ ligne.organisme.nom }}</span>
+                                <strong class="text-nowrap ms-2">{{ ligne.taux }}&nbsp;%</strong>
+                            </li>
+                        {% else %}
+                            <li class="list-group-item text-body-secondary">Aucun organisme AMO n'est encore configuré par l'éditeur.</li>
+                        {% endfor %}
+                    </ul>
+                    <div class="card-body small text-body-secondary">Sans taux saisi, PharmaGest applique 70 %. Un nouveau taux ne modifie jamais les ventes déjà enregistrées.</div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-body fw-semibold">Nouveau taux</div>
+                    <div class="card-body">
+                        {{ form_start(form_taux) }}
+                        <div class="row g-2">
+                            <div class="col-12 col-md-5">{{ form_row(form_taux.organisme) }}</div>
+                            <div class="col-6 col-md-3">{{ form_row(form_taux.taux) }}</div>
+                            <div class="col-6 col-md-4">{{ form_row(form_taux.dateEffet) }}</div>
+                        </div>
+                        <button class="btn btn-success" type="submit">Ajouter ce taux</button>
+                        {{ form_end(form_taux) }}
+                    </div>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-body fw-semibold">Historique</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light"><tr><th class="ps-3">Organisme</th><th>À partir du</th><th class="text-end pe-3">Taux</th></tr></thead>
+                            <tbody>
+                                {% for taux in historique_taux %}
+                                    <tr><td class="ps-3">{{ taux.organisme.nom }}</td><td>{{ taux.dateEffet|date('d/m/Y') }}</td><td class="text-end pe-3 text-nowrap">{{ taux.taux }}&nbsp;%</td></tr>
+                                {% else %}
+                                    <tr><td colspan="3" class="text-center text-body-secondary py-3">Aucun taux saisi : 70 % s'applique partout.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
