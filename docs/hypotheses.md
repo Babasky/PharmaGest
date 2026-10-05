@@ -9,7 +9,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 |----|-----------|-------------------|
 | H1 | Le taux AMO est paramétrable par organisme (70 % par défaut), et historisé par date d'effet. | Lot 2 (paramètres) et Lot 5 (AMO) |
 | H2 | Sur une vente AMO, la remise ne porte que sur la part assuré. | **Lot 4** : calcul de la vente ; créances au Lot 5 (RG-09) |
-| H3 | La part AMO est une créance ; elle devient une recette au règlement du bordereau. | Lot 5 / Lot 7 (RG-10) |
+| H3 | La part AMO est une créance ; elle devient une recette au règlement du bordereau. | **Lot 5** : créance à la vente, règlements par bordereau ; recette au Lot 7 (RG-10) |
 | H4 | L'abonnement est payé hors plateforme et activé manuellement. | **Lot 1** : le super admin enregistre le paiement |
 | H5 | Le nom « PharmaGest » est un nom de travail. | Nom centralisé dans `app.name` et `app.editeur` (`config/services.yaml`) |
 
@@ -241,3 +241,56 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - **Annulation** (RG-12) par le propriétaire ou l'adjoint, avec motif, **le jour même** et tant que la session de la
   vente est ouverte ; au-delà, il faut établir un avoir (V1). Le stock est réintégré dans les lots d'origine
   (mouvement « Annulation ») et le remboursement est compté comme une sortie de la session de la vente.
+
+## Décisions — Lot 5 (AMO)
+
+### Créances (AM-05)
+
+- Chaque vente AMO encaissée avec une part AMO crée une **créance « en attente »** sur l'organisme, dans la même
+  transaction que la vente. Son montant est la part AMO figée sur la vente (RG-06, RG-07) : rien n'est recalculé.
+- Les ventes AMO encaissées avant ce lot reçoivent leur créance à la migration (les ventes annulées sont exclues).
+- **Annulation** de la vente le jour même : la créance passe « annulée » et sort de l'encours (et d'un bordereau
+  brouillon). Si elle figure déjà sur un bordereau transmis, l'annulation est refusée.
+- Statuts d'une créance : en attente, transmise, payée partiellement, payée, rejetée, annulée. Le statut se déduit
+  du montant réglé et du motif de rejet : une créance réglée en partie puis rejetée garde le montant réglé, seul le
+  reste est perdu.
+
+### Bordereaux (AM-06, AM-07, RG-11)
+
+- Un bordereau regroupe les créances en attente **d'un organisme** pour les **ventes d'une période** (dates de
+  vente). Le brouillon se compose librement : retirer une créance, ajouter celles arrivées depuis, supprimer le
+  brouillon. Une créance n'est jamais sur deux bordereaux.
+- Le numéro `BRD-AAAA-NNNNNN` (RG-02) est attribué à la **transmission**, comme pour les ventes : un brouillon
+  supprimé ne laisse pas de trou. À la transmission, le montant est figé et plus rien ne change (RG-11), y compris
+  la copie des ordonnances.
+- **Exports** : Excel (une ligne par créance, numéros d'assuré en texte, totaux) et **PDF unique** : le relevé avec
+  cadres de signature, puis une page par copie d'ordonnance. Les deux sont disponibles dès le brouillon (mention
+  « BROUILLON » sur le PDF) pour vérification. Le format propre à chaque organisme reste à confirmer (§ 11.2).
+- Le brouillon signale les ordonnances sans copie ; la transmission n'est pas bloquée pour autant.
+
+### Copie de l'ordonnance (AM-01)
+
+- Photo ou scan en **JPEG, PNG ou WebP** (8 Mo au plus), prise à la caisse ou ajoutée ensuite depuis la fiche de
+  la vente. L'image est **recompressée en JPEG, 1600 px au plus** : lisible, légère en 3G, et intégrable telle quelle
+  au PDF. Les scans PDF ne sont pas acceptés pour l'instant (il faudrait fusionner des PDF).
+- Fichiers rangés par pharmacie hors du dossier public, servis par un contrôleur qui vérifie la pharmacie
+  (une autre pharmacie obtient une 404). Le vendeur peut joindre et voir la copie ; le super admin jamais.
+
+### Règlements et rejets (AM-08)
+
+- Un règlement (date, montant reçu, référence) est **affecté créance par créance** ; le total affecté doit être égal
+  au montant reçu. Plusieurs règlements successifs sont possibles sur un même bordereau.
+- Un **motif de rejet** sur une créance solde son reste ; un bouton rejette tout le reste du bordereau.
+- Statut du bordereau : payé si tout est réglé ; rejeté si rien n'est réglé et tout est rejeté ; payé partiellement
+  dès qu'une partie est réglée (R-11 : 9 réglées et 1 rejetée → « payé partiellement »).
+- Le règlement est la source de la **recette AMO** : sa génération (FI-04, RG-10) arrive au Lot 7 avec les autres
+  recettes. Le traitement d'une créance rejetée (refacturation, nouvelle soumission, perte, AM-09) et le rappel des
+  bordereaux impayés (AM-11) restent en V1.
+- Bordereaux et règlements : propriétaire et adjoint seulement (matrice des droits). Transmission, règlement et rejet
+  sont journalisés.
+
+### Suivi (AM-10)
+
+- **Encours** = part AMO ni réglée ni rejetée, par organisme, réparti par **ancienneté depuis la date de la vente**
+  (0-30, 31-60, 61-90, plus de 90 jours).
+- **Taux de rejet** = montant rejeté / montant des créances transmises, par organisme et au total.

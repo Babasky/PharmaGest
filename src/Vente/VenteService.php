@@ -2,7 +2,10 @@
 
 namespace App\Vente;
 
+use App\Amo\AmoException;
+use App\Amo\CopieOrdonnance;
 use App\Entity\Client;
+use App\Entity\CreanceAmo;
 use App\Entity\LigneVente;
 use App\Entity\Ordonnance;
 use App\Entity\Pharmacie;
@@ -15,6 +18,7 @@ use App\Enum\PolitiqueSansOrdonnance;
 use App\Enum\TypeMouvement;
 use App\Enum\TypeRemise;
 use App\Enum\TypeVente;
+use App\Repository\CreanceAmoRepository;
 use App\Repository\VenteRepository;
 use App\Security\CodePin;
 use App\Security\CodePinException;
@@ -27,6 +31,7 @@ use App\Tenant\TenantContext;
 use App\Util\Fcfa;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
  * Caisse (VE-01 à VE-09, RE-01 à RE-04) : panier du vendeur, mise en attente, contrôles, encaissement
@@ -47,6 +52,8 @@ class VenteService
         private readonly AuditLogger $audit,
         private readonly TenantContext $tenantContext,
         private readonly ClockInterface $horloge,
+        private readonly CreanceAmoRepository $creances,
+        private readonly CopieOrdonnance $copies,
     ) {
     }
 
@@ -120,17 +127,22 @@ class VenteService
     }
 
     /**
-     * Type de vente, client et ordonnance (VE-02, AM-01, AM-02).
+     * Type de vente, client et ordonnance avec sa copie éventuelle (VE-02, AM-01, AM-02).
      *
      * @param array{numero?: ?string, date?: ?\DateTimeImmutable, prescripteur?: ?string, structure?: ?string} $ordonnance
      *
      * @throws VenteException
      */
-    public function definirVente(Vente $vente, TypeVente $type, ?Client $client, array $ordonnance = []): void
+    public function definirVente(Vente $vente, TypeVente $type, ?Client $client, array $ordonnance = [], ?UploadedFile $copie = null): void
     {
         $this->exigerModifiable($vente);
         if (null !== $client && !$client->isActif()) {
             throw new VenteException(\sprintf('Le client %s est archivé.', $client->getNom()));
+        }
+        $pharmacie = $this->tenantContext->exigerPharmacie();
+        $ancienne = $vente->getOrdonnance();
+        if (null !== $ancienne && !$type->avecOrdonnance()) {
+            $this->copies->supprimer($pharmacie, $ancienne);
         }
         $vente->setType($type);
         $vente->setClient($client);
@@ -143,6 +155,13 @@ class VenteService
                 ->setStructure($ordonnance['structure'] ?? null);
             if (null !== $fiche->getDate() && $fiche->getDate() > $this->stock->aujourdhui()) {
                 throw new VenteException('La date de l\'ordonnance ne peut pas être dans le futur.');
+            }
+            if (null !== $copie) {
+                try {
+                    $this->copies->enregistrer($pharmacie, $fiche, $copie);
+                } catch (AmoException $e) {
+                    throw new VenteException($e->getMessage(), 0, $e);
+                }
             }
             $vente->setOrdonnance($fiche);
         }
@@ -349,6 +368,10 @@ class VenteService
                 foreach ($paiements as [$mode, $montant, $reference, $remis]) {
                     $vente->ajouterPaiement($mode, $montant, $reference, $remis);
                 }
+                // AM-05 : la part AMO devient une créance « en attente » sur l'organisme.
+                if (TypeVente::Amo === $vente->getType() && $vente->getPartAmo() > 0) {
+                    $this->em->persist(new CreanceAmo($vente));
+                }
                 $this->em->flush();
 
                 if ($controle->remiseHorsPlafond) {
@@ -396,8 +419,13 @@ class VenteService
         if (!($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d')) {
             throw new VenteException('Une vente ne s\'annule que le jour même, avant la clôture de sa session de caisse. Au-delà, il faut établir un avoir.');
         }
+        $creance = $this->creances->pourVente($vente);
+        $bordereau = $creance?->getBordereau();
+        if (null !== $bordereau && $bordereau->estTransmis()) {
+            throw new VenteException(\sprintf('La créance AMO de cette vente figure sur le bordereau transmis %s : la vente ne peut plus être annulée.', $bordereau->getNumero()));
+        }
 
-        $this->stock->transaction(function () use ($vente, $motif): void {
+        $this->stock->transaction(function () use ($vente, $motif, $creance): void {
             $numero = (string) $vente->getNumero();
             foreach ($vente->getLignes() as $ligne) {
                 foreach ($ligne->getLots() as $ligneLot) {
@@ -405,6 +433,7 @@ class VenteService
                 }
             }
             $vente->annuler($this->horloge->now(), $this->tenantContext->getUtilisateur(), mb_substr($motif, 0, 255));
+            $creance?->annuler();
             $this->em->flush();
             $this->audit->journaliser(AuditLogger::VENTE_ANNULEE, $vente->getPharmacie(), $vente, null, [
                 'vente' => $numero,

@@ -31,6 +31,9 @@ class AuditLogger
     public const VENTE_REMISE_HORS_PLAFOND = 'vente.remise_hors_plafond';
     public const VENTE_SANS_ORDONNANCE = 'vente.sans_ordonnance';
     public const CAISSE_ECART = 'caisse.ecart';
+    public const AMO_BORDEREAU_TRANSMIS = 'amo.bordereau_transmis';
+    public const AMO_REGLEMENT = 'amo.reglement';
+    public const AMO_REJET = 'amo.rejet';
 
     public const LIBELLES = [
         self::UTILISATEUR_CREE => 'Utilisateur créé',
@@ -50,6 +53,9 @@ class AuditLogger
         self::VENTE_REMISE_HORS_PLAFOND => 'Remise au-delà du plafond',
         self::VENTE_SANS_ORDONNANCE => 'Vente sans ordonnance autorisée',
         self::CAISSE_ECART => 'Écart de caisse',
+        self::AMO_BORDEREAU_TRANSMIS => 'Bordereau AMO transmis',
+        self::AMO_REGLEMENT => 'Règlement AMO',
+        self::AMO_REJET => 'Rejet AMO',
     ];
 
     public function __construct(

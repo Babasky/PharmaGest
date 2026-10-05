@@ -1,0 +1,46 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Créances AMO{% endblock %}
+
+{% block content %}
+    {% include 'amo/_onglets.html.twig' with {actif: 'creances'} %}
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3">
+        <select name="organisme" class="form-select" style="max-width: 16rem" aria-label="Organisme">
+            <option value="">Tous les organismes</option>
+            {% for o in organismes %}<option value="{{ o.id }}"{{ organisme == o.id ? ' selected' }}>{{ o.nom }}</option>{% endfor %}
+        </select>
+        <select name="statut" class="form-select" style="max-width: 14rem" aria-label="Statut">
+            <option value="">Tous les statuts</option>
+            {% for s in statuts %}<option value="{{ s.value }}"{{ statut == s.value ? ' selected' }}>{{ s.libelle }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+    </form>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="creances">
+                <thead class="table-light">
+                    <tr><th class="ps-3">Vente</th><th>Date</th><th>Assuré</th><th>Organisme</th><th>Bordereau</th><th class="text-end">Part AMO</th><th class="text-end">Réglé</th><th class="pe-3">Statut</th></tr>
+                </thead>
+                <tbody>
+                    {% for creance in creances %}
+                        {% set vente = creance.vente %}
+                        <tr>
+                            <td class="ps-3"><a class="font-monospace text-decoration-none" href="{{ path('app_vente_voir', {id: vente.id}) }}">{{ vente.numero }}</a></td>
+                            <td class="small text-nowrap">{{ creance.dateVente|date('d/m/Y') }}</td>
+                            <td>{{ vente.client ? vente.client.nom }}<div class="small text-body-secondary">{{ vente.numeroAssure }}</div></td>
+                            <td>{{ creance.organisme.code }}</td>
+                            <td>{% if creance.bordereau %}<a class="text-decoration-none" href="{{ path('app_amo_bordereau_voir', {id: creance.bordereau.id}) }}">{{ creance.bordereau.libelle }}</a>{% else %}—{% endif %}</td>
+                            <td class="montant">{{ creance.montant|fcfa }}</td>
+                            <td class="montant">{{ creance.montantRegle > 0 ? creance.montantRegle|fcfa : '—' }}</td>
+                            <td class="pe-3"><span class="badge text-bg-{{ creance.statut.couleur }}{{ creance.statut.value == 'annulee' ? ' border' }}">{{ creance.statut.libelle }}</span>{% if creance.motifRejet %}<div class="small text-danger">{{ creance.motifRejet }}</div>{% endif %}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" class="text-center text-body-secondary py-4">Aucune créance.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: creances, route: 'app_amo_creances', params: {organisme: organisme, statut: statut}} %}
+{% endblock %}

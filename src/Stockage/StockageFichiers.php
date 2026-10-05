@@ -7,7 +7,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
- * Fichiers des pharmacies (logos ; plus tard justificatifs et ordonnances), rangés par pharmacie
+ * Fichiers des pharmacies (logos, copies d'ordonnances ; plus tard justificatifs), rangés par pharmacie
  * hors du dossier public (§ 7.3) et servis uniquement par un contrôleur qui vérifie les droits.
  */
 class StockageFichiers
@@ -25,6 +25,21 @@ class StockageFichiers
     {
         $nom = bin2hex(random_bytes(12)).'.'.($fichier->guessExtension() ?? 'bin');
         $fichier->move($this->dossier($pharmacie, $categorie), $nom);
+
+        return $nom;
+    }
+
+    /**
+     * Enregistre un contenu déjà préparé (ex. image recompressée) sous un nom aléatoire et renvoie ce nom.
+     */
+    public function ecrire(Pharmacie $pharmacie, string $categorie, string $contenu, string $extension): string
+    {
+        $dossier = $this->dossier($pharmacie, $categorie);
+        if (!is_dir($dossier) && !mkdir($dossier, 0775, true) && !is_dir($dossier)) {
+            throw new \RuntimeException('Dossier de stockage inaccessible.');
+        }
+        $nom = bin2hex(random_bytes(12)).'.'.$extension;
+        file_put_contents($dossier.'/'.$nom, $contenu);
 
         return $nom;
     }

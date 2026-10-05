@@ -1,0 +1,6 @@
+{# Onglets du module AMO. Paramètre : actif (suivi, creances, bordereaux). #}
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link{{ actif == 'suivi' ? ' active' }}" href="{{ path('app_amo_index') }}">Suivi</a></li>
+    <li class="nav-item"><a class="nav-link{{ actif == 'creances' ? ' active' }}" href="{{ path('app_amo_creances') }}">Créances</a></li>
+    <li class="nav-item"><a class="nav-link{{ actif == 'bordereaux' ? ' active' }}" href="{{ path('app_amo_bordereaux') }}">Bordereaux</a></li>
+</ul>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bordereau AMO {{ bordereau.libelle }}</title>
+    <style>
+        @page { margin: 14mm 12mm; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 8.5pt; color: #1f2a24; }
+        h1 { font-size: 14pt; margin: 0 0 2mm; color: #198754; }
+        .entete td { vertical-align: top; }
+        .petit { font-size: 7.5pt; color: #555; }
+        table.lignes { width: 100%; border-collapse: collapse; margin-top: 5mm; }
+        table.lignes th { background: #e9f3ee; text-align: left; padding: 1.5mm; border-bottom: 1px solid #198754; font-size: 7.5pt; }
+        table.lignes td { padding: 1.5mm; border-bottom: 1px solid #ddd; vertical-align: top; }
+        table.lignes tr.total td { font-weight: bold; border-top: 1px solid #198754; border-bottom: none; font-size: 9pt; }
+        .droite { text-align: right; }
+        .nowrap { white-space: nowrap; }
+        .brouillon { color: #b02a37; font-weight: bold; font-size: 11pt; }
+        .signature { margin-top: 12mm; width: 100%; }
+        .signature td { width: 50%; vertical-align: top; height: 25mm; }
+        .annexe { page-break-before: always; text-align: center; }
+        .annexe img { max-width: 100%; max-height: 240mm; }
+    </style>
+</head>
+<body>
+    <table class="entete" width="100%">
+        <tr>
+            <td width="55%">
+                <h1>{{ pharmacie.nom }}</h1>
+                <div class="petit">
+                    {{ [pharmacie.adresse, pharmacie.ville]|filter(v => v)|join(', ') }}<br>
+                    {% if pharmacie.telephone %}Tél. {{ pharmacie.telephone|telephone }}{% endif %}{% if pharmacie.email %} · {{ pharmacie.email }}{% endif %}<br>
+                    {% if pharmacie.numeroAutorisation %}Autorisation n° {{ pharmacie.numeroAutorisation }}{% endif %}
+                </div>
+            </td>
+            <td width="45%" class="droite">
+                <div style="font-size: 13pt; font-weight: bold;">BORDEREAU AMO</div>
+                {% if bordereau.numero %}
+                    <div>N° <strong>{{ bordereau.numero }}</strong></div>
+                    <div>Transmis le {{ bordereau.transmisLe|date('d/m/Y') }}</div>
+                {% else %}
+                    <div class="brouillon">BROUILLON</div>
+                {% endif %}
+                <div>Organisme : <strong>{{ bordereau.organisme.nom }}</strong> ({{ bordereau.organisme.code }})</div>
+                <div>Ventes du {{ bordereau.debut|date('d/m/Y') }} au {{ bordereau.fin|date('d/m/Y') }}</div>
+            </td>
+        </tr>
+    </table>
+
+    {% set transmis = bordereau.numero is not null %}
+    <table class="lignes">
+        <thead>
+            <tr>
+                <th>N°</th><th>Date</th><th>Vente</th><th>Assuré</th><th>Ordonnance</th>
+                <th class="droite">Total</th><th class="droite">Base remb.</th><th class="droite">Part AMO</th>
+                {% if transmis %}<th class="droite">Réglé</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for creance in bordereau.creances %}
+                {% set vente = creance.vente %}
+                {% set ord = vente.ordonnance %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="nowrap">{{ creance.dateVente|date('d/m/Y') }}</td>
+                    <td class="nowrap">{{ vente.numero }}</td>
+                    <td>{{ vente.client ? vente.client.nom }}<br><span class="petit">n° {{ vente.numeroAssure }}</span></td>
+                    <td>{% if ord %}{{ ord.numero ? 'n° ' ~ ord.numero ~ ', ' }}{{ ord.date ? ord.date|date('d/m/Y') }}<br><span class="petit">{{ ord.prescripteur }}{{ ord.structure ? ' · ' ~ ord.structure }}</span>{% endif %}</td>
+                    <td class="droite nowrap">{{ vente.totalBrut|fcfa(false) }}</td>
+                    <td class="droite nowrap">{{ vente.baseAmo|fcfa(false) }}<br><span class="petit">{{ vente.tauxAmo }} %</span></td>
+                    <td class="droite nowrap">{{ creance.montant|fcfa(false) }}</td>
+                    {% if transmis %}<td class="droite nowrap">{{ creance.montantRegle|fcfa(false) }}{% if creance.statut.value == 'rejetee' %}<br><span class="petit">rejet : {{ creance.motifRejet }}</span>{% endif %}</td>{% endif %}
+                </tr>
+            {% endfor %}
+            <tr class="total">
+                <td colspan="7">Total : {{ bordereau.creances|length }} ordonnance(s)</td>
+                <td class="droite nowrap">{{ bordereau.montant|fcfa }}</td>
+                {% if transmis %}<td class="droite nowrap">{{ bordereau.montantRegle|fcfa }}</td>{% endif %}
+            </tr>
+        </tbody>
+    </table>
+
+    {% if sans_copie is not empty %}
+        <p class="petit" style="margin-top: 4mm;">Sans copie d'ordonnance jointe : {{ sans_copie|join(', ') }}.</p>
+    {% endif %}
+
+    <table class="signature">
+        <tr>
+            <td>Cachet et signature de la pharmacie</td>
+            <td>Visa de l'organisme</td>
+        </tr>
+    </table>
+
+    {% for annexe in annexes %}
+        <div class="annexe">
+            <p style="text-align: left;"><strong>Annexe {{ annexe.numero }}</strong> · vente {{ annexe.creance.vente.numero }} du {{ annexe.creance.dateVente|date('d/m/Y') }} · {{ annexe.creance.vente.client ? annexe.creance.vente.client.nom }} (n° {{ annexe.creance.vente.numeroAssure }})</p>
+            <img src="{{ annexe.image }}" alt="Ordonnance">
+        </div>
+    {% endfor %}
+</body>
+</html>

@@ -81,8 +81,37 @@
                         <div><span class="text-body-secondary">Ordonnance :</span> {{ vente.ordonnance.numero ? 'n° ' ~ vente.ordonnance.numero ~ ', ' }}du {{ vente.ordonnance.date|date('d/m/Y') }}, {{ vente.ordonnance.prescripteur }}{{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}</div>
                     {% endif %}
                     {% if vente.autorisePar %}<div><span class="text-body-secondary">Autorisée par :</span> {{ vente.autorisePar.nom }}</div>{% endif %}
+                    {% if creance %}
+                        <div id="creance-amo"><span class="text-body-secondary">Créance AMO :</span> {{ creance.montant|fcfa }}
+                            <span class="badge text-bg-{{ creance.statut.couleur }}{{ creance.statut.value == 'annulee' ? ' border' }}">{{ creance.statut.libelle }}</span>
+                            {% if creance.bordereau %}
+                                · {% if is_granted('ROLE_ADJOINT') %}<a href="{{ path('app_amo_bordereau_voir', {id: creance.bordereau.id}) }}">{{ creance.bordereau.libelle }}</a>{% else %}{{ creance.bordereau.libelle }}{% endif %}
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
+            {% if vente.ordonnance %}
+                <div class="card shadow-sm mb-3" id="copie-ordonnance">
+                    <div class="card-body small">
+                        <div class="fw-semibold mb-2">Copie de l'ordonnance</div>
+                        {% if vente.ordonnance.copie %}
+                            <a href="{{ path('app_vente_ordonnance', {id: vente.id}) }}" target="_blank"><img src="{{ path('app_vente_ordonnance', {id: vente.id}) }}" alt="Ordonnance de la vente {{ vente.numero }}" class="img-fluid rounded border mb-2" style="max-height: 14rem"></a>
+                        {% else %}
+                            <p class="text-body-secondary mb-2">Aucune copie{{ vente.type.value == 'amo' ? ' : elle est attendue en annexe du bordereau AMO' }}.</p>
+                        {% endif %}
+                        {% if copie_modifiable and ecriture_autorisee() %}
+                            <form method="post" action="{{ path('app_vente_ordonnance_copie', {id: vente.id}) }}" enctype="multipart/form-data">
+                                <input type="hidden" name="_token" value="{{ csrf_token('copie-ordonnance-' ~ vente.id) }}">
+                                <div class="input-group input-group-sm">
+                                    <input type="file" name="copie" class="form-control" accept="image/jpeg,image/png,image/webp" capture="environment" required aria-label="Photo de l'ordonnance">
+                                    <button class="btn btn-outline-success" type="submit">{{ vente.ordonnance.copie ? 'Remplacer' : 'Joindre' }}</button>
+                                </div>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
             {% if is_granted('ROLE_ADJOINT') and vente.statut.value == 'validee' and ecriture_autorisee() %}
                 <form method="post" action="{{ path('app_vente_annuler', {id: vente.id}) }}" class="card shadow-sm border-danger" id="annulation">
                     <input type="hidden" name="_token" value="{{ csrf_token('annuler-vente-' ~ vente.id) }}">
