@@ -34,6 +34,7 @@ final class Navigation
             'titre' => 'Stock',
             'elements' => [
                 ['libelle' => 'Produits', 'icone' => 'capsule', 'route' => 'app_produit_index', 'role' => 'ROLE_VENDEUR'],
+                ['libelle' => 'État du stock', 'icone' => 'box-seam', 'route' => 'app_stock_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Commandes', 'icone' => 'truck', 'route' => 'app_commande_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Fournisseurs', 'icone' => 'building', 'route' => 'app_fournisseur_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Catégories', 'icone' => 'diagram-3', 'route' => 'app_categorie_index', 'role' => 'ROLE_ADJOINT'],

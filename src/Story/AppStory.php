@@ -7,11 +7,13 @@ use App\Entity\Utilisateur;
 use App\Enum\MoyenPaiement;
 use App\Enum\ZoneEtagere;
 use App\Service\AbonnementService;
+use App\Stock\StockService;
 use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\CategorieFactory;
 use App\Tests\Factory\ClientFactory;
 use App\Tests\Factory\EtagereFactory;
 use App\Tests\Factory\FournisseurFactory;
+use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\PharmacieFactory;
 use App\Tests\Factory\ProduitFactory;
 use App\Tests\Factory\UtilisateurFactory;
@@ -27,8 +29,10 @@ use Zenstruck\Foundry\Story;
 #[AsFixture(name: 'main')]
 final class AppStory extends Story
 {
-    public function __construct(private readonly AbonnementService $abonnements)
-    {
+    public function __construct(
+        private readonly AbonnementService $abonnements,
+        private readonly StockService $stock,
+    ) {
     }
 
     public function build(): void
@@ -111,14 +115,30 @@ final class AppStory extends Story
             ['Insuline Actrapid', 'Insuline humaine', '100 UI/ml', 'Solution injectable', 'Flacon de 10 ml', '3400930000097', 'Gastro-entérologie', 'F1', $laborex, 7800, 9500, true, true],
             ['Crème solaire SPF 50', null, '50 ml', 'Crème', 'Tube', '3400930000103', 'Parapharmacie', 'R1', $laborex, 4200, 5500, false, false],
         ];
+        $catalogue = [];
         foreach ($produits as [$nom, $dci, $dosage, $nomForme, $conditionnement, $codeBarres, $categorie, $etagere, $fournisseur, $achat, $vente, $ordonnance, $amo]) {
-            ProduitFactory::createOne([
+            $catalogue[$nom] = ProduitFactory::createOne([
                 'pharmacie' => $pharmacie, 'nomCommercial' => $nom, 'dci' => $dci, 'dosage' => $dosage, 'forme' => $forme($nomForme),
                 'conditionnement' => $conditionnement, 'codeBarres' => $codeBarres, 'categorie' => $categories[$categorie], 'etagere' => $etageres[$etagere],
                 'fournisseurHabituel' => $fournisseur, 'prixAchat' => $achat, 'prixVente' => $vente, 'seuilAlerte' => 10, 'stockMax' => 60,
                 'ordonnanceObligatoire' => $ordonnance, 'remboursableAmo' => $amo, 'tauxTva' => 'Parapharmacie' === $categorie ? 18 : 0,
             ]);
         }
+
+        // Stock (Lot 3) : de quoi voir chaque alerte. Augmentin reste en rupture.
+        foreach ([
+            ['Doliprane', 'DP24A', '+60 days', 30], ['Doliprane', 'DP24B', '+20 months', 20],
+            ['Efferalgan', 'EF311', '+14 months', 8], ['Ibuprofène Biogaran', 'IB772', '+2 years', 40],
+            ['Amoxicilline', 'AX905', '+11 months', 25], ['Coartem', 'CO118', '+18 months', 35],
+            ['Oméprazole', 'OM450', '+9 months', 30], ['Insuline Actrapid', 'IN027', '+45 days', 12],
+            ['Crème solaire SPF 50', 'CS2026', '+2 years', 15],
+        ] as [$nom, $numero, $peremption, $quantite]) {
+            $produit = $catalogue[$nom];
+            $this->stock->entrer($produit, $numero, new \DateTimeImmutable('today '.$peremption), $quantite, (int) $produit->getPrixAchat(), $produit->getFournisseurHabituel(), motif: 'Stock initial');
+        }
+        // Lot périmé à détruire, et produit dormant (reçu il y a 4 mois, jamais vendu).
+        LotFactory::createOne(['produit' => $catalogue['Amoxicilline'], 'numero' => 'AX601', 'datePeremption' => new \DateTimeImmutable('today -15 days'), 'quantiteInitiale' => 6, 'prixAchat' => 1750, 'fournisseur' => $ppm]);
+        LotFactory::createOne(['produit' => $catalogue['Smecta'], 'numero' => 'SM118', 'datePeremption' => new \DateTimeImmutable('today +1 year'), 'quantiteInitiale' => 20, 'prixAchat' => 2300, 'dateReception' => new \DateTimeImmutable('today -4 months'), 'fournisseur' => $laborex]);
 
         $inps = \Zenstruck\Foundry\Persistence\repository(\App\Entity\OrganismeAmo::class)->findOneBy(['code' => 'INPS']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Mariam Diallo', 'telephone' => '+22376554433', 'privilegie' => true, 'organismeAmo' => $inps, 'numeroAssure' => 'INPS-0045871']);

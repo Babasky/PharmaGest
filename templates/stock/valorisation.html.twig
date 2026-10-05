@@ -1,0 +1,48 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Valorisation du stock{% endblock %}
+
+{% block content %}
+    {% include 'stock/_onglets.html.twig' with {actif: 'valorisation'} %}
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="small text-body-secondary">Valeur du stock vendable</div>
+                <div class="fs-4 fw-semibold text-success" id="valeur-stock">{{ total|fcfa }}</div>
+                <div class="small text-body-secondary">Au prix d'achat réel de chaque lot (ST-07).</div>
+            </div></div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="small text-body-secondary">Lots périmés encore en stock</div>
+                <div class="fs-4 fw-semibold {{ total_perime > 0 ? 'text-danger' }}">{{ total_perime|fcfa }}</div>
+                <div class="small text-body-secondary">Perte à constater lors de leur destruction.</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-body fw-semibold">Par catégorie</div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light"><tr><th class="ps-3">Catégorie</th><th class="text-end">Unités</th><th class="text-end">Valeur</th><th class="text-end pe-3">Périmés</th></tr></thead>
+                <tbody>
+                    {% for ligne in lignes %}
+                        <tr>
+                            <td class="ps-3">{{ ligne.categorie ?? 'Sans catégorie' }}</td>
+                            <td class="text-end">{{ ligne.quantite|number_format }}</td>
+                            <td class="montant">{{ ligne.disponible|fcfa }}</td>
+                            <td class="montant pe-3">{{ ligne.perime > 0 ? ligne.perime|fcfa : '—' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-body-secondary py-4">Aucun lot en stock.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if lignes is not empty %}
+                    <tfoot class="fw-semibold"><tr><td class="ps-3">Total</td><td></td><td class="montant">{{ total|fcfa }}</td><td class="montant pe-3">{{ total_perime|fcfa }}</td></tr></tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+{% endblock %}

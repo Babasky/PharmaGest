@@ -5,6 +5,7 @@
 {% block page_actions %}
     <a class="btn btn-outline-secondary" href="{{ path('app_produit_index') }}"><i class="bi bi-arrow-left"></i> Catalogue</a>
     {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+        {% if produit.actif %}<a class="btn btn-outline-success" href="{{ path('app_stock_entree', {id: produit.id}) }}"><i class="bi bi-box-arrow-in-down"></i> Entrée de stock</a>{% endif %}
         <a class="btn btn-success" href="{{ path('app_produit_modifier', {id: produit.id}) }}"><i class="bi bi-pencil"></i> Modifier</a>
     {% endif %}
 {% endblock %}
@@ -40,6 +41,14 @@
                             <dt class="col-6 fw-normal text-body-secondary">Marge brute</dt><dd class="col-6 montant">{{ produit.margeReference|fcfa }}</dd>
                         {% endif %}
                         <dt class="col-6 fw-normal text-body-secondary">TVA</dt><dd class="col-6 text-end">{{ produit.tauxTva }} %</dd>
+                        <dt class="col-6 fw-normal text-body-secondary">Stock disponible</dt>
+                        <dd class="col-6 text-end fs-5 fw-semibold" id="stock-disponible">
+                            {{ synthese.stock|number_format }}
+                            {% if synthese.stock == 0 %}<span class="badge text-bg-danger fs-6 align-middle">Rupture</span>{% elseif synthese.stock <= produit.seuilAlerte %}<span class="badge text-bg-warning fs-6 align-middle">Sous le seuil</span>{% endif %}
+                        </dd>
+                        {% if is_granted('ROLE_ADJOINT') %}
+                            <dt class="col-6 fw-normal text-body-secondary">Valeur du stock</dt><dd class="col-6 montant">{{ synthese.valeur|fcfa }}</dd>
+                        {% endif %}
                         <dt class="col-6 fw-normal text-body-secondary">Seuil d'alerte</dt><dd class="col-6 text-end">{{ produit.seuilAlerte }}</dd>
                         <dt class="col-6 fw-normal text-body-secondary">Stock maximum</dt><dd class="col-6 text-end">{{ produit.stockMax ?? '—' }}</dd>
                     </dl>
@@ -47,11 +56,94 @@
                         <span class="badge text-bg-{{ produit.ordonnanceObligatoire ? 'warning' : 'light border' }}">{{ produit.ordonnanceObligatoire ? 'Ordonnance obligatoire' : 'Sans ordonnance' }}</span>
                         <span class="badge text-bg-{{ produit.remboursableAmo ? 'info' : 'light border' }}">{{ produit.remboursableAmo ? 'Remboursable AMO' : 'Non remboursable' }}</span>
                     </div>
-                    <p class="small text-body-secondary mt-3 mb-0"><i class="bi bi-info-circle"></i> Le stock par lot et l'historique des mouvements arrivent avec le module Stock (Lot 3).</p>
                 </div>
             </div>
         </div>
     </div>
+
+    {% set gerer_stock = is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+    <div class="card shadow-sm mt-3">
+        <div class="card-header bg-body fw-semibold">Stock par lot</div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="lots">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Lot</th><th>Péremption</th><th class="text-end">Quantité</th>
+                        {% if is_granted('ROLE_ADJOINT') %}<th class="text-end">Prix d'achat</th><th class="d-none d-md-table-cell">Fournisseur</th>{% endif %}
+                        <th class="d-none d-md-table-cell">Entré le</th>
+                        {% if gerer_stock %}<th class="pe-3 text-end"><span class="visually-hidden">Actions</span></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lot in lots %}
+                        {% set perime = lot.estPerimeLe(aujourdhui) %}
+                        <tr class="{{ perime ? 'table-danger' }}">
+                            <td class="ps-3 font-monospace">{{ lot.numero }}</td>
+                            <td class="text-nowrap">{{ lot.datePeremption|date('d/m/Y') }}{% if perime %} <span class="badge text-bg-danger">Périmé</span>{% endif %}</td>
+                            <td class="text-end fw-semibold">{{ lot.quantiteRestante|number_format }}</td>
+                            {% if is_granted('ROLE_ADJOINT') %}
+                                <td class="montant">{{ lot.prixAchat|fcfa }}</td>
+                                <td class="d-none d-md-table-cell small">{{ lot.fournisseur ?? '—' }}</td>
+                            {% endif %}
+                            <td class="d-none d-md-table-cell small">{{ lot.dateReception|date('d/m/Y') }}</td>
+                            {% if gerer_stock %}
+                                <td class="pe-3 text-end text-nowrap">
+                                    <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_stock_ajuster', {id: lot.id}) }}">Ajuster</a>
+                                    <a class="btn btn-sm {{ perime ? 'btn-danger' : 'btn-outline-danger' }}" href="{{ path('app_stock_detruire', {id: lot.id}) }}">Détruire</a>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="7" class="text-center text-body-secondary py-4">Aucun lot en stock.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body small text-body-secondary py-2">Les lots sortent à la vente du premier au dernier périmé (FEFO). Un lot périmé ne peut plus être vendu.</div>
+    </div>
+
+    <div class="row g-3 mt-0">
+        <div class="col-12 col-xl-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Ventes des 12 derniers mois (unités)</div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas {{ stimulus_controller('chart', {config: {
+                            type: 'bar',
+                            data: {labels: ventes_mois|keys, datasets: [{label: 'Unités vendues', data: ventes_quantites, backgroundColor: '#198754'}]},
+                        }}) }} aria-label="Graphique des ventes mensuelles"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-body fw-semibold">Historique des mouvements</div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0" id="mouvements">
+                        <thead class="table-light"><tr><th class="ps-3">Date</th><th>Mouvement</th><th>Lot</th><th class="text-end">Qté</th><th class="text-end">Reste</th><th class="pe-3 d-none d-md-table-cell">Par</th></tr></thead>
+                        <tbody>
+                            {% for m in mouvements %}
+                                <tr>
+                                    <td class="ps-3 text-nowrap small">{{ m.date|date('d/m/Y H:i') }}</td>
+                                    <td>{{ m.type.libelle }}{% if m.document %} <span class="small text-body-secondary">{{ m.document }}</span>{% endif %}
+                                        {% if m.motif %}<div class="small text-body-secondary">{{ m.motif }}</div>{% endif %}</td>
+                                    <td class="font-monospace small">{{ m.lot.numero }}</td>
+                                    <td class="text-end fw-semibold {{ m.quantite < 0 ? 'text-danger' : 'text-success' }}">{{ m.quantite > 0 ? '+' }}{{ m.quantite }}</td>
+                                    <td class="text-end">{{ m.quantiteApres }}</td>
+                                    <td class="pe-3 d-none d-md-table-cell small">{{ m.utilisateur ? m.utilisateur.nom : '—' }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucun mouvement.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-3 pb-2">{% include 'layout/_pagination.html.twig' with {page: mouvements, route: 'app_produit_voir', params: {id: produit.id}} %}</div>
+            </div>
+        </div>
+    </div>
+
     {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
         {% include 'referentiel/_archiver.html.twig' with {entite: produit, route: 'app_produit_archiver'} %}
     {% endif %}

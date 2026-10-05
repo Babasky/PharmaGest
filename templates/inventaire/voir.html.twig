@@ -1,0 +1,66 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Inventaire {{ inventaire.numero }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_inventaire_index') }}"><i class="bi bi-arrow-left"></i> Inventaires</a>
+{% endblock %}
+
+{% block content %}
+    {% set modifiable = inventaire.estEnCours and ecriture_autorisee() %}
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+        <span class="badge fs-6 text-bg-{{ inventaire.statut.couleur }}">{{ inventaire.statut.libelle }}</span>
+        <span>{{ inventaire.libellePerimetre }}</span>
+        <span class="small text-body-secondary">Ouvert le {{ inventaire.ouvertLe|date('d/m/Y H:i') }}{{ inventaire.ouvertPar ? ' par ' ~ inventaire.ouvertPar.nom }}</span>
+        {% if inventaire.clotureLe %}<span class="small text-body-secondary">{{ inventaire.statut.libelle }} le {{ inventaire.clotureLe|date('d/m/Y H:i') }}{{ inventaire.cloturePar ? ' par ' ~ inventaire.cloturePar.nom }}</span>{% endif %}
+        <span class="ms-md-auto small">{{ inventaire.nombreComptees }} / {{ inventaire.lignes|length }} lots comptés · {{ inventaire.nombreEcarts }} écart(s) · <span class="montant {{ inventaire.valeurEcarts < 0 ? 'text-danger' }}">{{ inventaire.valeurEcarts|fcfa }}</span></span>
+    </div>
+
+    <form method="post" action="{{ path('app_inventaire_comptage', {id: inventaire.id}) }}" id="comptage">
+        <input type="hidden" name="_token" value="{{ csrf_token('inventaire-' ~ inventaire.id) }}">
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th class="ps-3">Étagère</th><th>Produit</th><th>Lot</th><th>Péremption</th><th class="text-end">Théorique</th><th class="text-end" style="width: 9rem">Compté</th><th class="text-end pe-3">Écart</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in inventaire.lignes %}
+                            {% set lot = ligne.lot %}
+                            <tr class="{{ ligne.ecart is not null and ligne.ecart != 0 ? 'table-warning' }}">
+                                <td class="ps-3 small">{{ lot.produit.etagere ? lot.produit.etagere.code : '—' }}</td>
+                                <td>{{ lot.produit.nomCommercial }}<div class="small text-body-secondary">{{ lot.produit.dosage }}</div></td>
+                                <td class="font-monospace small">{{ lot.numero }}</td>
+                                <td class="small text-nowrap {{ lot.estPerimeLe(aujourdhui) ? 'text-danger' }}">{{ lot.datePeremption|date('d/m/Y') }}</td>
+                                <td class="text-end">{{ ligne.quantiteTheorique }}</td>
+                                <td class="text-end">
+                                    {% if modifiable %}
+                                        <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm text-end" name="comptage[{{ ligne.id }}]" value="{{ ligne.quantiteComptee }}" aria-label="Quantité comptée, lot {{ lot.numero }}">
+                                    {% else %}
+                                        {{ ligne.quantiteComptee ?? '—' }}
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-3 fw-semibold {{ (ligne.ecart ?? 0) < 0 ? 'text-danger' : ((ligne.ecart ?? 0) > 0 ? 'text-success') }}">
+                                    {{ ligne.ecart is null ? '—' : (ligne.ecart > 0 ? '+' ~ ligne.ecart : ligne.ecart) }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if modifiable %}
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button class="btn btn-outline-success" type="submit">Enregistrer le comptage</button>
+                <button class="btn btn-success" type="submit" name="valider" value="1" data-turbo-confirm="Valider l'inventaire ? Les écarts seront appliqués au stock.">Valider et appliquer les écarts</button>
+            </div>
+            <p class="small text-body-secondary mt-2">Saisissez 0 pour un lot introuvable. Les écarts sont appliqués à la quantité actuelle de chaque lot : les ventes faites pendant le comptage restent prises en compte.</p>
+        {% endif %}
+    </form>
+    {% if modifiable %}
+        <form method="post" action="{{ path('app_inventaire_annuler', {id: inventaire.id}) }}" class="mt-2">
+            <input type="hidden" name="_token" value="{{ csrf_token('inventaire-' ~ inventaire.id) }}">
+            <button class="btn btn-sm btn-outline-danger" type="submit">Annuler l'inventaire</button>
+        </form>
+    {% endif %}
+{% endblock %}

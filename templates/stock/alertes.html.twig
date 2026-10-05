@@ -1,0 +1,66 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Alertes de stock{% endblock %}
+
+{% block content %}
+    {% include 'stock/_onglets.html.twig' with {actif: 'alertes'} %}
+
+    <ul class="nav nav-pills flex-wrap gap-1 mb-3">
+        {% for cle, libelle in constant('App\\Stock\\AlertesStock::LIBELLES') %}
+            <li class="nav-item">
+                <a class="nav-link{{ type == cle ? ' active' }}" href="{{ path('app_stock_alertes', {type: cle}) }}">
+                    {{ libelle }} <span class="badge {{ type == cle ? 'text-bg-light' : (nombres[cle] > 0 ? 'text-bg-danger' : 'text-bg-secondary') }}">{{ nombres[cle] }}</span>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <p class="small text-body-secondary">
+        {% if type == 'seuil' %}Produits actifs dont le stock disponible est au seuil d'alerte ou en dessous (un stock nul est toujours signalé).
+        {% elseif type == 'peremption' %}Lots qui périment dans les {{ delai }} prochains jours (délai réglé dans les paramètres). À vendre en priorité ou à retourner au fournisseur.
+        {% elseif type == 'perimes' %}Lots dont la date de péremption est atteinte : ils ne peuvent plus être vendus et doivent sortir par destruction ou retour fournisseur.
+        {% else %}Produits en stock depuis plus de {{ jours_dormant }} jours sans aucune vente sur cette période.{% endif %}
+    </p>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                {% if type in ['peremption', 'perimes'] %}
+                    <thead class="table-light"><tr><th class="ps-3">Produit</th><th>Lot</th><th>Péremption</th><th class="text-end">Quantité</th>{% if is_granted('ROLE_ADJOINT') %}<th class="text-end pe-3">Valeur</th>{% endif %}</tr></thead>
+                    <tbody>
+                        {% for lot in elements %}
+                            <tr>
+                                <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_produit_voir', {id: lot.produit.id}) }}">{{ lot.produit.nomCommercial }}</a></td>
+                                <td class="font-monospace">{{ lot.numero }}</td>
+                                <td class="text-nowrap {{ type == 'perimes' ? 'text-danger fw-semibold' }}">
+                                    {{ lot.datePeremption|date('d/m/Y') }}
+                                    {% if type == 'peremption' %}<span class="small text-body-secondary">(dans {{ ((lot.datePeremption|date('U') - aujourdhui|date('U')) / 86400)|round }} j)</span>{% endif %}
+                                </td>
+                                <td class="text-end">{{ lot.quantiteRestante|number_format }}</td>
+                                {% if is_granted('ROLE_ADJOINT') %}<td class="montant pe-3">{{ lot.valeur|fcfa }}</td>{% endif %}
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5" class="text-center text-body-secondary py-4">Aucune alerte.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                {% else %}
+                    <thead class="table-light"><tr><th class="ps-3">Produit</th><th class="text-end">Stock</th><th class="text-end">Seuil</th><th class="d-none d-md-table-cell pe-3">Fournisseur habituel</th></tr></thead>
+                    <tbody>
+                        {% for produit in elements %}
+                            <tr>
+                                <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_produit_voir', {id: produit.id}) }}">{{ produit.nomCommercial }}</a>
+                                    <div class="small text-body-secondary">{{ [produit.dci, produit.dosage]|filter(v => v)|join(' · ') }}</div></td>
+                                <td class="text-end fw-semibold">{{ synthese[produit.id].stock|number_format }}</td>
+                                <td class="text-end text-body-secondary">{{ produit.seuilAlerte }}</td>
+                                <td class="d-none d-md-table-cell pe-3">{{ produit.fournisseurHabituel ?? '—' }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="4" class="text-center text-body-secondary py-4">Aucune alerte.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: elements, route: 'app_stock_alertes', params: {type: type}} %}
+{% endblock %}

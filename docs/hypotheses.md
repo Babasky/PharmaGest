@@ -128,3 +128,57 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   « 1500,00 » ; « oui/non », « o/n », « 1/0 », « x » ; CSV à virgule ou point-virgule, en UTF-8 ou Windows-1252 (export
   Excel français). Limites : 2 Mo et 5 000 lignes par fichier.
 - Réservé au **propriétaire et à l'adjoint** (y compris l'import de clients, qui est une opération de masse).
+
+## Décisions — Lot 3 (stock)
+
+### Lots et mouvements
+
+- **Le stock n'est jamais saisi directement** : il est la somme des quantités restantes des lots non périmés (RG-03).
+  Toute variation d'un lot passe par `App\Stock\StockService`, qui écrit un `MouvementStock` typé (ST-04) avec la
+  quantité restante après le mouvement, l'utilisateur et le document d'origine (n° d'inventaire, de vente…).
+  Les mouvements ne se modifient pas.
+- **Périmé** = date de péremption **atteinte** : un lot qui périme aujourd'hui n'est déjà plus vendable (RG-05).
+  Il reste visible (fiche produit, alertes, valorisation à part) jusqu'à sa destruction.
+- **Entrée de stock manuelle** (type « Entrée de stock ») : pour charger le stock initial d'une officine et les
+  livraisons sans commande, en attendant la réception des commandes (Lot 6). Elle crée un lot, est réservée au
+  propriétaire et à l'adjoint, et est tracée au journal d'audit. Un lot déjà périmé ne peut pas entrer.
+- **Deux livraisons d'un même n° de lot** donnent deux lots distincts (chacun avec son prix d'achat et sa date
+  d'entrée) ; aucun contrôle d'unicité du numéro.
+- **Sortie FEFO** (`StockService::prelever()`, RG-04) : prête pour la caisse (Lot 4). Elle verrouille les lots
+  (SELECT … FOR UPDATE), refuse toute sortie supérieure au stock disponible et renvoie, pour chaque lot consommé,
+  la quantité et le prix d'achat (marge RG-17). Si seul un lot périmé reste, le message le dit (R-03).
+- **Ajustement** : on saisit la quantité réelle du lot, avec un motif obligatoire ; l'écart devient un mouvement
+  « Ajustement » et une entrée du journal d'audit (AU-01).
+- **Destruction** : possible sur tout lot (périmé ou abîmé), motif obligatoire, tracée. Le procès-verbal PDF (ST-10)
+  et le retour fournisseur (ST-09) sont prévus en V1.
+
+### Alertes (ST-05)
+
+- **Rupture ou sous le seuil** : produit actif dont le stock disponible est **inférieur ou égal** au seuil d'alerte.
+  Avec un seuil à 0 (valeur par défaut), seul un stock nul est signalé.
+- **Péremption proche** : lot en stock qui périme dans le délai réglé dans les paramètres (90 jours par défaut).
+- **Produit dormant** : produit actif ayant un lot en stock reçu depuis plus de 90 jours, et aucune vente sur les
+  90 derniers jours. Un produit reçu récemment n'est donc jamais « dormant ».
+- Les alertes sont calculées à l'affichage (page Stock › Alertes et tableau de bord). Le centre de notifications
+  (NO-01) arrive au Lot 8.
+
+### Inventaire (ST-06)
+
+- **Complet, par étagère ou par catégorie** (une catégorie principale inclut ses sous-catégories). Les lots
+  périmés encore présents sont comptés.
+- Les **quantités théoriques sont figées à l'ouverture**. À la validation, l'écart (compté − théorique) est appliqué
+  à la **quantité actuelle** du lot : les ventes faites pendant le comptage restent justes. Si cela rendait un lot
+  négatif, la validation est refusée et le lot doit être recompté.
+- **Un seul inventaire en cours par pharmacie**, pour qu'un lot ne soit jamais ajusté deux fois.
+- Tous les lots doivent être comptés avant la validation (saisir 0 pour un lot introuvable). Un champ vide = pas
+  encore compté ; le comptage s'enregistre en plusieurs fois.
+- Validation et annulation par le **propriétaire ou l'adjoint** ; numéro `INV-AAAA-NNNNNN` (RG-02). La validation
+  écrit un mouvement « Ajustement » par écart (document = n° d'inventaire) et **une** entrée du journal d'audit
+  pour l'inventaire (nombre de lots, d'écarts et valeur des écarts).
+
+### Valorisation et fiche produit
+
+- **Valorisation** (ST-07) au prix d'achat réel de chaque lot, par catégorie principale ; les lots périmés sont
+  valorisés à part (perte à constater). Réservée au propriétaire et à l'adjoint, comme les prix d'achat.
+- **Fiche produit** (ST-08) : stock par lot, historique paginé des mouvements, graphique des ventes des 12 derniers
+  mois (alimenté à partir du Lot 4).

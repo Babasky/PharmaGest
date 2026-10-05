@@ -23,6 +23,10 @@ class AuditLogger
     public const PHARMACIE_REACTIVEE = 'pharmacie.reactivee';
     public const PHARMACIE_ARCHIVEE = 'pharmacie.archivee';
     public const ABONNEMENT_PAIEMENT = 'abonnement.paiement';
+    public const STOCK_ENTREE = 'stock.entree';
+    public const STOCK_AJUSTEMENT = 'stock.ajustement';
+    public const STOCK_DESTRUCTION = 'stock.destruction';
+    public const INVENTAIRE_VALIDE = 'inventaire.valide';
 
     public const LIBELLES = [
         self::UTILISATEUR_CREE => 'Utilisateur créé',
@@ -34,6 +38,10 @@ class AuditLogger
         self::PHARMACIE_REACTIVEE => 'Pharmacie réactivée',
         self::PHARMACIE_ARCHIVEE => 'Pharmacie archivée',
         self::ABONNEMENT_PAIEMENT => "Paiement d'abonnement",
+        self::STOCK_ENTREE => 'Entrée de stock manuelle',
+        self::STOCK_AJUSTEMENT => 'Ajustement de stock',
+        self::STOCK_DESTRUCTION => 'Destruction de stock',
+        self::INVENTAIRE_VALIDE => 'Inventaire validé',
     ];
 
     public function __construct(
