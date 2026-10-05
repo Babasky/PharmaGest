@@ -5,9 +5,13 @@ namespace App\Story;
 use App\Entity\Offre;
 use App\Entity\Utilisateur;
 use App\Enum\MoyenPaiement;
+use App\Enum\TypeRemise;
+use App\Enum\TypeVente;
 use App\Enum\ZoneEtagere;
+use App\Security\CodePin;
 use App\Service\AbonnementService;
 use App\Stock\StockService;
+use App\Tenant\TenantContext;
 use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\CategorieFactory;
 use App\Tests\Factory\ClientFactory;
@@ -17,6 +21,8 @@ use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\PharmacieFactory;
 use App\Tests\Factory\ProduitFactory;
 use App\Tests\Factory\UtilisateurFactory;
+use App\Vente\GestionCaisse;
+use App\Vente\VenteService;
 use Zenstruck\Foundry\Attribute\AsFixture;
 use Zenstruck\Foundry\Story;
 
@@ -32,6 +38,10 @@ final class AppStory extends Story
     public function __construct(
         private readonly AbonnementService $abonnements,
         private readonly StockService $stock,
+        private readonly CodePin $codePin,
+        private readonly TenantContext $tenantContext,
+        private readonly GestionCaisse $caisse,
+        private readonly VenteService $ventes,
     ) {
     }
 
@@ -50,7 +60,8 @@ final class AppStory extends Story
             ['s.diarra@fleuve.ml', 'Seydou Diarra', Utilisateur::ROLE_VENDEUR],
         ]);
         $this->abonnements->enregistrerPaiement($fleuve, $fleuve->getOffre(), 180000, MoyenPaiement::OrangeMoney, 'OM-2026-55871', new \DateTimeImmutable('today'), null);
-        $this->catalogue($fleuve);
+        $catalogue = $this->catalogue($fleuve);
+        $this->caisse($fleuve, $catalogue);
 
         // Officine dont l'abonnement expire bientôt (bandeau d'alerte).
         $kanaga = PharmacieFactory::createOne([
@@ -82,8 +93,10 @@ final class AppStory extends Story
 
     /**
      * Petit catalogue réaliste (prix publics indicatifs en FCFA) pour la recette des lots 2 à 4.
+     *
+     * @return array<string, \App\Entity\Produit>
      */
-    private function catalogue(\App\Entity\Pharmacie $pharmacie): void
+    private function catalogue(\App\Entity\Pharmacie $pharmacie): array
     {
         $em = \Zenstruck\Foundry\Persistence\repository(\App\Entity\FormeGalenique::class);
         $forme = static fn (string $nom) => $em->findOneBy(['nom' => $nom]);
@@ -144,6 +157,60 @@ final class AppStory extends Story
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Mariam Diallo', 'telephone' => '+22376554433', 'privilegie' => true, 'organismeAmo' => $inps, 'numeroAssure' => 'INPS-0045871']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Sékou Traoré', 'telephone' => '+22366112233']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Aïssata Cissé', 'telephone' => '+22379887766', 'privilegie' => true]);
+
+        return $catalogue;
+    }
+
+    /**
+     * Caisse (Lot 4) : codes PIN de l'équipe et une session clôturée de Moussa avec trois ventes,
+     * dont une vente AMO et une vente annulée.
+     *
+     * @param array<string, \App\Entity\Produit> $catalogue
+     */
+    private function caisse(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
+    {
+        $equipe = [];
+        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590'] as $email => $pin) {
+            $utilisateur = \Zenstruck\Foundry\Persistence\repository(Utilisateur::class)->findOneBy(['email' => $email]);
+            \assert($utilisateur instanceof Utilisateur);
+            $this->codePin->definir($utilisateur, $pin);
+            $equipe[$email] = $utilisateur;
+        }
+        $moussa = $equipe['m.coulibaly@fleuve.ml'];
+        $mariam = \Zenstruck\Foundry\Persistence\repository(\App\Entity\Client::class)->findOneBy(['nom' => 'Mariam Diallo']);
+        \assert($mariam instanceof \App\Entity\Client);
+
+        $this->tenantContext->forcer($pharmacie);
+        $session = $this->caisse->ouvrir($pharmacie, $moussa, 10000);
+
+        $vente = $this->ventes->panierOuNouveau($moussa);
+        $this->ventes->ajouter($vente, $catalogue['Doliprane'], 2);
+        $this->ventes->ajouter($vente, $catalogue['Ibuprofène Biogaran']);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']], null);
+
+        $vente = $this->ventes->panierOuNouveau($moussa);
+        $this->ventes->ajouter($vente, $catalogue['Coartem']);
+        $this->ventes->ajouter($vente, $catalogue['Crème solaire SPF 50']);
+        $this->ventes->definirVente($vente, TypeVente::Amo, $mariam, ['date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Sangaré', 'structure' => 'CSCOM de Badalabougou']);
+        $this->ventes->remiseGlobale($vente, TypeRemise::Pourcentage, 5);
+        $this->ventes->encaisser($vente, $moussa, $session, ['orange_money' => ['montant' => '6000', 'reference' => 'OM-DEMO-1']], null);
+
+        $vente = $this->ventes->panierOuNouveau($moussa);
+        $this->ventes->ajouter($vente, $catalogue['Efferalgan']);
+        $this->ventes->encaisser($vente, $moussa, $session, [], null);
+        $this->ventes->annuler($vente, 'Le client a changé d\'avis');
+
+        // Comptage juste, au franc près, avec les plus grosses coupures possibles.
+        $reste = $this->caisse->synthese($session)->especesAttendues();
+        $comptage = [];
+        foreach (\App\Entity\SessionCaisse::COUPURES as $cle => [, $valeur]) {
+            if ($reste >= $valeur) {
+                $comptage[$cle] = intdiv($reste, $valeur);
+                $reste %= $valeur;
+            }
+        }
+        $this->caisse->cloturer($session, $comptage, null);
+        $this->tenantContext->forcer(null);
     }
 
     /**

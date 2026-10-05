@@ -135,6 +135,39 @@ class StockService
     }
 
     /**
+     * Vérifie, sans rien écrire, qu'une quantité peut sortir en FEFO (contrôle de la caisse avant validation).
+     *
+     * @throws StockException
+     */
+    public function verifierDisponible(Produit $produit, int $quantite): void
+    {
+        $disponible = $this->stockDisponible($produit);
+        if ($disponible < $quantite) {
+            throw new StockException($this->messageStockInsuffisant($produit, $disponible, $quantite));
+        }
+    }
+
+    /**
+     * Remet des unités dans leur lot d'origine (annulation d'une vente, RG-12).
+     *
+     * @throws StockException
+     */
+    public function reintegrer(Lot $lot, int $quantite, TypeMouvement $type, ?string $document, ?string $motif = null): MouvementStock
+    {
+        if ($quantite <= 0) {
+            throw new StockException('La quantité doit être supérieure à zéro.');
+        }
+
+        return $this->transaction(function () use ($lot, $quantite, $type, $document, $motif): MouvementStock {
+            $this->lots->verrouiller($lot);
+            $mouvement = $this->mouvementer($lot, $type, $quantite, $motif, $document);
+            $this->em->flush();
+
+            return $mouvement;
+        });
+    }
+
+    /**
      * Corrige la quantité d'un lot (casse, erreur de saisie, écart d'inventaire). Action tracée (AU-01).
      *
      * @throws StockException

@@ -1,0 +1,35 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Sessions de caisse{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-success" href="{{ path('app_caisse') }}"><i class="bi bi-cart-plus"></i> Caisse</a>
+{% endblock %}
+
+{% block content %}
+    {% if not tout %}<p class="small text-body-secondary">Vos sessions de caisse. Le propriétaire et l'adjoint voient celles de toute l'équipe.</p>{% endif %}
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th class="ps-3">N°</th><th>Caissier</th><th>Ouverture</th><th>Clôture</th><th class="text-end">Fond</th><th class="text-end pe-3">Écart</th></tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                        <tr>
+                            <td class="ps-3"><a class="fw-semibold text-decoration-none font-monospace" href="{{ path('app_session_caisse_voir', {id: session.id}) }}">{{ session.numero }}</a></td>
+                            <td>{{ session.utilisateur.nom }}</td>
+                            <td class="small text-nowrap">{{ session.ouverteLe|date('d/m/Y H:i') }}</td>
+                            <td class="small text-nowrap">{% if session.estOuverte %}<span class="badge text-bg-success">Ouverte</span>{% else %}{{ session.clotureeLe|date('d/m/Y H:i') }}{% endif %}</td>
+                            <td class="montant">{{ session.fondCaisse|fcfa }}</td>
+                            <td class="montant pe-3 {{ session.ecart is not null and session.ecart != 0 ? 'text-danger fw-semibold' }}">{{ session.ecart is null ? '—' : session.ecart|fcfa }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucune session de caisse.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: sessions, route: 'app_session_caisse_index'} %}
+{% endblock %}

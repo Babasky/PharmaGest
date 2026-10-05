@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Pharmacie;
+use App\Entity\Utilisateur;
 use App\Security\Voter\TenantVoter;
 use App\Tenant\TenantAwareInterface;
 use App\Tenant\TenantContext;
@@ -35,6 +36,11 @@ abstract class AbstractAppController extends AbstractController
     protected function pharmacie(): Pharmacie
     {
         return $this->tenantContext->exigerPharmacie();
+    }
+
+    protected function utilisateur(): Utilisateur
+    {
+        return $this->tenantContext->getUtilisateur() ?? throw $this->createAccessDeniedException();
     }
 
     /**

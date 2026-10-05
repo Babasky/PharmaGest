@@ -30,6 +30,11 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 | `i.ouattara@paix.ml` | Propriétaire | Abonnement expiré : lecture seule |
 | `m.dembele@groupe-dembele.ml` | Propriétaire Premium | Deux pharmacies (sélecteur en haut de page) |
 
+Codes PIN de la Pharmacie du Fleuve (remise hors plafond, vente sans ordonnance, changement de vendeur) :
+Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**.
+Moussa a une session de caisse clôturée avec trois ventes (dont une AMO et une annulée) ; ouvrez une caisse depuis
+le menu **Caisse** pour vendre.
+
 ## Sans DDEV
 
 Prérequis : PHP 8.3 (extensions `intl`, `pdo_mysql`, `zip`, `gd`, `mbstring`, `xml`), Composer, MySQL 8.

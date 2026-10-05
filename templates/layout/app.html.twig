@@ -49,6 +49,9 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><span class="dropdown-item-text small text-body-secondary">{{ app.user.email }}<br>{{ app.user.libelleRole }}</span></li>
                     <li><hr class="dropdown-divider"></li>
+                    {% if is_granted('ROLE_VENDEUR') %}
+                        <li><a class="dropdown-item" href="{{ path('app_code_pin') }}"><i class="bi bi-key"></i> Mon code PIN</a></li>
+                    {% endif %}
                     {% if is_granted('ROLE_PROPRIETAIRE') %}
                         <li><a class="dropdown-item" href="{{ path('app_mon_abonnement') }}"><i class="bi bi-patch-check"></i> Mon abonnement</a></li>
                     {% endif %}

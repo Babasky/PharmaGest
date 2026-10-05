@@ -1,0 +1,22 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Mon code PIN{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 32rem">
+        <div class="card-body">
+            <p class="small text-body-secondary">
+                Le code PIN à 4 chiffres permet de prendre la caisse rapidement (« Changer de vendeur »)
+                {%- if is_granted('ROLE_PROPRIETAIRE') %} et d'autoriser au comptoir une remise au-delà du plafond ou une vente sans ordonnance{% endif %}.
+                Ne le communiquez à personne.
+                {% if a_un_code %}<br><strong>Un code est déjà enregistré :</strong> le nouveau le remplacera.{% endif %}
+            </p>
+            {{ form_start(formulaire) }}
+            {{ form_errors(formulaire) }}
+            {{ form_row(formulaire.motDePasse) }}
+            {{ form_row(formulaire.code) }}
+            <button class="btn btn-success" type="submit">Enregistrer le code PIN</button>
+            {{ form_end(formulaire) }}
+        </div>
+    </div>
+{% endblock %}
