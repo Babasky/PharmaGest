@@ -1,0 +1,70 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Bordereaux AMO{% endblock %}
+
+{% block content %}
+    {% include 'amo/_onglets.html.twig' with {actif: 'bordereaux'} %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-body fw-semibold">Nouveau bordereau</div>
+                <div class="card-body">
+                    {% if not ecriture_autorisee() %}
+                        <p class="small text-body-secondary mb-0">Abonnement expiré : lecture seule.</p>
+                    {% else %}
+                        <form method="post" action="{{ path('app_amo_bordereau_nouveau') }}" id="nouveau-bordereau">
+                            <input type="hidden" name="_token" value="{{ csrf_token(csrf_nouveau) }}">
+                            <div class="mb-2">
+                                <label class="form-label" for="organisme">Organisme</label>
+                                <select class="form-select" id="organisme" name="organisme" required>
+                                    {% for o in organismes %}<option value="{{ o.id }}">{{ o.nom }} ({{ o.code }})</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-6"><label class="form-label" for="debut">Ventes du</label><input type="date" class="form-control" id="debut" name="debut" value="{{ debut_defaut }}" required></div>
+                                <div class="col-6"><label class="form-label" for="fin">au</label><input type="date" class="form-control" id="fin" name="fin" value="{{ fin_defaut }}" required></div>
+                            </div>
+                            <p class="small text-body-secondary">Le brouillon reprend toutes les créances en attente de l'organisme pour cette période. Une créance n'est jamais sur deux bordereaux.</p>
+                            <button class="btn btn-success" type="submit">Créer le brouillon</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-8">
+            <form method="get" class="d-flex flex-wrap gap-2 mb-3">
+                <select name="organisme" class="form-select" style="max-width: 14rem" aria-label="Organisme">
+                    <option value="">Tous les organismes</option>
+                    {% for o in tous_organismes %}<option value="{{ o.id }}"{{ organisme == o.id ? ' selected' }}>{{ o.nom }}</option>{% endfor %}
+                </select>
+                <select name="statut" class="form-select" style="max-width: 12rem" aria-label="Statut">
+                    <option value="">Tous les statuts</option>
+                    {% for s in statuts %}<option value="{{ s.value }}"{{ statut == s.value ? ' selected' }}>{{ s.libelle }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+            </form>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="bordereaux">
+                        <thead class="table-light"><tr><th class="ps-3">Bordereau</th><th>Organisme</th><th>Période</th><th class="text-end">Montant</th><th class="text-end">Réglé</th><th class="pe-3">Statut</th></tr></thead>
+                        <tbody>
+                            {% for bordereau in bordereaux %}
+                                <tr>
+                                    <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_amo_bordereau_voir', {id: bordereau.id}) }}">{{ bordereau.libelle }}</a></td>
+                                    <td>{{ bordereau.organisme.code }}</td>
+                                    <td class="small text-nowrap">{{ bordereau.debut|date('d/m/Y') }} – {{ bordereau.fin|date('d/m/Y') }}</td>
+                                    <td class="montant">{{ bordereau.montant|fcfa }}</td>
+                                    <td class="montant">{{ bordereau.estTransmis ? bordereau.montantRegle|fcfa : '—' }}</td>
+                                    <td class="pe-3"><span class="badge text-bg-{{ bordereau.statut.couleur }}">{{ bordereau.statut.libelle }}</span></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucun bordereau pour l'instant.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% include 'layout/_pagination.html.twig' with {page: bordereaux, route: 'app_amo_bordereaux', params: {organisme: organisme, statut: statut}} %}
+        </div>
+    </div>
+{% endblock %}

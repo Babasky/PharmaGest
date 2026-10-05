@@ -452,6 +452,19 @@ class Vente implements TenantAwareInterface
         return $this->partAmo;
     }
 
+    /** Base AMO : total des lignes remboursables, au prix plein (RG-07). */
+    public function getBaseAmo(): int
+    {
+        $base = 0;
+        foreach ($this->lignes as $ligne) {
+            if ($ligne->isRemboursable()) {
+                $base += $ligne->getMontantBrut();
+            }
+        }
+
+        return TypeVente::Amo === $this->type ? $base : 0;
+    }
+
     public function getMontantEncaisse(): int
     {
         return $this->montantEncaisse;

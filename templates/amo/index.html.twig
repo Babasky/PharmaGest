@@ -1,0 +1,73 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Créance AMO{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-success" href="{{ path('app_amo_bordereaux') }}"><i class="bi bi-file-earmark-plus"></i> Bordereaux</a>
+{% endblock %}
+
+{% block content %}
+    {% include 'amo/_onglets.html.twig' with {actif: 'suivi'} %}
+    {% set total = suivi.total %}
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="small text-body-secondary">Encours AMO</div>
+                <div class="fs-4 fw-bold" id="encours-total">{{ total.encours|fcfa }}</div>
+                <div class="small text-body-secondary">{{ total.nombre }} créance{{ total.nombre > 1 ? 's' }} ouverte{{ total.nombre > 1 ? 's' }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="small text-body-secondary">Plus de 90 jours</div>
+                <div class="fs-4 fw-bold {{ total.tranches|last > 0 ? 'text-danger' }}">{{ total.tranches|last|fcfa }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="small text-body-secondary">Rejeté</div>
+                <div class="fs-4 fw-bold">{{ total.rejete|fcfa }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="small text-body-secondary">Taux de rejet</div>
+                <div class="fs-4 fw-bold" id="taux-rejet-total">{{ total.taux_rejet is null ? '—' : total.taux_rejet|number_format(1, ',') ~ ' %' }}</div>
+                <div class="small text-body-secondary">du montant transmis</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-body fw-semibold">Encours par organisme et ancienneté</div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="suivi">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Organisme</th>
+                        <th class="text-end">Encours</th>
+                        {% for tranche in tranches %}<th class="text-end d-none d-md-table-cell">{{ tranche }}</th>{% endfor %}
+                        <th class="text-end">Transmis</th>
+                        <th class="text-end">Rejeté</th>
+                        <th class="text-end pe-3">Taux de rejet</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in suivi.lignes %}
+                        <tr data-organisme="{{ ligne.organisme.code }}">
+                            <td class="ps-3"><a class="text-decoration-none" href="{{ path('app_amo_creances', {organisme: ligne.organisme.id}) }}">{{ ligne.organisme.nom }}</a> <span class="badge text-bg-light border">{{ ligne.organisme.code }}</span></td>
+                            <td class="montant fw-semibold">{{ ligne.encours|fcfa }}</td>
+                            {% for tranche in tranches %}<td class="montant d-none d-md-table-cell {{ loop.last and ligne.tranches[tranche] > 0 ? 'text-danger' }}">{{ ligne.tranches[tranche] > 0 ? ligne.tranches[tranche]|fcfa : '—' }}</td>{% endfor %}
+                            <td class="montant">{{ ligne.transmis|fcfa }}</td>
+                            <td class="montant">{{ ligne.rejete|fcfa }}</td>
+                            <td class="text-end pe-3">{{ ligne.taux_rejet is null ? '—' : ligne.taux_rejet|number_format(1, ',') ~ ' %' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="{{ 5 + tranches|length }}" class="text-center text-body-secondary py-4">Aucune créance AMO pour l'instant : elles naissent des ventes « ordonnance AMO » encaissées.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="small text-body-secondary mt-2">Ancienneté comptée depuis la date de la vente. Encours = part AMO pas encore réglée ni rejetée.</p>
+{% endblock %}

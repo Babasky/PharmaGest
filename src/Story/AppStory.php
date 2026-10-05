@@ -2,6 +2,7 @@
 
 namespace App\Story;
 
+use App\Amo\GestionBordereaux;
 use App\Entity\Offre;
 use App\Entity\Utilisateur;
 use App\Enum\MoyenPaiement;
@@ -42,6 +43,7 @@ final class AppStory extends Story
         private readonly TenantContext $tenantContext,
         private readonly GestionCaisse $caisse,
         private readonly VenteService $ventes,
+        private readonly GestionBordereaux $bordereaux,
     ) {
     }
 
@@ -155,6 +157,8 @@ final class AppStory extends Story
 
         $inps = \Zenstruck\Foundry\Persistence\repository(\App\Entity\OrganismeAmo::class)->findOneBy(['code' => 'INPS']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Mariam Diallo', 'telephone' => '+22376554433', 'privilegie' => true, 'organismeAmo' => $inps, 'numeroAssure' => 'INPS-0045871']);
+        $cmss = \Zenstruck\Foundry\Persistence\repository(\App\Entity\OrganismeAmo::class)->findOneBy(['code' => 'CMSS']);
+        ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Oumar Sidibé', 'telephone' => '+22365443322', 'organismeAmo' => $cmss, 'numeroAssure' => 'CMSS-1187-22']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Sékou Traoré', 'telephone' => '+22366112233']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Aïssata Cissé', 'telephone' => '+22379887766', 'privilegie' => true]);
 
@@ -162,8 +166,9 @@ final class AppStory extends Story
     }
 
     /**
-     * Caisse (Lot 4) : codes PIN de l'équipe et une session clôturée de Moussa avec trois ventes,
-     * dont une vente AMO et une vente annulée.
+     * Caisse (Lot 4) : codes PIN de l'équipe et une session clôturée de Moussa avec cinq ventes,
+     * dont trois ventes AMO et une vente annulée.
+     * AMO (Lot 5) : un bordereau INPS transmis et réglé en partie ; la créance CMSS reste en attente.
      *
      * @param array<string, \App\Entity\Produit> $catalogue
      */
@@ -196,6 +201,18 @@ final class AppStory extends Story
         $this->ventes->encaisser($vente, $moussa, $session, ['orange_money' => ['montant' => '6000', 'reference' => 'OM-DEMO-1']], null);
 
         $vente = $this->ventes->panierOuNouveau($moussa);
+        $this->ventes->ajouter($vente, $catalogue['Coartem'], 2);
+        $this->ventes->definirVente($vente, TypeVente::Amo, $mariam, ['numero' => 'ORD-5521', 'date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Sangaré', 'structure' => 'CSCOM de Badalabougou']);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']], null);
+
+        $oumar = \Zenstruck\Foundry\Persistence\repository(\App\Entity\Client::class)->findOneBy(['nom' => 'Oumar Sidibé']);
+        \assert($oumar instanceof \App\Entity\Client);
+        $vente = $this->ventes->panierOuNouveau($moussa);
+        $this->ventes->ajouter($vente, $catalogue['Amoxicilline'], 2);
+        $this->ventes->definirVente($vente, TypeVente::Amo, $oumar, ['date' => new \DateTimeImmutable('today -1 day'), 'prescripteur' => 'Dr Keïta', 'structure' => 'CHU du Point G']);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '2000']], null);
+
+        $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Efferalgan']);
         $this->ventes->encaisser($vente, $moussa, $session, [], null);
         $this->ventes->annuler($vente, 'Le client a changé d\'avis');
@@ -210,6 +227,14 @@ final class AppStory extends Story
             }
         }
         $this->caisse->cloturer($session, $comptage, null);
+
+        $inps = $mariam->getOrganismeAmo();
+        \assert($inps instanceof \App\Entity\OrganismeAmo);
+        $bordereau = $this->bordereaux->creer($inps, new \DateTimeImmutable('first day of this month'), new \DateTimeImmutable('today'));
+        $this->bordereaux->transmettre($bordereau);
+        $premiere = $bordereau->getCreances()->first();
+        \assert($premiere instanceof \App\Entity\CreanceAmo);
+        $this->bordereaux->enregistrerReglement($bordereau, new \DateTimeImmutable('today'), $premiere->getMontant(), 'VIR-INPS-0912', [(int) $premiere->getId() => $premiere->getMontant()], []);
         $this->tenantContext->forcer(null);
     }
 

@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * Ordonnance présentée pour une vente « ordonnance classique » ou « ordonnance AMO » (AM-01).
- * La copie numérisée, jointe aux bordereaux AMO, arrive avec le Lot 5.
+ * Sa copie (photo ou scan) est jointe en annexe des bordereaux AMO (AM-07).
  */
 #[ORM\Entity(repositoryClass: OrdonnanceRepository::class)]
 class Ordonnance implements TenantAwareInterface
@@ -34,6 +34,10 @@ class Ordonnance implements TenantAwareInterface
     /** Structure de santé (CSCOM, CSRéf, hôpital, clinique…). */
     #[ORM\Column(length: 120, nullable: true)]
     private ?string $structure = null;
+
+    /** Nom du fichier de la copie dans le stockage de la pharmacie ({@see \App\Amo\CopieOrdonnance}). */
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $copie = null;
 
     public function getId(): ?int
     {
@@ -84,6 +88,18 @@ class Ordonnance implements TenantAwareInterface
     public function setStructure(?string $structure): static
     {
         $this->structure = self::nettoyer($structure, 120);
+
+        return $this;
+    }
+
+    public function getCopie(): ?string
+    {
+        return $this->copie;
+    }
+
+    public function setCopie(?string $copie): static
+    {
+        $this->copie = $copie;
 
         return $this;
     }

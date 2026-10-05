@@ -23,6 +23,7 @@ use App\Vente\GestionCaisse;
 use App\Vente\VenteException;
 use App\Vente\VenteService;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -160,7 +161,7 @@ final class CaisseController extends AbstractAppController
     }
 
     /**
-     * Type de vente, ordonnance et remise sur le total.
+     * Type de vente, ordonnance (avec sa copie) et remise sur le total.
      */
     #[Route('/vente', name: 'app_caisse_vente', methods: ['POST'])]
     #[IsCsrfTokenValid(self::CSRF)]
@@ -176,7 +177,7 @@ final class CaisseController extends AbstractAppController
                 'date' => '' === $date ? null : (\DateTimeImmutable::createFromFormat('!Y-m-d', $date) ?: throw new VenteException('Date d\'ordonnance invalide.')),
                 'prescripteur' => (string) $donnees->get('ordonnance_prescripteur'),
                 'structure' => (string) $donnees->get('ordonnance_structure'),
-            ]);
+            ], self::fichier($requete, 'ordonnance_copie'));
             if ($donnees->has('remise_valeur')) {
                 $this->ventes->remiseGlobale($vente, TypeRemise::tryFrom((string) $donnees->get('remise_type')), $this->montant($donnees->get('remise_valeur'), 'Remise') ?? 0);
             }
@@ -317,6 +318,13 @@ final class CaisseController extends AbstractAppController
         $this->addFlash('success', \sprintf('Bonjour %s : la caisse est à vous.', $cible->getNom()));
 
         return $this->redirectToRoute('app_caisse');
+    }
+
+    private static function fichier(Request $requete, string $champ): ?UploadedFile
+    {
+        $fichier = $requete->files->get($champ);
+
+        return $fichier instanceof UploadedFile ? $fichier : null;
     }
 
     private function ajouterAuPanier(Produit $produit, int $quantite): void

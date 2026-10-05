@@ -225,7 +225,7 @@
             </div>
 
             {# --- Type de vente, ordonnance, remise --- #}
-            <form method="post" action="{{ path('app_caisse_vente') }}" class="card shadow-sm mb-3" id="type-vente">
+            <form method="post" action="{{ path('app_caisse_vente') }}" enctype="multipart/form-data" class="card shadow-sm mb-3" id="type-vente">
                 <input type="hidden" name="_token" value="{{ token }}">
                 <div class="card-body">
                     {% set type_courant = panier ? panier.type.value : 'sans_ordonnance' %}
@@ -242,6 +242,13 @@
                         <div class="col-6"><input type="text" name="ordonnance_numero" value="{{ ord ? ord.numero }}" class="form-control form-control-sm" placeholder="N° (facultatif)" aria-label="Numéro de l'ordonnance"></div>
                         <div class="col-6"><input type="text" name="ordonnance_prescripteur" value="{{ ord ? ord.prescripteur }}" class="form-control form-control-sm" placeholder="Prescripteur" aria-label="Prescripteur"></div>
                         <div class="col-6"><input type="text" name="ordonnance_structure" value="{{ ord ? ord.structure }}" class="form-control form-control-sm" placeholder="Structure (facultatif)" aria-label="Structure de santé"></div>
+                        <div class="col-12">
+                            <label class="form-label small text-body-secondary mb-0" for="ordonnance-copie">
+                                Photo de l'ordonnance {{ type_courant == 'amo' ? '(jointe au bordereau AMO)' : '(facultatif)' }}
+                                {% if ord and ord.copie %}<span class="badge text-bg-success" id="copie-jointe"><i class="bi bi-check"></i> jointe</span>{% endif %}
+                            </label>
+                            <input type="file" name="ordonnance_copie" id="ordonnance-copie" accept="image/jpeg,image/png,image/webp" capture="environment" class="form-control form-control-sm">
+                        </div>
                     </fieldset>
                     {% if remise_possible %}
                         <div class="mt-2">

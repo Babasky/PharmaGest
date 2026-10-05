@@ -32,8 +32,9 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 
 Codes PIN de la Pharmacie du Fleuve (remise hors plafond, vente sans ordonnance, changement de vendeur) :
 Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**.
-Moussa a une session de caisse clôturée avec trois ventes (dont une AMO et une annulée) ; ouvrez une caisse depuis
-le menu **Caisse** pour vendre.
+Moussa a une session de caisse clôturée avec cinq ventes (dont trois AMO et une annulée) ; ouvrez une caisse depuis
+le menu **Caisse** pour vendre. Le menu **AMO** (propriétaire et adjoint) montre l'encours, un bordereau INPS transmis
+et réglé en partie, et une créance CMSS encore en attente.
 
 ## Sans DDEV
 
