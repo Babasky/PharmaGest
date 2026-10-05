@@ -54,6 +54,10 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::JSON)]
     private array $roles = [];
 
+    /** Code PIN à 4 chiffres, haché (PH-04) : changement rapide de vendeur, autorisations du propriétaire. */
+    #[ORM\Column(nullable: true)]
+    private ?string $codePin = null;
+
     #[ORM\Column]
     private bool $actif = true;
 
@@ -161,6 +165,26 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getCodePin(): ?string
+    {
+        return $this->codePin;
+    }
+
+    public function aUnCodePin(): bool
+    {
+        return null !== $this->codePin;
+    }
+
+    /**
+     * @param string $codePinHache code déjà haché ({@see \App\Security\CodePin})
+     */
+    public function setCodePin(string $codePinHache): static
+    {
+        $this->codePin = $codePinHache;
+
+        return $this;
+    }
+
     public function isActive(): bool
     {
         return null !== $this->password;
@@ -214,6 +238,9 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         $data = (array) $this;
         if (null !== $this->password) {
             $data["\0".self::class."\0password"] = hash('crc32c', $this->password);
+        }
+        if (null !== $this->codePin) {
+            $data["\0".self::class."\0codePin"] = hash('crc32c', $this->codePin);
         }
 
         return $data;

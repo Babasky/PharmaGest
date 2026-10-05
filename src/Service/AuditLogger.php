@@ -27,6 +27,10 @@ class AuditLogger
     public const STOCK_AJUSTEMENT = 'stock.ajustement';
     public const STOCK_DESTRUCTION = 'stock.destruction';
     public const INVENTAIRE_VALIDE = 'inventaire.valide';
+    public const VENTE_ANNULEE = 'vente.annulee';
+    public const VENTE_REMISE_HORS_PLAFOND = 'vente.remise_hors_plafond';
+    public const VENTE_SANS_ORDONNANCE = 'vente.sans_ordonnance';
+    public const CAISSE_ECART = 'caisse.ecart';
 
     public const LIBELLES = [
         self::UTILISATEUR_CREE => 'Utilisateur créé',
@@ -42,6 +46,10 @@ class AuditLogger
         self::STOCK_AJUSTEMENT => 'Ajustement de stock',
         self::STOCK_DESTRUCTION => 'Destruction de stock',
         self::INVENTAIRE_VALIDE => 'Inventaire validé',
+        self::VENTE_ANNULEE => 'Vente annulée',
+        self::VENTE_REMISE_HORS_PLAFOND => 'Remise au-delà du plafond',
+        self::VENTE_SANS_ORDONNANCE => 'Vente sans ordonnance autorisée',
+        self::CAISSE_ECART => 'Écart de caisse',
     ];
 
     public function __construct(

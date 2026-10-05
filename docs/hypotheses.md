@@ -8,7 +8,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 | N° | Hypothèse | Où c'est appliqué |
 |----|-----------|-------------------|
 | H1 | Le taux AMO est paramétrable par organisme (70 % par défaut), et historisé par date d'effet. | Lot 2 (paramètres) et Lot 5 (AMO) |
-| H2 | Sur une vente AMO, la remise ne porte que sur la part assuré. | Lot 4 / Lot 5 (RG-09) |
+| H2 | Sur une vente AMO, la remise ne porte que sur la part assuré. | **Lot 4** : calcul de la vente ; créances au Lot 5 (RG-09) |
 | H3 | La part AMO est une créance ; elle devient une recette au règlement du bordereau. | Lot 5 / Lot 7 (RG-10) |
 | H4 | L'abonnement est payé hors plateforme et activé manuellement. | **Lot 1** : le super admin enregistre le paiement |
 | H5 | Le nom « PharmaGest » est un nom de travail. | Nom centralisé dans `app.name` et `app.editeur` (`config/services.yaml`) |
@@ -74,7 +74,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 ### Report à un lot ultérieur
 
 - **SA-07** (référentiels communs) : traité au Lot 2 (voir ci-dessous).
-- **PH-04, code PIN** : le champ et le changement rapide de vendeur arrivent au **Lot 4** (caisse).
+- **PH-04, code PIN** : livré au **Lot 4** (voir « Décisions — Lot 4 »).
 - **Consultation du journal d'audit** (AU-02) : **Lot 8**. Les actions sensibles du Lot 1 sont déjà journalisées.
 
 ## Décisions — Lot 2 (référentiels)
@@ -182,3 +182,62 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   valorisés à part (perte à constater). Réservée au propriétaire et à l'adjoint, comme les prix d'achat.
 - **Fiche produit** (ST-08) : stock par lot, historique paginé des mouvements, graphique des ventes des 12 derniers
   mois (alimenté à partir du Lot 4).
+
+## Décisions — Lot 4 (caisse)
+
+### Panier et vente
+
+- Le **panier** est une vente « en cours » sans numéro. Le numéro `V-AAAA-NNNNNN` (RG-02) n'est attribué qu'à
+  l'encaissement : une vente abandonnée ne laisse donc pas de trou dans la numérotation.
+- **Une ligne par produit** : scanner deux fois le même produit augmente la quantité. Le prix de vente est figé à
+  l'ajout de la ligne (RG-06) ; les totaux, la remise, la part AMO et le coût d'achat des lots sont figés à
+  l'encaissement.
+- Un code-barres scanné à l'identique ajoute directement le produit ; sinon la recherche affiche les résultats.
+- Le stock est vérifié à l'ajout et à l'encaissement (R-03) ; la sortie se fait en **FEFO** via
+  `StockService::prelever()` (RG-04), lot par lot, dans la même transaction que la numérotation.
+- **Ventes en attente** : un panier mis en attente peut être repris par n'importe quel vendeur de la pharmacie (le
+  client revient souvent vers un autre comptoir).
+
+### Remises et code PIN
+
+- Remise par ligne ou globale, en pourcentage ou en montant (arrondi RG-01). Sur une **vente AMO**, seule la remise
+  globale est possible et elle porte sur la **part assuré** (H2, RG-09).
+- Les remises sont réservées aux **clients privilégiés**. Le **plafond** de la pharmacie (RG-08) est comparé au
+  **plus haut** des taux : chaque ligne, la remise globale et le total des remises. Au-delà, le **code PIN du
+  propriétaire** est demandé ; le propriétaire connecté n'a pas besoin de le saisir. Chaque dépassement est
+  journalisé (vendeur, client, taux, plafond, qui a autorisé).
+- **Code PIN** (PH-04) : 4 chiffres, stocké haché, codes triviaux refusés (0000, 1234…), choisi par chacun dans
+  « Mon code PIN » après saisie de son mot de passe. **5 essais faux en 15 minutes** bloquent la saisie (par
+  utilisateur, et par pharmacie pour le PIN du propriétaire).
+- **Changement rapide de vendeur** : depuis l'écran de caisse, avec le code PIN du vendeur, sans mot de passe.
+
+### Types de vente et ordonnance
+
+- Trois types : sans ordonnance, ordonnance classique, ordonnance AMO. Une ordonnance est complète avec sa **date et
+  son prescripteur** ; le numéro et la structure sont facultatifs. Le scan de l'ordonnance arrive au Lot 5.
+- Un produit soumis à ordonnance dans une vente sans ordonnance : selon le paramètre de la pharmacie, la vente est
+  **bloquée**, ou autorisée avec le **code PIN du propriétaire** et journalisée.
+- Vente AMO : organisme, n° d'assuré et taux (taux de l'organisme, sinon celui de la pharmacie) sont figés ; la part
+  AMO est calculée sur les produits remboursables. La **créance AMO** et les bordereaux (AM-05) sont construits au
+  **Lot 5** à partir de ces ventes.
+
+### Paiements, tickets
+
+- Paiement **mixte** : espèces, Orange Money, Moov Money, carte (référence facultative). Les paiements
+  électroniques ne peuvent pas dépasser le montant dû ; le reste est payé en espèces et la monnaie est calculée sur
+  les espèces remises.
+- Ticket **80 mm** et facture **A4** en PDF, réimprimables depuis la fiche de la vente.
+- **Crédit client** (VE-04 / VE-11) et **avoir** : reportés à la **V1**. Les recettes et la contre-passation
+  (FI-04), ainsi que le rapport des remises (RE-05), viennent au **Lot 7**, calculés à partir des paiements.
+
+### Sessions de caisse et annulations
+
+- **Une session par utilisateur** : un vendeur ne vend qu'avec sa propre caisse ouverte (fond de caisse saisi à
+  l'ouverture, numéro `SC-AAAA-NNNNNN`). Le vendeur ne voit que ses sessions ; le propriétaire et l'adjoint voient
+  et peuvent clôturer toutes les sessions.
+- **Clôture** : comptage par billet et pièce du franc CFA. Espèces attendues = fond + encaissements espèces −
+  remboursements espèces. Tout écart (RG-13) exige une justification et est journalisé ; le **rapport Z** (PDF) est
+  disponible après la clôture.
+- **Annulation** (RG-12) par le propriétaire ou l'adjoint, avec motif, **le jour même** et tant que la session de la
+  vente est ouverte ; au-delà, il faut établir un avoir (V1). Le stock est réintégré dans les lots d'origine
+  (mouvement « Annulation ») et le remboursement est compté comme une sortie de la session de la vente.

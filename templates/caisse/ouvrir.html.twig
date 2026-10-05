@@ -1,0 +1,26 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Caisse{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 32rem">
+        <div class="card-body">
+            <h2 class="h5"><i class="bi bi-safe"></i> Ouvrir ma caisse</h2>
+            <p class="text-body-secondary small">Comptez les espèces présentes dans le tiroir avant de commencer : ce fond de caisse servira au calcul de l'écart à la clôture.</p>
+            {% if ecriture_autorisee() %}
+                <form method="post" action="{{ path('app_caisse_ouvrir') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('caisse') }}">
+                    <label class="form-label" for="fond">Fond de caisse (FCFA)</label>
+                    <div class="input-group mb-3">
+                        <input type="text" inputmode="numeric" class="form-control form-control-lg text-end" id="fond" name="fond" value="0" autofocus autocomplete="off">
+                        <span class="input-group-text">FCFA</span>
+                    </div>
+                    <button class="btn btn-success btn-lg" type="submit"><i class="bi bi-unlock"></i> Ouvrir la caisse</button>
+                </form>
+            {% else %}
+                <div class="alert alert-danger mb-0">Abonnement expiré : la caisse est bloquée.</div>
+            {% endif %}
+        </div>
+    </div>
+    <p class="small text-body-secondary mt-3"><a href="{{ path('app_session_caisse_index') }}">Mes sessions de caisse</a></p>
+{% endblock %}

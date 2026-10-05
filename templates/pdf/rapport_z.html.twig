@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport Z {{ session.numero }}</title>
+    <style>
+        @page { margin: 16mm 14mm; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9.5pt; color: #1f2a24; }
+        h1 { font-size: 15pt; margin: 0; color: #198754; }
+        h2 { font-size: 11pt; margin: 6mm 0 2mm; border-bottom: 1px solid #198754; }
+        .petit { font-size: 8pt; color: #555; }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 1.5mm 2mm; }
+        th { background: #e9f3ee; text-align: left; font-size: 8.5pt; }
+        .droite { text-align: right; }
+        .gras { font-weight: bold; }
+        .ecart { font-size: 12pt; font-weight: bold; }
+        .rouge { color: #b02a37; }
+        tr.ligne td { border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <table>
+        <tr>
+            <td><h1>Rapport Z</h1><div>{{ pharmacie.nom }}</div><div class="petit">{{ pharmacie.ville }}</div></td>
+            <td class="droite">
+                Session <strong>{{ session.numero }}</strong><br>
+                Caissier : {{ session.utilisateur.nom }}<br>
+                <span class="petit">Du {{ session.ouverteLe|date('d/m/Y H:i') }} au {{ session.clotureeLe|date('d/m/Y H:i') }}{{ session.clotureePar ? ' · clôturée par ' ~ session.clotureePar.nom }}</span>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Ventes</h2>
+    <table>
+        <tr class="ligne"><td>Nombre de ventes</td><td class="droite">{{ synthese.nombreVentes }}</td></tr>
+        <tr class="ligne"><td>Chiffre d'affaires (part AMO comprise)</td><td class="droite">{{ synthese.chiffreAffaires|fcfa }}</td></tr>
+        <tr class="ligne"><td>Dont part AMO (créances sur les organismes)</td><td class="droite">{{ synthese.partAmo|fcfa }}</td></tr>
+        <tr class="ligne"><td>Remises accordées</td><td class="droite">{{ synthese.remises|fcfa }}</td></tr>
+        <tr class="ligne"><td>Annulations</td><td class="droite">{{ synthese.nombreAnnulations }} · {{ synthese.montantAnnule|fcfa }}</td></tr>
+    </table>
+
+    <h2>Encaissements par mode de paiement</h2>
+    <table>
+        <tr><th>Mode</th><th class="droite">Encaissé</th><th class="droite">Remboursé (annulations)</th><th class="droite">Net</th></tr>
+        {% for mode in enum_cases('App\\Enum\\ModePaiement') %}
+            <tr class="ligne">
+                <td>{{ mode.libelle }}</td>
+                <td class="droite">{{ synthese.encaissements[mode.value]|fcfa }}</td>
+                <td class="droite">{{ synthese.decaissements[mode.value]|fcfa }}</td>
+                <td class="droite gras">{{ synthese.net(mode)|fcfa }}</td>
+            </tr>
+        {% endfor %}
+        <tr><td class="gras">Total</td><td></td><td></td><td class="droite gras">{{ synthese.totalEncaisse|fcfa }}</td></tr>
+    </table>
+
+    <h2>Contrôle des espèces</h2>
+    <table>
+        <tr class="ligne"><td>Fond de caisse</td><td class="droite">{{ session.fondCaisse|fcfa }}</td></tr>
+        <tr class="ligne"><td>+ Encaissements espèces</td><td class="droite">{{ synthese.encaissements.especes|fcfa }}</td></tr>
+        <tr class="ligne"><td>− Remboursements espèces</td><td class="droite">{{ synthese.decaissements.especes|fcfa }}</td></tr>
+        <tr class="ligne"><td class="gras">Espèces attendues</td><td class="droite gras">{{ session.especesAttendues|fcfa }}</td></tr>
+        <tr class="ligne"><td class="gras">Espèces comptées</td><td class="droite gras">{{ session.especesComptees|fcfa }}</td></tr>
+        <tr><td class="ecart">Écart</td><td class="droite ecart {{ session.ecart != 0 ? 'rouge' }}">{{ session.ecart|fcfa }}</td></tr>
+    </table>
+    {% if session.justification %}<p><span class="gras">Justification :</span> {{ session.justification }}</p>{% endif %}
+
+    {% if session.comptage is not empty %}
+        <h2>Comptage</h2>
+        <table>
+            {% for cle, nombre in session.comptage %}
+                <tr class="ligne"><td>{{ coupures[cle][0] }}</td><td class="droite">× {{ nombre }}</td><td class="droite">{{ (coupures[cle][1] * nombre)|fcfa }}</td></tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+    <p class="petit" style="margin-top: 12mm;">Signature du caissier : ______________________ &nbsp;&nbsp; Signature du responsable : ______________________</p>
+</body>
+</html>

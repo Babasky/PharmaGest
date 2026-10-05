@@ -1,0 +1,57 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Ventes{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-success" href="{{ path('app_caisse') }}"><i class="bi bi-cart-plus"></i> Caisse</a>
+{% endblock %}
+
+{% block content %}
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3" role="search">
+        <input type="search" name="q" value="{{ q }}" class="form-control" style="max-width: 18rem" placeholder="N° de vente ou client" aria-label="Rechercher une vente">
+        <input type="date" name="jour" value="{{ jour }}" class="form-control" style="max-width: 11rem" aria-label="Jour">
+        <select name="statut" class="form-select" style="max-width: 12rem" aria-label="Statut">
+            <option value="">Tous les statuts</option>
+            <option value="validee"{{ statut == 'validee' ? ' selected' }}>Validées</option>
+            <option value="annulee"{{ statut == 'annulee' ? ' selected' }}>Annulées</option>
+        </select>
+        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Filtrer</button>
+    </form>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">N°</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th class="d-none d-md-table-cell">Client</th>
+                        <th class="d-none d-md-table-cell">Vendeur</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end pe-3">Encaissé</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vente in ventes %}
+                        <tr class="{{ vente.statut.value == 'annulee' ? 'text-body-secondary' }}">
+                            <td class="ps-3">
+                                <a class="fw-semibold text-decoration-none font-monospace" href="{{ path('app_vente_voir', {id: vente.id}) }}">{{ vente.numero }}</a>
+                                {% if vente.statut.value == 'annulee' %}<span class="badge text-bg-secondary">Annulée</span>{% endif %}
+                            </td>
+                            <td class="small text-nowrap">{{ vente.valideeLe|date('d/m/Y H:i') }}</td>
+                            <td class="small">{{ vente.type.libelle }}</td>
+                            <td class="d-none d-md-table-cell">{{ vente.client ? vente.client.nom : '—' }}</td>
+                            <td class="d-none d-md-table-cell small">{{ vente.vendeur.nom }}</td>
+                            <td class="montant">{{ vente.totalNet|fcfa }}</td>
+                            <td class="montant pe-3">{{ vente.montantEncaisse|fcfa }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="7" class="text-center text-body-secondary py-4">Aucune vente.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: ventes, route: 'app_vente_index', params: {q: q, jour: jour, statut: statut}} %}
+{% endblock %}

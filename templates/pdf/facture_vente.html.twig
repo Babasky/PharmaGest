@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture {{ vente.numero }}</title>
+    <style>
+        @page { margin: 16mm 14mm; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9.5pt; color: #1f2a24; }
+        h1 { font-size: 15pt; margin: 0 0 2mm; color: #198754; }
+        .entete td { vertical-align: top; }
+        .petit { font-size: 8pt; color: #555; }
+        table.lignes { width: 100%; border-collapse: collapse; margin-top: 6mm; }
+        table.lignes th { background: #e9f3ee; text-align: left; padding: 2mm; border-bottom: 1px solid #198754; font-size: 8.5pt; }
+        table.lignes td { padding: 2mm; border-bottom: 1px solid #ddd; }
+        .droite { text-align: right; }
+        table.totaux { width: 45%; margin-left: 55%; border-collapse: collapse; margin-top: 4mm; }
+        table.totaux td { padding: 1.5mm 2mm; }
+        .total td { font-weight: bold; font-size: 11pt; border-top: 1px solid #198754; }
+        .cadre { border: 1px solid #ccc; padding: 3mm; }
+        .annulee { color: #b02a37; font-weight: bold; font-size: 12pt; }
+    </style>
+</head>
+<body>
+    <table class="entete" width="100%">
+        <tr>
+            <td width="55%">
+                {% if logo %}<img src="{{ logo }}" style="max-height: 18mm; max-width: 50mm; margin-bottom: 2mm;"><br>{% endif %}
+                <h1>{{ pharmacie.nom }}</h1>
+                <div class="petit">
+                    {{ [pharmacie.adresse, pharmacie.ville]|filter(v => v)|join(', ') }}<br>
+                    {% if pharmacie.telephone %}Tél. {{ pharmacie.telephone|telephone }}{% endif %}{% if pharmacie.email %} · {{ pharmacie.email }}{% endif %}<br>
+                    {% if pharmacie.numeroAutorisation %}Autorisation n° {{ pharmacie.numeroAutorisation }}{% endif %}
+                </div>
+            </td>
+            <td width="45%" class="droite">
+                <div style="font-size: 14pt; font-weight: bold;">FACTURE</div>
+                <div>N° <strong>{{ vente.numero }}</strong></div>
+                <div>Date : {{ vente.valideeLe|date('d/m/Y') }}</div>
+                <div class="petit">{{ vente.type.libelle }} · vendeur : {{ vente.vendeur.nom }}</div>
+                {% if vente.statut.value == 'annulee' %}<div class="annulee">VENTE ANNULÉE</div>{% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <table width="100%" style="margin-top: 6mm;">
+        <tr>
+            <td width="50%" class="petit" style="vertical-align: top;">
+                {% if vente.ordonnance %}
+                    Ordonnance{{ vente.ordonnance.numero ? ' n° ' ~ vente.ordonnance.numero }} du {{ vente.ordonnance.date|date('d/m/Y') }}<br>
+                    Prescripteur : {{ vente.ordonnance.prescripteur }}{{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}
+                {% endif %}
+            </td>
+            <td width="50%" class="cadre">
+                <div class="petit">Client</div>
+                <strong>{{ vente.client ? vente.client.nom : 'Client de passage' }}</strong>
+                {% if vente.client and vente.client.telephone %}<br>Tél. {{ vente.client.telephone|telephone }}{% endif %}
+                {% if vente.type.value == 'amo' %}<br>Assuré {{ vente.organismeAmo.nom }} n° {{ vente.numeroAssure }}{% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <table class="lignes">
+        <thead>
+            <tr><th>Désignation</th><th class="droite">Qté</th><th class="droite">Prix unitaire</th><th class="droite">Remise</th><th class="droite">Montant</th></tr>
+        </thead>
+        <tbody>
+            {% for ligne in vente.lignes %}
+                <tr>
+                    <td>{{ ligne.produit.designation }}{% if vente.type.value == 'amo' %}<br><span class="petit">{{ ligne.remboursable ? 'Remboursable AMO' : 'Non remboursable : à la charge de l\'assuré' }}</span>{% endif %}</td>
+                    <td class="droite">{{ ligne.quantite }}</td>
+                    <td class="droite">{{ ligne.prixUnitaire|fcfa }}</td>
+                    <td class="droite">{{ ligne.remise > 0 ? ligne.remise|fcfa : '—' }}</td>
+                    <td class="droite">{{ (ligne.montantBrut - ligne.remise)|fcfa }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="totaux">
+        <tr><td>Total</td><td class="droite">{{ vente.totalBrut|fcfa }}</td></tr>
+        {% if vente.type.value == 'amo' %}
+            <tr><td>Part AMO ({{ vente.organismeAmo.code }}, {{ vente.tauxAmo }} %)</td><td class="droite">{{ vente.partAmo|fcfa }}</td></tr>
+            <tr><td>Part assuré</td><td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td></tr>
+        {% endif %}
+        {% if vente.remise > 0 %}<tr><td>Remise</td><td class="droite">− {{ vente.remise|fcfa }}</td></tr>{% endif %}
+        <tr class="total"><td>Payé par le client</td><td class="droite">{{ vente.montantEncaisse|fcfa }}</td></tr>
+        {% for paiement in vente.paiements %}
+            <tr><td class="petit">{{ paiement.mode.libelle }}{{ paiement.reference ? ' (' ~ paiement.reference ~ ')' }}</td><td class="droite petit">{{ paiement.montant|fcfa }}</td></tr>
+        {% endfor %}
+    </table>
+
+    {% if mentions %}<p class="petit" style="margin-top: 10mm;">{{ mentions|nl2br }}</p>{% endif %}
+</body>
+</html>

@@ -27,6 +27,7 @@ final class Navigation
             'elements' => [
                 ['libelle' => 'Caisse', 'icone' => 'cart-plus', 'route' => 'app_caisse', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Ventes', 'icone' => 'receipt', 'route' => 'app_vente_index', 'role' => 'ROLE_VENDEUR'],
+                ['libelle' => 'Sessions de caisse', 'icone' => 'safe', 'route' => 'app_session_caisse_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Clients', 'icone' => 'people', 'route' => 'app_client_index', 'role' => 'ROLE_VENDEUR'],
             ],
         ],

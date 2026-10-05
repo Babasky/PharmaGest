@@ -22,9 +22,10 @@ class GenerateurPdf
     }
 
     /**
-     * @param array<string, mixed> $contexte
+     * @param array<string, mixed>                         $contexte
+     * @param string|array{0: 0, 1: 0, 2: float, 3: float} $format   format nommé (« A4 ») ou dimensions en points
      */
-    public function rendre(string $template, array $contexte, string $format = 'A4'): string
+    public function rendre(string $template, array $contexte, string|array $format = 'A4'): string
     {
         if (!is_dir($this->dossierTemporaire)) {
             mkdir($this->dossierTemporaire, 0775, true);
