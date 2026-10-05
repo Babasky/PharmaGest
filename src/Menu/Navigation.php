@@ -48,6 +48,7 @@ final class Navigation
             'elements' => [
                 ['libelle' => 'AMO', 'icone' => 'shield-plus', 'route' => 'app_amo_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Dépenses', 'icone' => 'wallet2', 'route' => 'app_depense_index', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => 'Recettes', 'icone' => 'piggy-bank', 'route' => 'app_recette_index', 'role' => 'ROLE_PROPRIETAIRE'],
                 ['libelle' => 'Rapports', 'icone' => 'bar-chart-line', 'route' => 'app_rapport_index', 'role' => 'ROLE_ADJOINT'],
             ],
         ],

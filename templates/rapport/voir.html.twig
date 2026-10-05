@@ -1,0 +1,51 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ rapport.titre }}{% endblock %}
+
+{% block page_actions %}
+    {% set export = {code: rapport.code}|merge(rapport.periode.parametres) %}
+    <a class="btn btn-outline-success" href="{{ path('app_rapport_excel', export) }}" id="export-excel"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a class="btn btn-outline-danger" href="{{ path('app_rapport_pdf', export) }}" id="export-pdf" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+{% endblock %}
+
+{% block content %}
+    <ul class="nav nav-tabs mb-3" id="onglets-rapports">
+        {% for code, titre in onglets %}
+            <li class="nav-item"><a class="nav-link{{ code == rapport.code ? ' active' }}" href="{{ path('app_rapport_voir', {code: code}|merge(rapport.periode.parametres)) }}">{{ titre }}</a></li>
+        {% endfor %}
+    </ul>
+
+    {% include 'rapport/_periode.html.twig' with {periode: rapport.periode, route: 'app_rapport_voir', route_params: {code: rapport.code}} %}
+
+    {% set graphiques = rapport.graphiques %}
+    {% set synthese = rapport.tableau('synthese') %}
+    {% if synthese %}{% include 'rapport/_tableau.html.twig' with {tableau: synthese} %}{% endif %}
+
+    {% if graphiques.mois is defined %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-body fw-semibold">Recettes et dépenses par mois, solde du mois</div>
+            <div class="card-body"><div class="chart-container"><canvas {{ stimulus_controller('chart', {config: graphiques.mois, devise: true}) }} aria-label="Recettes et dépenses par mois"></canvas></div></div>
+        </div>
+    {% endif %}
+    {% if graphiques.jours is defined %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-body fw-semibold">Chiffre d'affaires par jour</div>
+            <div class="card-body"><div class="chart-container"><canvas {{ stimulus_controller('chart', {config: graphiques.jours, devise: true}) }} aria-label="Chiffre d'affaires par jour"></canvas></div></div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        {% for tableau in rapport.tableaux|filter(t => t.id != 'synthese') %}
+            {% set graphique = {'par-type': 'types', 'par-mode': 'modes', 'par-categorie': 'categories', 'depenses-categorie': 'categories'}[tableau.id] ?? null %}
+            {% set large = tableau.id in ['detail', 'depenses', 'mois', 'par-mode'] and rapport.code != 'ventes' %}
+            <div class="col-12{{ large ? '' : ' col-xl-6' }}">
+                {% include 'rapport/_tableau.html.twig' %}
+                {% if graphique and graphiques[graphique] is defined and tableau.lignes is not empty %}
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-body"><div class="chart-container"><canvas {{ stimulus_controller('chart', {config: graphiques[graphique], devise: graphiques[graphique].type == 'bar'}) }} aria-label="{{ tableau.titre }}"></canvas></div></div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

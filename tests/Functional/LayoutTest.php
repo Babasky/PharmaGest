@@ -49,7 +49,7 @@ final class LayoutTest extends AppWebTestCase
         foreach (['Caisse', 'Inventaires', 'AMO', 'Rapports'] as $present) {
             self::assertStringContainsString($present, $menu);
         }
-        foreach (['Dépenses', 'Équipe', 'Paramètres', 'Abonnement'] as $absent) {
+        foreach (['Dépenses', 'Recettes', 'Équipe', 'Paramètres', 'Abonnement'] as $absent) {
             self::assertStringNotContainsString($absent, $menu);
         }
     }
@@ -59,7 +59,7 @@ final class LayoutTest extends AppWebTestCase
         $officine = $this->creerOfficine();
         $menu = $this->connecter($officine->proprietaire)->request('GET', '/')->filter('#sidebar')->text();
 
-        foreach (['Caisse', 'Inventaires', 'Dépenses', 'Rapports', 'Équipe', 'Paramètres', 'Abonnement', "Journal d'audit"] as $present) {
+        foreach (['Caisse', 'Inventaires', 'Dépenses', 'Recettes', 'Rapports', 'Équipe', 'Paramètres', 'Abonnement', "Journal d'audit"] as $present) {
             self::assertStringContainsString($present, $menu);
         }
         self::assertStringNotContainsString('Pharmacies', $menu);

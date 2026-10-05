@@ -2,6 +2,7 @@
 
 namespace App\Twig;
 
+use App\Reporting\ExportRapport;
 use App\Util\Fcfa;
 use App\Util\Telephone;
 use Twig\Attribute\AsTwigFilter;
@@ -24,5 +25,14 @@ final class AppExtension
     public function telephone(?string $numero): string
     {
         return Telephone::format($numero);
+    }
+
+    /**
+     * Cellule d'un tableau de rapport : {{ valeur|cellule('montant') }}.
+     */
+    #[AsTwigFilter('cellule')]
+    public function cellule(mixed $valeur, string $type): string
+    {
+        return ExportRapport::formater($valeur, $type);
     }
 }

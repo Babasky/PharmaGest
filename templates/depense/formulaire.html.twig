@@ -1,0 +1,31 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ depense ? 'Modifier la dépense ' ~ depense.numero : 'Nouvelle dépense' }}{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 46rem">
+        <div class="card-body">
+            {{ form_start(formulaire) }}
+            {{ form_errors(formulaire) }}
+            <div class="row g-2">
+                <div class="col-12 col-md-6">{{ form_row(formulaire.date) }}</div>
+                <div class="col-12 col-md-6">{{ form_row(formulaire.categorie) }}</div>
+            </div>
+            {{ form_row(formulaire.libelle) }}
+            <div class="row g-2">
+                <div class="col-12 col-md-6">{{ form_row(formulaire.montant) }}</div>
+                <div class="col-12 col-md-6">{{ form_row(formulaire.mode) }}</div>
+            </div>
+            {{ form_row(formulaire.beneficiaire) }}
+            {% if depense and depense.justificatif %}
+                <p class="small mb-1"><i class="bi bi-paperclip"></i> Un justificatif est déjà joint ; un nouveau fichier le remplace.</p>
+            {% endif %}
+            {{ form_row(formulaire.justificatif) }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-success" type="submit">Enregistrer</button>
+                <a class="btn btn-outline-secondary" href="{{ depense ? path('app_depense_voir', {id: depense.id}) : path('app_depense_index') }}">Annuler</a>
+            </div>
+            {{ form_end(formulaire) }}
+        </div>
+    </div>
+{% endblock %}

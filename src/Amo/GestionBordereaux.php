@@ -6,6 +6,7 @@ use App\Entity\BordereauAmo;
 use App\Entity\CreanceAmo;
 use App\Entity\OrganismeAmo;
 use App\Entity\ReglementAmo;
+use App\Finance\RecetteService;
 use App\Repository\CreanceAmoRepository;
 use App\Service\AuditLogger;
 use App\Service\Numeroteur;
@@ -28,6 +29,7 @@ class GestionBordereaux
         private readonly AuditLogger $audit,
         private readonly TenantContext $tenantContext,
         private readonly ClockInterface $horloge,
+        private readonly RecetteService $recettes,
     ) {
     }
 
@@ -209,6 +211,8 @@ class GestionBordereaux
                     $reglement->affecter($parCreance[$id], $somme);
                 }
                 $this->em->persist($reglement);
+                // RG-10 : la part AMO réglée devient une recette.
+                $this->recettes->enregistrerReglementAmo($reglement);
             }
             foreach ($motifs as $id => $motif) {
                 $parCreance[$id]->rejeter($motif, $date);
