@@ -1,0 +1,26 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Entrée de stock — {{ produit.nomCommercial }}{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 46rem">
+        <div class="card-body">
+            <p class="text-body-secondary small">{{ produit.designation }}. L'entrée crée un nouveau lot. Les livraisons des commandes fournisseurs seront réceptionnées depuis le module Commandes.</p>
+            {{ form_start(formulaire) }}
+            {{ form_errors(formulaire) }}
+            <div class="row g-2">
+                <div class="col-12 col-md-6">{{ form_row(formulaire.numero) }}</div>
+                <div class="col-12 col-md-6">{{ form_row(formulaire.datePeremption) }}</div>
+                <div class="col-6">{{ form_row(formulaire.quantite) }}</div>
+                <div class="col-6">{{ form_row(formulaire.prixAchat) }}</div>
+            </div>
+            {{ form_row(formulaire.fournisseur) }}
+            {{ form_row(formulaire.motif) }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-success" type="submit">Entrer en stock</button>
+                <a class="btn btn-outline-secondary" href="{{ path('app_produit_voir', {id: produit.id}) }}">Annuler</a>
+            </div>
+            {{ form_end(formulaire) }}
+        </div>
+    </div>
+{% endblock %}

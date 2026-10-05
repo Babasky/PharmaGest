@@ -1,0 +1,9 @@
+{# Onglets du module Stock. Paramètre : actif (index, alertes, valorisation). #}
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link{{ actif == 'index' ? ' active' }}" href="{{ path('app_stock_index') }}">Stock par produit</a></li>
+    <li class="nav-item"><a class="nav-link{{ actif == 'alertes' ? ' active' }}" href="{{ path('app_stock_alertes') }}">Alertes</a></li>
+    {% if is_granted('ROLE_ADJOINT') %}
+        <li class="nav-item"><a class="nav-link{{ actif == 'valorisation' ? ' active' }}" href="{{ path('app_stock_valorisation') }}">Valorisation</a></li>
+        <li class="nav-item"><a class="nav-link{{ actif == 'inventaires' ? ' active' }}" href="{{ path('app_inventaire_index') }}">Inventaires</a></li>
+    {% endif %}
+</ul>

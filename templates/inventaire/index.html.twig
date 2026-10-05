@@ -1,0 +1,54 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Inventaires{% endblock %}
+
+{% block content %}
+    {% include 'stock/_onglets.html.twig' with {actif: 'inventaires'} %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-body fw-semibold">Nouvel inventaire</div>
+                <div class="card-body">
+                    {% if en_cours %}
+                        <p class="mb-2">L'inventaire <a href="{{ path('app_inventaire_voir', {id: en_cours.id}) }}">{{ en_cours.numero }}</a> est en cours.</p>
+                        <p class="small text-body-secondary mb-0">Validez-le ou annulez-le avant d'en ouvrir un autre : un lot n'est jamais compté dans deux inventaires à la fois.</p>
+                    {% elseif not ecriture_autorisee() %}
+                        <p class="small text-body-secondary mb-0">Abonnement expiré : lecture seule.</p>
+                    {% else %}
+                        {{ form_start(formulaire) }}
+                        {{ form_errors(formulaire) }}
+                        {{ form_row(formulaire.perimetre) }}
+                        {{ form_row(formulaire.etagere) }}
+                        {{ form_row(formulaire.categorie) }}
+                        <p class="small text-body-secondary">Les quantités théoriques de chaque lot sont figées à l'ouverture. Un inventaire tournant ne porte que sur une étagère ou une catégorie.</p>
+                        <button class="btn btn-success" type="submit">Ouvrir l'inventaire</button>
+                        {{ form_end(formulaire) }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light"><tr><th class="ps-3">Numéro</th><th>Périmètre</th><th>Ouvert le</th><th class="text-end">Écarts</th><th class="pe-3">Statut</th></tr></thead>
+                        <tbody>
+                            {% for inventaire in inventaires %}
+                                <tr>
+                                    <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_inventaire_voir', {id: inventaire.id}) }}">{{ inventaire.numero }}</a></td>
+                                    <td>{{ inventaire.libellePerimetre }}</td>
+                                    <td class="small text-nowrap">{{ inventaire.ouvertLe|date('d/m/Y H:i') }}</td>
+                                    <td class="text-end">{{ inventaire.statut.value == 'valide' ? inventaire.nombreEcarts : '—' }}</td>
+                                    <td class="pe-3"><span class="badge text-bg-{{ inventaire.statut.couleur }}">{{ inventaire.statut.libelle }}</span></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="text-center text-body-secondary py-4">Aucun inventaire pour l'instant.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% include 'layout/_pagination.html.twig' with {page: inventaires, route: 'app_inventaire_index'} %}
+        </div>
+    </div>
+{% endblock %}

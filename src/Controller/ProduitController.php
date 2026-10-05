@@ -6,7 +6,10 @@ use App\Entity\Produit;
 use App\Entity\Utilisateur;
 use App\Form\ProduitType;
 use App\Repository\CategorieRepository;
+use App\Repository\LotRepository;
+use App\Repository\MouvementStockRepository;
 use App\Repository\ProduitRepository;
+use App\Stock\StockService;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,11 +44,34 @@ final class ProduitController extends AbstractAppController
     }
 
     #[Route('/{id}', name: 'app_produit_voir', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function voir(Produit $produit): Response
-    {
+    public function voir(
+        Produit $produit,
+        LotRepository $lots,
+        MouvementStockRepository $mouvements,
+        StockService $stock,
+        #[MapQueryParameter] int $page = 1,
+    ): Response {
         $this->exigerMemePharmacie($produit);
+        $aujourdhui = $stock->aujourdhui();
 
-        return $this->render('produit/voir.html.twig', ['produit' => $produit]);
+        // Ventes des 12 derniers mois, mois en cours compris (ST-08).
+        $debut = $aujourdhui->modify('first day of this month')->modify('-11 months');
+        $ventes = $mouvements->ventesParMois($produit, $debut);
+        $mois = [];
+        for ($i = 0; $i < 12; ++$i) {
+            $m = $debut->modify(\sprintf('+%d months', $i));
+            $mois[$m->format('m/Y')] = $ventes[$m->format('Y-m')] ?? 0;
+        }
+
+        return $this->render('produit/voir.html.twig', [
+            'produit' => $produit,
+            'lots' => $lots->enStock($produit),
+            'synthese' => $lots->syntheseParProduit([$produit], $aujourdhui)[(int) $produit->getId()],
+            'mouvements' => $mouvements->historique($produit, $page),
+            'ventes_mois' => $mois,
+            'ventes_quantites' => array_values($mois),
+            'aujourdhui' => $aujourdhui,
+        ]);
     }
 
     #[Route('/nouveau', name: 'app_produit_nouveau', methods: ['GET', 'POST'])]

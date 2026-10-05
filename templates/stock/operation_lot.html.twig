@@ -1,0 +1,28 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}{{ ajustement ? 'Ajuster' : 'Détruire' }} le lot {{ lot.numero }}{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 40rem">
+        <div class="card-body">
+            <dl class="row small mb-3">
+                <dt class="col-5 fw-normal text-body-secondary">Produit</dt><dd class="col-7">{{ lot.produit.nomCommercial }}</dd>
+                <dt class="col-5 fw-normal text-body-secondary">Péremption</dt><dd class="col-7 {{ perime ? 'text-danger fw-semibold' }}">{{ lot.datePeremption|date('d/m/Y') }}{{ perime ? ' (périmé)' }}</dd>
+                <dt class="col-5 fw-normal text-body-secondary">Quantité enregistrée</dt><dd class="col-7">{{ lot.quantiteRestante }}</dd>
+            </dl>
+            <p class="small text-body-secondary">
+                {% if ajustement %}Saisissez la quantité réellement présente dans le lot : l'écart est enregistré comme un ajustement et tracé dans le journal d'audit.
+                {% else %}Les unités détruites sortent définitivement du stock. L'opération est tracée dans le journal d'audit.{% endif %}
+            </p>
+            {{ form_start(formulaire) }}
+            {{ form_errors(formulaire) }}
+            {{ form_row(formulaire.quantite) }}
+            {{ form_row(formulaire.motif) }}
+            <div class="d-flex gap-2">
+                <button class="btn {{ ajustement ? 'btn-success' : 'btn-danger' }}" type="submit">{{ ajustement ? 'Ajuster' : 'Détruire' }}</button>
+                <a class="btn btn-outline-secondary" href="{{ path('app_produit_voir', {id: lot.produit.id}) }}">Annuler</a>
+            </div>
+            {{ form_end(formulaire) }}
+        </div>
+    </div>
+{% endblock %}

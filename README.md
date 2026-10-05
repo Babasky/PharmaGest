@@ -23,7 +23,7 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 | Compte | Rôle | Situation |
 |---|---|---|
 | `admin@pharmagest.ml` | Super admin | Espace plateforme |
-| `a.traore@fleuve.ml` | Propriétaire | Pharmacie du Fleuve, abonnement actif, équipe complète, catalogue de 10 produits |
+| `a.traore@fleuve.ml` | Propriétaire | Pharmacie du Fleuve, abonnement actif, équipe complète, catalogue de 10 produits avec stock (une alerte de chaque type) |
 | `f.keita@fleuve.ml` / `m.coulibaly@fleuve.ml` | Adjoint / vendeur | Pharmacie du Fleuve |
 | `o.guindo@kanaga.ml` | Propriétaire | Échéance dans 12 jours (bandeau d'alerte) |
 | `k.sangare@djoliba.ml` | Propriétaire | Période d'essai |
@@ -82,6 +82,7 @@ ligne ; la confirmation importe les lignes valides.
 - Téléphones affichés via `|telephone` → `+223 76 12 34 56`.
 - Numéros de documents : `App\Service\Numeroteur` (séquentiels sans trou, par pharmacie et par année, RG-02).
 - Actions sensibles : `App\Service\AuditLogger` (journal non modifiable).
+- Stock : jamais modifié directement ; toute variation passe par `App\Stock\StockService` (mouvement typé, FEFO, RG-03 à RG-05).
 - Pages connectées : étendre `layout/app.html.twig` (blocs `title`, `page_actions`, `content`).
   Le menu est décrit dans `App\Menu\Navigation` (rôle requis par entrée ; les modules pas encore livrés apparaissent « Bientôt »).
 - Graphiques : `{{ stimulus_controller('chart', {config: {...}, devise: true}) }}` sur un `<canvas>`.

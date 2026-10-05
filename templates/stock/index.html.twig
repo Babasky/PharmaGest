@@ -1,0 +1,74 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}État du stock{% endblock %}
+
+{% block content %}
+    {% include 'stock/_onglets.html.twig' with {actif: 'index'} %}
+
+    <div class="row g-2 mb-3">
+        {% for type, libelle in constant('App\\Stock\\AlertesStock::LIBELLES') %}
+            <div class="col-6 col-xl-3">
+                <a class="card shadow-sm h-100 text-decoration-none" href="{{ path('app_stock_alertes', {type: type}) }}">
+                    <div class="card-body py-2">
+                        <div class="small text-body-secondary">{{ libelle }}</div>
+                        <div class="fs-5 fw-semibold {{ alertes[type] > 0 ? 'text-danger' : 'text-success' }}">{{ alertes[type]|number_format }}</div>
+                    </div>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% set choix_categorie %}
+        <select name="categorie" class="form-select" style="max-width: 16rem" aria-label="Filtrer par catégorie" onchange="this.form.requestSubmit()">
+            <option value="">Toutes les catégories</option>
+            {% for c in categories %}
+                <option value="{{ c.id }}"{{ categorie == c.id ? ' selected' }}>{{ c.parent ? '— ' }}{{ c.nom }}</option>
+            {% endfor %}
+        </select>
+    {% endset %}
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3" role="search">
+        <div class="input-group" style="max-width: 26rem">
+            <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Nom, DCI ou code-barres" aria-label="Rechercher un produit" autofocus>
+            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i><span class="visually-hidden">Rechercher</span></button>
+        </div>
+        {{ choix_categorie }}
+    </form>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Produit</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end d-none d-md-table-cell">Seuil</th>
+                        <th class="text-end">Périmés</th>
+                        {% if is_granted('ROLE_ADJOINT') %}<th class="text-end pe-3">Valeur</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for produit in produits %}
+                        {% set s = synthese[produit.id] %}
+                        <tr>
+                            <td class="ps-3">
+                                <a class="fw-semibold text-decoration-none" href="{{ path('app_produit_voir', {id: produit.id}) }}">{{ produit.nomCommercial }}</a>
+                                <div class="small text-body-secondary">{{ [produit.dci, produit.dosage, produit.etagere ? 'étagère ' ~ produit.etagere.code : null]|filter(v => v)|join(' · ') }}</div>
+                            </td>
+                            <td class="text-end fw-semibold">
+                                {{ s.stock|number_format }}
+                                {% if s.stock == 0 %}<span class="badge text-bg-danger ms-1">Rupture</span>{% elseif s.stock <= produit.seuilAlerte %}<span class="badge text-bg-warning ms-1">Seuil</span>{% endif %}
+                            </td>
+                            <td class="text-end d-none d-md-table-cell text-body-secondary">{{ produit.seuilAlerte }}</td>
+                            <td class="text-end">{{ s.perime > 0 ? s.perime|number_format : '—' }}</td>
+                            {% if is_granted('ROLE_ADJOINT') %}<td class="montant pe-3">{{ s.valeur|fcfa }}</td>{% endif %}
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-body-secondary py-4">{% if q %}Aucun produit ne correspond à « {{ q }} ».{% else %}Le catalogue est vide.{% endif %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: produits, route: 'app_stock_index', params: {q: q, categorie: categorie}} %}
+    <p class="small text-body-secondary mt-2"><i class="bi bi-info-circle"></i> Le stock ne compte que les lots non périmés (RG-03). Les lots périmés restent en réserve jusqu'à leur destruction ou leur retour au fournisseur.</p>
+{% endblock %}

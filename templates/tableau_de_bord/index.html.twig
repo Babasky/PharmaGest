@@ -10,7 +10,9 @@
                     <div class="card-body d-flex align-items-center gap-3">
                         <i class="bi bi-{{ indicateur.icone }} fs-2 text-success"></i>
                         <div class="min-w-0">
-                            <div class="small text-body-secondary">{{ indicateur.libelle }}</div>
+                            <div class="small text-body-secondary">
+                                {% if indicateur.lien is defined %}<a class="stretched-link text-reset text-decoration-none" href="{{ path('app_stock_alertes', indicateur.lien) }}">{{ indicateur.libelle }}</a>{% else %}{{ indicateur.libelle }}{% endif %}
+                            </div>
                             <div class="fs-5 fw-semibold text-nowrap">
                                 {{ indicateur.montant ? indicateur.valeur|fcfa : indicateur.valeur|number_format }}
                             </div>
