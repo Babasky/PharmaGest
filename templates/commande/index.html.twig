@@ -1,0 +1,84 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Commandes fournisseurs{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-success" href="{{ path('app_commande_suggestions') }}" id="lien-suggestions">
+        <i class="bi bi-lightbulb"></i> Suggestions{% if a_commander > 0 %} <span class="badge text-bg-warning">{{ a_commander }}</span>{% endif %}
+    </a>
+{% endblock %}
+
+{% block content %}
+    {% set prix_visibles = is_granted('ROLE_ADJOINT') %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-body fw-semibold">Nouvelle commande</div>
+                <div class="card-body">
+                    {% if not ecriture_autorisee() %}
+                        <p class="small text-body-secondary mb-0">Abonnement expiré : lecture seule.</p>
+                    {% elseif fournisseurs is empty %}
+                        <p class="small text-body-secondary mb-0">Ajoutez d'abord un fournisseur.</p>
+                    {% else %}
+                        <form method="post" action="{{ path('app_commande_nouvelle') }}" id="nouvelle-commande">
+                            <input type="hidden" name="_token" value="{{ csrf_token(csrf_nouvelle) }}">
+                            <label class="form-label" for="fournisseur-nouvelle">Fournisseur</label>
+                            <select class="form-select mb-2" id="fournisseur-nouvelle" name="fournisseur" required>
+                                {% for f in fournisseurs %}<option value="{{ f.id }}">{{ f.nom }}</option>{% endfor %}
+                            </select>
+                            <button class="btn btn-success" type="submit">Créer le brouillon</button>
+                        </form>
+                        <p class="small text-body-secondary mt-3 mb-0">
+                            Ou partez des <a href="{{ path('app_commande_suggestions') }}">suggestions</a> : les produits sous le seuil d'alerte,
+                            avec la quantité qui ramène le stock au maximum.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="list-group shadow-sm small" id="compteurs">
+                {% for s in statuts %}
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between{{ statut == s.value ? ' active' }}" href="{{ path('app_commande_index', {statut: s.value}) }}">
+                        <span>{{ s.libelle }}</span><span class="badge text-bg-{{ s.couleur }}">{{ nombres[s.value] ?? 0 }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-12 col-lg-8">
+            <form method="get" class="d-flex flex-wrap gap-2 mb-3">
+                <select name="fournisseur" class="form-select" style="max-width: 14rem" aria-label="Fournisseur">
+                    <option value="">Tous les fournisseurs</option>
+                    {% for f in tous_fournisseurs %}<option value="{{ f.id }}"{{ fournisseur == f.id ? ' selected' }}>{{ f.nom }}</option>{% endfor %}
+                </select>
+                <select name="statut" class="form-select" style="max-width: 13rem" aria-label="Statut">
+                    <option value="">Tous les statuts</option>
+                    {% for s in statuts %}<option value="{{ s.value }}"{{ statut == s.value ? ' selected' }}>{{ s.libelle }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+            </form>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="commandes">
+                        <thead class="table-light">
+                            <tr><th class="ps-3">Commande</th><th>Fournisseur</th><th>Date</th><th class="text-end">Produits</th>{% if prix_visibles %}<th class="text-end">Montant estimé</th>{% endif %}<th class="pe-3">Statut</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for commande in commandes %}
+                                <tr>
+                                    <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_commande_voir', {id: commande.id}) }}">{{ commande.libelle }}</a></td>
+                                    <td>{{ commande.fournisseur.nom }}</td>
+                                    <td class="small text-nowrap">{{ (commande.envoyeeLe ?? commande.creeLe)|date('d/m/Y') }}</td>
+                                    <td class="text-end">{{ commande.lignes|length }}</td>
+                                    {% if prix_visibles %}<td class="montant">{{ commande.montantEstime|fcfa }}</td>{% endif %}
+                                    <td class="pe-3"><span class="badge text-bg-{{ commande.statut.couleur }}">{{ commande.statut.libelle }}</span></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucune commande pour l'instant.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% include 'layout/_pagination.html.twig' with {page: commandes, route: 'app_commande_index', params: {fournisseur: fournisseur, statut: statut}} %}
+        </div>
+    </div>
+{% endblock %}

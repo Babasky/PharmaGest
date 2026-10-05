@@ -1,0 +1,11 @@
+{# Une ligne de la réception. Paramètres : i (index), ligne (LigneCommande), s (valeurs saisies). #}
+{% set p = ligne.produit %}
+<tr data-produit="{{ p.nomCommercial }}">
+    <td class="ps-3"><span data-libelle>{{ p.designation }}</span><input type="hidden" name="lignes[{{ i }}][ligne]" value="{{ ligne.id }}"></td>
+    <td class="text-end">{{ ligne.reste }}<span class="small text-body-secondary"> / {{ ligne.quantite }}</span></td>
+    <td><input type="number" min="0" max="100000" class="form-control form-control-sm text-end" style="width: 6.5rem" name="lignes[{{ i }}][quantite]" value="{{ s.quantite ?? '' }}" data-vider aria-label="Quantité reçue de {{ p.nomCommercial }}"></td>
+    <td><input type="text" maxlength="50" class="form-control form-control-sm" style="min-width: 7rem" name="lignes[{{ i }}][lot]" value="{{ s.lot ?? '' }}" data-vider aria-label="N° de lot de {{ p.nomCommercial }}"></td>
+    <td><input type="date" class="form-control form-control-sm" name="lignes[{{ i }}][peremption]" value="{{ s.peremption ?? '' }}" data-vider aria-label="Péremption de {{ p.nomCommercial }}"></td>
+    <td><input type="text" inputmode="numeric" class="form-control form-control-sm text-end" style="width: 7.5rem" name="lignes[{{ i }}][prix]" value="{{ s.prix ?? ligne.prixEstime }}" aria-label="Prix réel de {{ p.nomCommercial }}"></td>
+    <td class="pe-3"><button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-action="reception#ajouterLot" title="Le même produit dans un autre lot">+ lot</button></td>
+</tr>

@@ -294,3 +294,61 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - **Encours** = part AMO ni réglée ni rejetée, par organisme, réparti par **ancienneté depuis la date de la vente**
   (0-30, 31-60, 61-90, plus de 90 jours).
 - **Taux de rejet** = montant rejeté / montant des créances transmises, par organisme et au total.
+
+## Décisions — Lot 6 (commandes)
+
+### Brouillon et numérotation (CO-01, CO-03, RG-02)
+
+- Une commande = **un fournisseur**. Le brouillon se compose librement : recherche par nom, DCI ou code-barres, une
+  ligne par produit (ajouter deux fois le même produit cumule la quantité), quantité 0 = ligne retirée. Le prix
+  estimé est repris du **prix d'achat de référence** de la fiche produit et reste modifiable sur le brouillon.
+- Le **vendeur** prépare des brouillons (matrice des droits) mais ne voit pas les prix d'achat (décision du Lot 2) :
+  colonnes de prix masquées, prix envoyé ignoré. Passer, envoyer, annuler, réceptionner et télécharger l'Excel sont
+  réservés au **propriétaire et à l'adjoint**.
+- Le numéro `CMD-AAAA-NNNNNN` est attribué quand la commande est **passée** (comme les ventes et les bordereaux) :
+  un brouillon supprimé ne laisse pas de trou. Passée, la commande n'est plus modifiable.
+- Deux façons de passer une commande : **par email** (CO-05) ou **sans email**, pour une commande téléphonée ou
+  envoyée par WhatsApp avec le bon Excel. Les deux donnent le statut « envoyée ».
+- Statuts (CO-03) : brouillon → envoyée → reçue partiellement → reçue ; « annulée » seulement pour une commande
+  envoyée dont rien n'a été reçu (un brouillon se supprime). Une commande reçue en partie dont le reste ne viendra
+  pas peut être **soldée** avec un motif : elle passe « reçue » et le reliquat n'est plus attendu. Annulation et
+  solde sont journalisés (motif, unités non livrées).
+
+### Suggestion (CO-02)
+
+- Produits actifs au **seuil d'alerte ou en dessous** (même règle que l'alerte du Lot 3), groupés par **fournisseur
+  habituel** ; les produits sans fournisseur habituel actif sont listés à part pour qu'on le renseigne.
+- Quantité proposée = stock maximum − stock disponible − **quantité déjà commandée et pas encore livrée** (commandes
+  envoyées ou reçues en partie), pour ne pas commander deux fois. **Sans stock maximum**, on vise le double du seuil.
+  Un produit en rupture et non commandé reçoit au moins 1 unité.
+- On coche les produits, on ajuste les quantités, et le brouillon est créé : il reste à le vérifier et l'envoyer.
+
+### Bon de commande Excel et email (CO-04, CO-05)
+
+- Excel A4 portrait, une page en largeur, en-tête du tableau répété à l'impression : pharmacie (adresse, téléphone,
+  email, n° d'autorisation), fournisseur, numéro, date, lignes (désignation, code-barres, conditionnement,
+  quantité, prix unitaire estimé, montant) et total. Codes-barres en texte. Un brouillon s'exporte avec la mention
+  « BROUILLON ».
+- L'email part **tout de suite** (sans file d'attente) pour enregistrer le résultat réel : chaque tentative entre
+  dans l'**historique des envois** (date, destinataire, envoyé ou échec avec la cause). Si l'envoi d'un brouillon
+  échoue, il reste brouillon et son numéro n'est pas consommé. Une commande passée peut être renvoyée.
+- Le fournisseur doit avoir un email ; « Répondre » écrit à l'email de la pharmacie (à défaut, celui de l'expéditeur),
+  pas à l'adresse technique de la plateforme.
+
+### Réception (CO-06, RG-16)
+
+- Une réception (date, n° du bon de livraison) par livraison ; plusieurs réceptions par commande. Chaque ligne reçue
+  exige un **n° de lot, une péremption future et le prix d'achat réel** (proposé : le prix estimé), et crée un lot
+  par `StockService::entrer()` (mouvement « Réception », document = n° de commande, fournisseur de la commande).
+  Un même produit peut arriver en **plusieurs lots** (« + lot »).
+- Tout est vérifié avant la première écriture : une ligne refusée n'enregistre rien.
+- Une quantité **supérieure** à la commande est acceptée avec un avertissement (RG-16). Le statut se déduit des
+  quantités reçues : tout reçu → « reçue », sinon « reçue partiellement ».
+- L'écart entre prix réel et estimé (CO-07), la mise à jour du prix de référence et les factures et dettes
+  fournisseurs (CO-08) restent en **V1**.
+
+### Entrée de stock manuelle
+
+- Elle est **conservée** pour ce qui n'est pas une commande : stock initial à l'installation, don, échantillons,
+  régularisation. Le **motif devient obligatoire** et l'écran renvoie vers la réception pour une livraison commandée.
+  Elle reste réservée au propriétaire et à l'adjoint et tracée au journal d'audit.

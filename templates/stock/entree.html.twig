@@ -5,7 +5,7 @@
 {% block content %}
     <div class="card shadow-sm" style="max-width: 46rem">
         <div class="card-body">
-            <p class="text-body-secondary small">{{ produit.designation }}. L'entrée crée un nouveau lot. Les livraisons des commandes fournisseurs seront réceptionnées depuis le module Commandes.</p>
+            <p class="text-body-secondary small">{{ produit.designation }}. L'entrée crée un nouveau lot, hors commande : stock initial, don, échantillons, régularisation. Une livraison commandée se saisit depuis la <a href="{{ path('app_commande_index') }}">réception de sa commande</a>, qui garde le lien avec le fournisseur et la commande.</p>
             {{ form_start(formulaire) }}
             {{ form_errors(formulaire) }}
             <div class="row g-2">

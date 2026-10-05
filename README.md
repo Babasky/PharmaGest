@@ -34,7 +34,9 @@ Codes PIN de la Pharmacie du Fleuve (remise hors plafond, vente sans ordonnance,
 Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**.
 Moussa a une session de caisse clôturée avec cinq ventes (dont trois AMO et une annulée) ; ouvrez une caisse depuis
 le menu **Caisse** pour vendre. Le menu **AMO** (propriétaire et adjoint) montre l'encours, un bordereau INPS transmis
-et réglé en partie, et une créance CMSS encore en attente.
+et réglé en partie, et une créance CMSS encore en attente. Le menu **Commandes** montre une commande Laborex reçue
+en partie (l'Augmentin est encore attendu), un brouillon PPM à envoyer et les suggestions du jour. En local, les emails
+aux fournisseurs arrivent dans Mailpit (`ddev launch -m`).
 
 ## Sans DDEV
 

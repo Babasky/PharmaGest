@@ -63,6 +63,8 @@ class Numeroteur
                 new \Doctrine\ORM\Query\Parameter('annee', $annee),
             ]))
             ->getQuery()
+            // Relit la valeur en base même si le compteur est déjà en mémoire (transaction précédente annulée).
+            ->setHint(\Doctrine\ORM\Query::HINT_REFRESH, true)
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getOneOrNullResult();
     }
