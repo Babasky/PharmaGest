@@ -1,0 +1,49 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Réception — commande {{ commande.libelle }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_commande_voir', {id: commande.id}) }}"><i class="bi bi-arrow-left"></i> Commande</a>
+{% endblock %}
+
+{% block content %}
+    <p class="text-body-secondary small">
+        {{ commande.fournisseur.nom }}, commande passée le {{ commande.envoyeeLe|date('d/m/Y') }}.
+        Saisissez ce qui est arrivé : chaque ligne crée un lot (n° et péremption obligatoires) et entre en stock.
+        Laissez la quantité vide pour un produit non livré : la commande restera « reçue partiellement ».
+        Un produit livré en plusieurs lots : « + lot ».
+    </p>
+    {% if erreur %}<div class="alert alert-danger" id="erreur">{{ erreur }}</div>{% endif %}
+
+    {% set lignes_saisies = saisie.lignes ?? null %}
+    <form method="post" id="reception" data-controller="reception" data-reception-index-value="{{ max(commande.lignes|length, lignes_saisies ? lignes_saisies|length : 0) + 1 }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('commande-' ~ commande.id) }}">
+        <div class="row g-2 mb-3" style="max-width: 36rem">
+            <div class="col-6"><label class="form-label small" for="date">Reçue le</label><input type="date" class="form-control" id="date" name="date" value="{{ saisie.date ?? aujourdhui|date('Y-m-d') }}" max="{{ aujourdhui|date('Y-m-d') }}" required></div>
+            <div class="col-6"><label class="form-label small" for="bon-livraison">N° du bon de livraison</label><input type="text" class="form-control" id="bon-livraison" name="bon_livraison" maxlength="50" value="{{ saisie.bon_livraison ?? '' }}"></div>
+        </div>
+        <div class="card shadow-sm mb-3">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" id="lignes-reception">
+                    <thead class="table-light">
+                        <tr><th class="ps-3">Produit</th><th class="text-end">Attendu</th><th>Quantité reçue</th><th>N° de lot</th><th>Péremption</th><th>Prix d'achat réel (FCFA)</th><th class="pe-3"></th></tr>
+                    </thead>
+                    <tbody>
+                        {% if lignes_saisies %}
+                            {# Nouvel affichage après une erreur : on rend la saisie telle quelle. #}
+                            {% for i, s in lignes_saisies %}
+                                {% set ligne = commande.lignes|filter(l => l.id == s.ligne)|first %}
+                                {% if ligne %}{% include 'commande/_ligne_reception.html.twig' with {i: i, ligne: ligne, s: s} %}{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {% for ligne in commande.lignes %}
+                                {% include 'commande/_ligne_reception.html.twig' with {i: loop.index0, ligne: ligne, s: {quantite: ligne.reste ?: '', prix: ligne.prixEstime}} %}
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <button class="btn btn-success" type="submit"><i class="bi bi-box-arrow-in-down"></i> Enregistrer la réception</button>
+    </form>
+{% endblock %}

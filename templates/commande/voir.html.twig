@@ -1,0 +1,218 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Commande {{ commande.libelle }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_commande_index') }}"><i class="bi bi-arrow-left"></i> Commandes</a>
+    {% if is_granted('ROLE_ADJOINT') %}
+        <a class="btn btn-outline-success" href="{{ path('app_commande_excel', {id: commande.id}) }}"><i class="bi bi-file-earmark-excel"></i> Bon de commande Excel</a>
+        {% if commande.estReceptionnable and ecriture_autorisee() %}
+            <a class="btn btn-success" href="{{ path('app_commande_reception', {id: commande.id}) }}"><i class="bi bi-box-arrow-in-down"></i> Réceptionner</a>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set jeton = csrf_token('commande-' ~ commande.id) %}
+    {% set ecriture = ecriture_autorisee() %}
+    {% set responsable = is_granted('ROLE_ADJOINT') %}
+    {% set modifiable = commande.estBrouillon and ecriture %}
+    {% set fournisseur = commande.fournisseur %}
+
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+        <span class="badge fs-6 text-bg-{{ commande.statut.couleur }}" id="statut">{{ commande.statut.libelle }}</span>
+        <span class="fw-semibold">{{ fournisseur.nom }}</span>
+        <span class="small text-body-secondary">
+            {{ fournisseur.email ?? 'pas d\'email' }}{{ fournisseur.telephone ? ' · ' ~ fournisseur.telephone|telephone }}{{ fournisseur.delaiLivraison is not null ? ' · livre en ' ~ fournisseur.delaiLivraison ~ ' j' }}
+        </span>
+        <span class="small text-body-secondary">
+            Créée le {{ commande.creeLe|date('d/m/Y') }}{{ commande.creePar ? ' par ' ~ commande.creePar.nom }}
+            {% if commande.envoyeeLe %} · passée le {{ commande.envoyeeLe|date('d/m/Y à H:i') }}{{ commande.envoyeePar ? ' par ' ~ commande.envoyeePar.nom }}{% endif %}
+        </span>
+    </div>
+    {% if commande.motifCloture %}
+        <div class="alert alert-secondary small" id="cloture">
+            {{ commande.statut.value == 'annulee' ? 'Annulée' : 'Reliquat abandonné' }} le {{ commande.clotureeLe|date('d/m/Y') }} : {{ commande.motifCloture }}
+        </div>
+    {% endif %}
+
+    {% if modifiable %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" class="d-flex gap-2" id="recherche-produit">
+                    <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Ajouter un produit : nom, DCI ou code-barres" aria-label="Rechercher un produit" autofocus>
+                    <button class="btn btn-outline-success" type="submit"><i class="bi bi-search"></i></button>
+                </form>
+                {% if q %}
+                    <ul class="list-group list-group-flush mt-2" id="resultats">
+                        {% for produit in resultats %}
+                            <li class="list-group-item d-flex flex-wrap align-items-center gap-2 px-0">
+                                <span class="me-auto">{{ produit.designation }} <span class="small text-body-secondary">· stock {{ synthese[produit.id].stock ?? 0 }}</span></span>
+                                <form method="post" action="{{ path('app_commande_ajouter', {id: commande.id}) }}" class="d-flex gap-2">
+                                    <input type="hidden" name="_token" value="{{ jeton }}">
+                                    <input type="hidden" name="produit" value="{{ produit.id }}">
+                                    <input type="number" min="1" max="100000" class="form-control form-control-sm text-end" style="width: 6rem" name="quantite" value="1" aria-label="Quantité de {{ produit.nomCommercial }}">
+                                    <button class="btn btn-sm btn-success" type="submit">Ajouter</button>
+                                </form>
+                            </li>
+                        {% else %}
+                            <li class="list-group-item px-0 text-body-secondary">Aucun produit actif ne correspond.</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if modifiable %}<form method="post" action="{{ path('app_commande_lignes', {id: commande.id}) }}" id="lignes-commande"><input type="hidden" name="_token" value="{{ jeton }}"></form>{% endif %}
+    <div class="card shadow-sm mb-3">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="lignes">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Produit</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end">Quantité</th>
+                        {% if responsable %}<th class="text-end">Prix estimé</th><th class="text-end">Montant</th>{% endif %}
+                        {% if not commande.estBrouillon %}<th class="text-end">Reçu</th><th class="text-end">Reste</th>{% endif %}
+                        {% if modifiable %}<th class="pe-3"></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in commande.lignes %}
+                        {% set p = ligne.produit %}
+                        <tr data-produit="{{ p.nomCommercial }}">
+                            <td class="ps-3">{{ p.designation }}{% if p.conditionnement %}<div class="small text-body-secondary">{{ p.conditionnement }}</div>{% endif %}</td>
+                            <td class="text-end">{{ synthese[p.id].stock ?? 0 }}</td>
+                            {% if modifiable %}
+                                <td><input type="number" min="0" max="100000" form="lignes-commande" class="form-control form-control-sm text-end ms-auto" style="max-width: 6.5rem" name="quantite[{{ ligne.id }}]" value="{{ ligne.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
+                            {% else %}
+                                <td class="text-end fw-semibold">{{ ligne.quantite }}</td>
+                            {% endif %}
+                            {% if responsable %}
+                                {% if modifiable %}
+                                    <td><input type="text" inputmode="numeric" form="lignes-commande" class="form-control form-control-sm text-end ms-auto" style="max-width: 7.5rem" name="prix[{{ ligne.id }}]" value="{{ ligne.prixEstime }}" aria-label="Prix estimé de {{ p.nomCommercial }}"></td>
+                                {% else %}
+                                    <td class="montant">{{ ligne.prixEstime|fcfa }}</td>
+                                {% endif %}
+                                <td class="montant">{{ ligne.montantEstime|fcfa }}</td>
+                            {% endif %}
+                            {% if not commande.estBrouillon %}
+                                <td class="text-end">{{ ligne.quantiteRecue }}{% if ligne.quantiteRecue > ligne.quantite %} <i class="bi bi-exclamation-triangle text-warning" title="Plus que commandé"></i>{% endif %}</td>
+                                <td class="text-end">{{ ligne.reste ?: '—' }}</td>
+                            {% endif %}
+                            {% if modifiable %}
+                                <td class="pe-3 text-end">
+                                    <form method="post" action="{{ path('app_commande_retirer', {id: commande.id, ligne: ligne.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ jeton }}">
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit" title="Retirer {{ p.nomCommercial }}"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" class="text-center text-body-secondary py-4">Aucun produit : recherchez-en un ci-dessus pour l'ajouter.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if commande.lignes is not empty %}
+                    <tfoot class="table-light fw-semibold">
+                        <tr>
+                            <td class="ps-3" colspan="2">Total</td>
+                            <td class="text-end">{{ commande.quantiteCommandee }}</td>
+                            {% if responsable %}<td></td><td class="montant" id="montant">{{ commande.montantEstime|fcfa }}</td>{% endif %}
+                            {% if not commande.estBrouillon %}<td class="text-end">{{ commande.quantiteRecue }}</td><td></td>{% endif %}
+                            {% if modifiable %}<td></td>{% endif %}
+                        </tr>
+                    </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    {% if ecriture %}
+        {% if commande.estBrouillon %}
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% if commande.lignes is not empty %}
+                    <button class="btn btn-outline-success" type="submit" form="lignes-commande"><i class="bi bi-check2"></i> Enregistrer les quantités</button>
+                {% endif %}
+                {% if responsable and commande.lignes is not empty %}
+                    <form method="post" action="{{ path('app_commande_envoyer', {id: commande.id}) }}">
+                        <input type="hidden" name="_token" value="{{ jeton }}">
+                        <button class="btn btn-success" type="submit"{{ fournisseur.email ? '' : ' disabled' }} data-turbo-confirm="Envoyer la commande à {{ fournisseur.email }} ? Elle recevra son numéro et ne sera plus modifiable."><i class="bi bi-envelope"></i> Envoyer par email</button>
+                    </form>
+                    <form method="post" action="{{ path('app_commande_passer', {id: commande.id}) }}">
+                        <input type="hidden" name="_token" value="{{ jeton }}">
+                        <button class="btn btn-outline-success" type="submit" data-turbo-confirm="Passer la commande sans email (téléphone, WhatsApp, bon imprimé) ? Elle recevra son numéro et ne sera plus modifiable."><i class="bi bi-telephone"></i> Passer sans email</button>
+                    </form>
+                {% endif %}
+                <form method="post" action="{{ path('app_commande_supprimer', {id: commande.id}) }}" class="ms-auto">
+                    <input type="hidden" name="_token" value="{{ jeton }}">
+                    <button class="btn btn-outline-danger" type="submit" data-turbo-confirm="Supprimer ce brouillon ?"><i class="bi bi-trash"></i> Supprimer le brouillon</button>
+                </form>
+            </div>
+            {% if responsable and not fournisseur.email %}
+                <p class="small text-body-secondary">{{ fournisseur.nom }} n'a pas d'adresse email : complétez <a href="{{ path('app_fournisseur_modifier', {id: fournisseur.id}) }}">sa fiche</a>, ou passez la commande sans email et transmettez l'Excel.</p>
+            {% elseif not responsable %}
+                <p class="small text-body-secondary">Le propriétaire ou l'adjoint vérifiera les prix et enverra la commande au fournisseur.</p>
+            {% endif %}
+        {% elseif responsable and commande.estReceptionnable %}
+            <div class="row g-2 mb-3">
+                <div class="col-12 col-md-4">
+                    <form method="post" action="{{ path('app_commande_envoyer', {id: commande.id}) }}">
+                        <input type="hidden" name="_token" value="{{ jeton }}">
+                        <button class="btn btn-outline-success" type="submit"{{ fournisseur.email ? '' : ' disabled' }}><i class="bi bi-envelope"></i> {{ commande.envois is empty ? 'Envoyer par email' : 'Renvoyer par email' }}</button>
+                    </form>
+                </div>
+                <div class="col-12 col-md-8">
+                    {% set solde = commande.statut.value == 'recue_partiellement' %}
+                    <form method="post" action="{{ path(solde ? 'app_commande_solder' : 'app_commande_annuler', {id: commande.id}) }}" id="{{ solde ? 'solder' : 'annuler' }}">
+                        <input type="hidden" name="_token" value="{{ jeton }}">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="motif" maxlength="255" required placeholder="{{ solde ? 'Le reste ne sera pas livré : motif' : 'Motif de l\'annulation' }}" aria-label="Motif">
+                            <button class="btn btn-outline-danger" type="submit">{{ solde ? 'Solder la commande' : 'Annuler la commande' }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {% if commande.receptions is not empty %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-body fw-semibold">Réceptions</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" id="receptions">
+                    <thead class="table-light"><tr><th class="ps-3">Date</th><th>Produit</th><th>Lot</th><th>Péremption</th><th class="text-end">Quantité</th>{% if responsable %}<th class="text-end pe-3">Prix réel</th>{% endif %}</tr></thead>
+                    <tbody>
+                        {% for reception in commande.receptions %}
+                            {% for l in reception.lignes %}
+                                <tr>
+                                    <td class="ps-3 small">{% if loop.first %}{{ reception.date|date('d/m/Y') }}{{ reception.numeroBonLivraison ? ' · BL ' ~ reception.numeroBonLivraison }}{% if reception.creePar %}<div class="text-body-secondary">{{ reception.creePar.nom }}</div>{% endif %}{% endif %}</td>
+                                    <td>{{ l.ligneCommande.produit.nomCommercial }}</td>
+                                    <td class="font-monospace small">{{ l.lot.numero }}</td>
+                                    <td class="small">{{ l.lot.datePeremption|date('d/m/Y') }}</td>
+                                    <td class="text-end">{{ l.quantite }}</td>
+                                    {% if responsable %}<td class="montant pe-3">{{ l.prixAchat|fcfa }}</td>{% endif %}
+                                </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if commande.envois is not empty %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-body fw-semibold">Envois par email</div>
+            <ul class="list-group list-group-flush" id="envois">
+                {% for envoi in commande.envois %}
+                    <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+                        <span>{{ envoi.date|date('d/m/Y à H:i') }} · {{ envoi.destinataire }}{{ envoi.envoyePar ? ' · par ' ~ envoi.envoyePar.nom }}{% if envoi.erreur %}<div class="small text-danger">{{ envoi.erreur }}</div>{% endif %}</span>
+                        <span class="badge align-self-start text-bg-{{ envoi.statut.couleur }}">{{ envoi.statut.libelle }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}

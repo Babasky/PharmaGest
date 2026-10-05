@@ -2,6 +2,8 @@
 
 namespace App\Story;
 
+use App\Achat\CommandeService;
+use App\Achat\ReceptionService;
 use App\Amo\GestionBordereaux;
 use App\Entity\Offre;
 use App\Entity\Utilisateur;
@@ -44,6 +46,8 @@ final class AppStory extends Story
         private readonly GestionCaisse $caisse,
         private readonly VenteService $ventes,
         private readonly GestionBordereaux $bordereaux,
+        private readonly CommandeService $commandes,
+        private readonly ReceptionService $receptions,
     ) {
     }
 
@@ -64,6 +68,7 @@ final class AppStory extends Story
         $this->abonnements->enregistrerPaiement($fleuve, $fleuve->getOffre(), 180000, MoyenPaiement::OrangeMoney, 'OM-2026-55871', new \DateTimeImmutable('today'), null);
         $catalogue = $this->catalogue($fleuve);
         $this->caisse($fleuve, $catalogue);
+        $this->commandes($fleuve, $catalogue);
 
         // Officine dont l'abonnement expire bientôt (bandeau d'alerte).
         $kanaga = PharmacieFactory::createOne([
@@ -235,6 +240,30 @@ final class AppStory extends Story
         $premiere = $bordereau->getCreances()->first();
         \assert($premiere instanceof \App\Entity\CreanceAmo);
         $this->bordereaux->enregistrerReglement($bordereau, new \DateTimeImmutable('today'), $premiere->getMontant(), 'VIR-INPS-0912', [(int) $premiere->getId() => $premiere->getMontant()], []);
+        $this->tenantContext->forcer(null);
+    }
+
+    /**
+     * Commandes (Lot 6) : une commande Laborex reçue en partie (l'Augmentin reste attendu) et un brouillon PPM.
+     *
+     * @param array<string, \App\Entity\Produit> $catalogue
+     */
+    private function commandes(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
+    {
+        $this->tenantContext->forcer($pharmacie);
+        $laborex = $catalogue['Augmentin']->getFournisseurHabituel();
+        $ppm = $catalogue['Coartem']->getFournisseurHabituel();
+        \assert(null !== $laborex && null !== $ppm);
+
+        $commande = $this->commandes->creer($laborex, [[$catalogue['Augmentin'], 40], [$catalogue['Efferalgan'], 30]]);
+        $this->commandes->passer($commande);
+        $efferalgan = $commande->ligneDe($catalogue['Efferalgan']);
+        \assert(null !== $efferalgan);
+        $this->receptions->receptionner($commande, new \DateTimeImmutable('today'), 'BL-LBX-2291', [
+            ['ligne' => $efferalgan->getId(), 'quantite' => 30, 'lot' => 'EF412', 'peremption' => (new \DateTimeImmutable('today +20 months'))->format('Y-m-d'), 'prix' => 1580],
+        ]);
+
+        $this->commandes->creer($ppm, [[$catalogue['Coartem'], 25], [$catalogue['Amoxicilline'], 20]]);
         $this->tenantContext->forcer(null);
     }
 

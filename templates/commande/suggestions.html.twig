@@ -1,0 +1,74 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Suggestions de commande{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_commande_index') }}"><i class="bi bi-arrow-left"></i> Commandes</a>
+{% endblock %}
+
+{% block content %}
+    <p class="text-body-secondary small">
+        Produits dont le stock disponible est au seuil d'alerte ou en dessous, classés par fournisseur habituel.
+        Quantité proposée : stock maximum − stock actuel − quantité déjà commandée et pas encore livrée
+        (sans stock maximum : le double du seuil).
+    </p>
+    {% if groupes is empty %}
+        <div class="alert alert-success" id="aucune-suggestion"><i class="bi bi-check-circle"></i> Aucun produit sous le seuil d'alerte : rien à commander pour l'instant.</div>
+    {% else %}
+        <ul class="nav nav-pills mb-3" id="fournisseurs-suggeres">
+            {% for cle, groupe in groupes %}
+                {% set actif = groupe.fournisseur ? (fournisseur and fournisseur.id == groupe.fournisseur.id) : sans_fournisseur %}
+                <li class="nav-item">
+                    <a class="nav-link{{ actif ? ' active' }}" href="{{ path('app_commande_suggestions', {fournisseur: cle}) }}">
+                        {{ groupe.fournisseur ? groupe.fournisseur.nom : 'Sans fournisseur habituel' }} <span class="badge text-bg-light">{{ groupe.nombre }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+
+        {% if sans_fournisseur %}
+            <div class="alert alert-info small">Ces produits n'ont pas de fournisseur habituel actif : renseignez-le sur leur fiche pour qu'ils apparaissent dans la suggestion du bon fournisseur, ou ajoutez-les à une commande à la main.</div>
+            <div class="card shadow-sm">
+                <ul class="list-group list-group-flush" id="suggestions">
+                    {% for s in suggestions %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <a class="text-decoration-none" href="{{ path('app_produit_voir', {id: s.produit.id}) }}">{{ s.produit.designation }}</a>
+                            <span class="small text-body-secondary">stock {{ s.stock }} · seuil {{ s.produit.seuilAlerte }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% elseif fournisseur %}
+            <form method="post" action="{{ path('app_commande_depuis_suggestions') }}" id="formulaire-suggestions">
+                <input type="hidden" name="_token" value="{{ csrf_token(csrf_suggestions) }}">
+                <input type="hidden" name="fournisseur" value="{{ fournisseur.id }}">
+                <div class="card shadow-sm mb-3">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" id="suggestions">
+                            <thead class="table-light">
+                                <tr><th class="ps-3" style="width: 2rem"></th><th>Produit</th><th class="text-end">Stock</th><th class="text-end">Seuil</th><th class="text-end">Stock max.</th><th class="text-end">Déjà commandé</th><th class="text-end pe-3">À commander</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for s in suggestions %}
+                                    {% set p = s.produit %}
+                                    <tr data-produit="{{ p.nomCommercial }}">
+                                        <td class="ps-3"><input class="form-check-input" type="checkbox" name="produits[]" value="{{ p.id }}" id="produit-{{ p.id }}"{{ s.quantite > 0 ? ' checked' }} aria-label="Commander {{ p.nomCommercial }}"></td>
+                                        <td><label for="produit-{{ p.id }}">{{ p.designation }}</label>{% if s.stock == 0 %} <span class="badge text-bg-danger">rupture</span>{% endif %}</td>
+                                        <td class="text-end">{{ s.stock }}</td>
+                                        <td class="text-end">{{ p.seuilAlerte }}</td>
+                                        <td class="text-end">{{ p.stockMax ?? '—' }}</td>
+                                        <td class="text-end">{{ s.attendu ?: '—' }}</td>
+                                        <td class="pe-3"><input type="number" min="0" max="100000" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="quantite[{{ p.id }}]" value="{{ s.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% if ecriture_autorisee() %}
+                    <button class="btn btn-success" type="submit"><i class="bi bi-cart-check"></i> Créer la commande pour {{ fournisseur.nom }}</button>
+                {% endif %}
+            </form>
+        {% endif %}
+    {% endif %}
+{% endblock %}

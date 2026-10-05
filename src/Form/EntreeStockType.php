@@ -32,7 +32,7 @@ final class EntreeStockType extends AbstractType
                 'required' => false,
                 'placeholder' => '—',
             ])
-            ->add('motif', TextType::class, ['label' => 'Motif', 'required' => false, 'help' => 'Ex. : stock initial, livraison sans commande.']);
+            ->add('motif', TextType::class, ['label' => 'Motif', 'help' => 'Ex. : stock initial, don, échantillons, régularisation.']);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

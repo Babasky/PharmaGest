@@ -71,6 +71,7 @@ final class StockTest extends AppWebTestCase
             'entree_stock[numero]' => 'X1',
             'entree_stock[datePeremption]' => (new \DateTimeImmutable('today'))->format('Y-m-d'),
             'entree_stock[quantite]' => '5',
+            'entree_stock[motif]' => 'Don',
         ]);
 
         self::assertResponseStatusCodeSame(422);

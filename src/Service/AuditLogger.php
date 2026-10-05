@@ -34,6 +34,8 @@ class AuditLogger
     public const AMO_BORDEREAU_TRANSMIS = 'amo.bordereau_transmis';
     public const AMO_REGLEMENT = 'amo.reglement';
     public const AMO_REJET = 'amo.rejet';
+    public const COMMANDE_ANNULEE = 'commande.annulee';
+    public const COMMANDE_SOLDEE = 'commande.soldee';
 
     public const LIBELLES = [
         self::UTILISATEUR_CREE => 'Utilisateur créé',
@@ -56,6 +58,8 @@ class AuditLogger
         self::AMO_BORDEREAU_TRANSMIS => 'Bordereau AMO transmis',
         self::AMO_REGLEMENT => 'Règlement AMO',
         self::AMO_REJET => 'Rejet AMO',
+        self::COMMANDE_ANNULEE => 'Commande fournisseur annulée',
+        self::COMMANDE_SOLDEE => 'Reliquat de commande abandonné',
     ];
 
     public function __construct(

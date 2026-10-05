@@ -6,7 +6,8 @@ use App\Entity\Fournisseur;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Entrée de stock sans commande (stock initial, livraison hors commande) : crée un lot.
+ * Entrée de stock sans commande (stock initial, don, échantillons, régularisation) : crée un lot. Les livraisons
+ * des commandes passent par la réception (Lot 6). Le motif est obligatoire : l'entrée est tracée au journal d'audit.
  */
 final class EntreeStock
 {
@@ -29,6 +30,7 @@ final class EntreeStock
 
     public ?Fournisseur $fournisseur = null;
 
+    #[Assert\NotBlank(message: 'Indiquez le motif de l\'entrée (stock initial, don, échantillons…).')]
     #[Assert\Length(max: 255)]
     public ?string $motif = null;
 }
