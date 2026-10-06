@@ -59,6 +59,19 @@ class AlertesStock
         return Page::depuis($this->requete($type), $page);
     }
 
+    /**
+     * Identifiants des produits ou lots concernés par une alerte (notifications, NO-01).
+     *
+     * @return list<int>
+     */
+    public function identifiants(string $type): array
+    {
+        $qb = $this->requete($type);
+        $alias = $qb->getRootAliases()[0];
+
+        return array_map('intval', $qb->select($alias.'.id')->resetDQLPart('orderBy')->getQuery()->getSingleColumnResult());
+    }
+
     public function delaiPeremption(): int
     {
         return $this->parametres->pour($this->tenantContext->exigerPharmacie())->getDelaiAlertePeremption();

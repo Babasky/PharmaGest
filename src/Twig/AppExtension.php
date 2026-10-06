@@ -3,9 +3,11 @@
 namespace App\Twig;
 
 use App\Reporting\ExportRapport;
+use App\Service\AuditLogger;
 use App\Util\Fcfa;
 use App\Util\Telephone;
 use Twig\Attribute\AsTwigFilter;
+use Twig\Attribute\AsTwigFunction;
 
 final class AppExtension
 {
@@ -34,5 +36,35 @@ final class AppExtension
     public function cellule(mixed $valeur, string $type): string
     {
         return ExportRapport::formater($valeur, $type);
+    }
+
+    #[AsTwigFunction('audit_libelle')]
+    public function auditLibelle(string $action): string
+    {
+        return AuditLogger::libelle($action);
+    }
+
+    /**
+     * Valeurs avant / après d'une entrée du journal, lisibles : « motif : Casse · quantité : 3 ».
+     *
+     * @param array<string, mixed> $valeurs
+     */
+    #[AsTwigFilter('audit_valeurs')]
+    public function auditValeurs(array $valeurs): string
+    {
+        $morceaux = [];
+        foreach ($valeurs as $cle => $valeur) {
+            // prixVente, prix_vente => « prix vente »
+            $libelle = mb_strtolower(trim((string) preg_replace(['/(?<!^)([A-Z])/', '/_+/'], [' $1', ' '], (string) $cle)));
+            $texte = match (true) {
+                null === $valeur => '—',
+                \is_bool($valeur) => $valeur ? 'oui' : 'non',
+                \is_scalar($valeur) => (string) $valeur,
+                default => (string) json_encode($valeur, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES),
+            };
+            $morceaux[] = $libelle.' : '.$texte;
+        }
+
+        return implode(' · ', $morceaux);
     }
 }

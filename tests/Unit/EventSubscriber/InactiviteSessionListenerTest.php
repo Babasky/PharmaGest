@@ -34,11 +34,23 @@ final class InactiviteSessionListenerTest extends TestCase
         self::assertTrue($session->has('_security_main'));
     }
 
-    private function sessionUtiliseeIlYA(int $secondes): Session
+    public function testDelaiDeLaCaisseMemoriseEnSession(): void
+    {
+        $session = $this->sessionUtiliseeIlYA(61 * 60, ['_inactivite_delai' => 7200]);
+
+        $this->declencher($session);
+
+        self::assertTrue($session->has('_security_main'), 'Caisse ouverte avec un délai de 2 h : session conservée.');
+    }
+
+    /**
+     * @param array<string, mixed> $attributs
+     */
+    private function sessionUtiliseeIlYA(int $secondes, array $attributs = []): Session
     {
         $stockage = new MockArraySessionStorage();
         $stockage->setSessionData([
-            '_sf2_attributes' => ['_security_main' => 'jeton'],
+            '_sf2_attributes' => ['_security_main' => 'jeton', ...$attributs],
             '_sf2_meta' => ['u' => time() - $secondes, 'c' => time() - 3600, 'l' => 0],
         ]);
 

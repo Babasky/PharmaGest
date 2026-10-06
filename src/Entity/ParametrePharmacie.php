@@ -21,6 +21,7 @@ class ParametrePharmacie implements TenantAwareInterface
 
     public const PLAFOND_REMISE_PAR_DEFAUT = 10;
     public const DELAI_PEREMPTION_PAR_DEFAUT = 90;
+    public const INACTIVITE_CAISSE_PAR_DEFAUT = 30;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -39,6 +40,14 @@ class ParametrePharmacie implements TenantAwareInterface
 
     #[ORM\Column(length: 20, enumType: PolitiqueSansOrdonnance::class)]
     private PolitiqueSansOrdonnance $politiqueSansOrdonnance = PolitiqueSansOrdonnance::Blocage;
+
+    /**
+     * Déconnexion après ce nombre de minutes d'inactivité tant que l'utilisateur a une session de caisse ouverte
+     * (§ 6 Sécurité : « paramétrable pour la caisse »). Ailleurs, le délai reste de 30 minutes.
+     */
+    #[ORM\Column(options: ['default' => self::INACTIVITE_CAISSE_PAR_DEFAUT])]
+    #[Assert\Range(min: 5, max: 720)]
+    private int $inactiviteCaisse = self::INACTIVITE_CAISSE_PAR_DEFAUT;
 
     /** Texte libre imprimé en bas du ticket de caisse (VE-06). */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -82,6 +91,18 @@ class ParametrePharmacie implements TenantAwareInterface
     public function setPolitiqueSansOrdonnance(PolitiqueSansOrdonnance $politique): static
     {
         $this->politiqueSansOrdonnance = $politique;
+
+        return $this;
+    }
+
+    public function getInactiviteCaisse(): int
+    {
+        return $this->inactiviteCaisse;
+    }
+
+    public function setInactiviteCaisse(int $minutes): static
+    {
+        $this->inactiviteCaisse = $minutes;
 
         return $this;
     }

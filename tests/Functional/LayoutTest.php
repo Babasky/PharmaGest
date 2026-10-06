@@ -78,12 +78,13 @@ final class LayoutTest extends AppWebTestCase
         }
     }
 
-    public function testEntreeActiveEtModulesAVenir(): void
+    public function testEntreeActiveEtTousLesModulesLivres(): void
     {
         $officine = $this->creerOfficine();
         $crawler = $this->connecter($officine->proprietaire)->request('GET', '/equipe/nouveau');
 
         self::assertSelectorExists('#sidebar a[href="/equipe"].active');
-        self::assertGreaterThan(0, $crawler->filter('#sidebar .nav-link.disabled')->count());
+        // Lot 8 : plus aucun module « Bientôt » dans le menu.
+        self::assertSame(0, $crawler->filter('#sidebar .nav-link.disabled')->count());
     }
 }

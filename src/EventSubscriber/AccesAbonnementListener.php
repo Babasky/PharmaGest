@@ -19,7 +19,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 final class AccesAbonnementListener
 {
     /** Routes toujours accessibles, même en lecture seule ou suspendu. */
-    private const ROUTES_LIBRES = ['app_deconnexion', 'app_compte_suspendu', 'app_pharmacie_basculer'];
+    private const ROUTES_LIBRES = ['app_deconnexion', 'app_compte_suspendu', 'app_pharmacie_basculer', 'app_notification_tout_lire'];
 
     public function __construct(
         private readonly TenantContext $tenantContext,

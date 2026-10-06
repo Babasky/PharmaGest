@@ -38,6 +38,12 @@ et réglé en partie, et une créance CMSS encore en attente. Le menu **Commande
 en partie (l'Augmentin est encore attendu), un brouillon PPM à envoyer et les suggestions du jour. En local, les emails
 aux fournisseurs arrivent dans Mailpit (`ddev launch -m`).
 
+La cloche de la barre supérieure (propriétaire et adjoint) montre les notifications du jour : rupture, péremptions,
+lot périmé et bordereau INPS impayé pour la Pharmacie du Fleuve ; échéance proche, fin d'essai ou lecture seule pour
+les autres officines. Le **Journal d'audit** (propriétaire) liste les actions sensibles de la démo, et
+« Mon abonnement › Exporter toutes mes données » télécharge l'export complet (ZIP). Le super admin consulte le
+journal de la plateforme (menu Administration).
+
 ## Sans DDEV
 
 Prérequis : PHP 8.3 (extensions `intl`, `pdo_mysql`, `zip`, `gd`, `mbstring`, `xml`), Composer, MySQL 8.
@@ -49,9 +55,15 @@ php bin/console importmap:install       # ou bin/importmap-from-npm.sh si jsDeli
 php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate
 php bin/console app:super-admin:creer admin@exemple.ml "Nom de l'éditeur"
-symfony serve                           # ou : php -S 127.0.0.1:8000 -t public
-php bin/console messenger:consume async scheduler_default   # worker (emails, rappels)
+symfony serve                           # ou : php -S 127.0.0.1:8000 -t public public/index.php
+php bin/console messenger:consume async scheduler_default   # worker (emails, rappels, notifications)
 ```
+
+Avec le serveur intégré de PHP, le dernier argument `public/index.php` est indispensable : sans lui, les fichiers
+d'assets (CSS, JavaScript) ne sont pas servis.
+
+Tâches planifiées (lancées par le worker, ou à la main) : `app:notifications:generer` (centre de notifications),
+`app:abonnements:rappels` (emails d'échéance), `app:pharmacies:archiver` (archivage 12 mois après l'échéance).
 
 Pour les tests, créer `.env.test.local` avec le `DATABASE_URL` local (le suffixe `_test` est ajouté automatiquement),
 puis `php bin/console doctrine:migrations:migrate --env=test`.
@@ -89,13 +101,17 @@ ligne ; la confirmation importe les lignes valides.
 - Montants en **entiers FCFA**, affichés via le filtre Twig `|fcfa` → `12 500 FCFA`.
 - Téléphones affichés via `|telephone` → `+223 76 12 34 56`.
 - Numéros de documents : `App\Service\Numeroteur` (séquentiels sans trou, par pharmacie et par année, RG-02).
-- Actions sensibles : `App\Service\AuditLogger` (journal non modifiable).
+- Actions sensibles : `App\Service\AuditLogger` (journal non modifiable, consultable par le propriétaire). Les
+  modifications de prix, de règles de gestion et de taux AMO sont tracées automatiquement (`AuditModificationsListener`).
+- Notifications : `App\Service\GenerateurNotifications` (une notification n'est créée que si la situation change).
 - Stock : jamais modifié directement ; toute variation passe par `App\Stock\StockService` (mouvement typé, FEFO, RG-03 à RG-05).
 - Pages connectées : étendre `layout/app.html.twig` (blocs `title`, `page_actions`, `content`).
-  Le menu est décrit dans `App\Menu\Navigation` (rôle requis par entrée ; les modules pas encore livrés apparaissent « Bientôt »).
+  Le menu est décrit dans `App\Menu\Navigation` (rôle requis par entrée ; une route absente apparaît « Bientôt »).
 - Graphiques : `{{ stimulus_controller('chart', {config: {...}, devise: true}) }}` sur un `<canvas>`.
 
 ## Documentation
 
 - [Cahier des charges](docs/cahier-des-charges.md)
 - [Hypothèses et décisions](docs/hypotheses.md)
+- [Guide de mise en production](docs/mise-en-production.md) (Nginx, PHP-FPM, worker supervisé, HTTPS, sauvegardes ; exemples dans `deploy/`)
+- [Revue de sécurité OWASP](docs/securite.md)

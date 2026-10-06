@@ -41,6 +41,30 @@
             {% endif %}
         </div>
         {% if app.user %}
+          <div class="d-flex align-items-center gap-1">
+            {% if courante and is_granted('ROLE_ADJOINT') %}
+                {% set non_lues = notifications_non_lues() %}
+                <div class="dropdown" id="cloche">
+                    <button class="btn btn-success position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications{{ non_lues ? ' : ' ~ non_lues ~ ' non lue(s)' }}">
+                        <i class="bi bi-bell{{ non_lues ? '-fill' }}"></i>
+                        {% if non_lues %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cloche-compteur">{{ non_lues > 99 ? '99+' : non_lues }}</span>{% endif %}
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-0 shadow" style="width: min(24rem, 92vw)">
+                        <div class="px-3 py-2 border-bottom fw-semibold small">Notifications</div>
+                        <div class="list-group list-group-flush">
+                            {% for n in notifications_recentes() %}
+                                <a class="list-group-item list-group-item-action small d-flex gap-2{{ n.lue ? ' text-body-secondary' }}" href="{{ path('app_notification_ouvrir', {id: n.id}) }}">
+                                    <i class="bi bi-{{ n.type.icone }} text-{{ n.type.couleur }}"></i>
+                                    <span class="flex-grow-1">{% if not n.lue %}<span class="fw-semibold">{{ n.message }}</span>{% else %}{{ n.message }}{% endif %}<br><span class="text-body-secondary">{{ n.creeLe|date('d/m/Y H:i') }}</span></span>
+                                </a>
+                            {% else %}
+                                <div class="list-group-item small text-body-secondary">Aucune notification.</div>
+                            {% endfor %}
+                        </div>
+                        <a class="d-block text-center small py-2 border-top" href="{{ path('app_notification_index') }}">Toutes les notifications</a>
+                    </div>
+                </div>
+            {% endif %}
             <div class="dropdown">
                 <button class="btn btn-success dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-person-circle"></i>
@@ -58,6 +82,7 @@
                     <li><a class="dropdown-item" href="{{ logout_path() }}"><i class="bi bi-box-arrow-right"></i> Se déconnecter</a></li>
                 </ul>
             </div>
+          </div>
         {% endif %}
     </header>
 
