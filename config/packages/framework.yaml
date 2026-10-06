@@ -3,7 +3,12 @@ framework:
     secret: '%env(APP_SECRET)%'
 
     # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    # Cookie de session : jamais lisible en JavaScript, envoyé seulement en HTTPS quand la requête l'est
+    # (toujours le cas en production), et pas sur les requêtes venant d'un autre site (revue OWASP, docs/securite.md).
+    session:
+        cookie_httponly: true
+        cookie_secure: auto
+        cookie_samesite: lax
 
     #esi: true
     #fragments: true

@@ -1,12 +1,15 @@
-{% extends 'layout/app.html.twig' %}
+{% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block title %}{{ pharmacie.nom }}{% endblock %}
+{# Fiche d'une pharmacie (page « detail » de PharmacieCrudController) : abonnement, équipe, accès et paiements. #}
+{% block page_title %}{{ pharmacie.nom }}{% endblock %}
+{% block content_title %}{{ pharmacie.nom }}{% endblock %}
 
 {% block page_actions %}
-    <a class="btn btn-outline-secondary" href="{{ path('admin_pharmacie_modifier', {id: pharmacie.id}) }}"><i class="bi bi-pencil"></i> Modifier la fiche</a>
+    <a class="btn btn-secondary" href="{{ path('admin_pharmacie_index') }}"><i class="bi bi-arrow-left"></i> Pharmacies</a>
+    <a class="btn btn-primary" href="{{ path('admin_pharmacie_edit', {entityId: pharmacie.id}) }}"><i class="bi bi-pencil"></i> Modifier la fiche</a>
 {% endblock %}
 
-{% block content %}
+{% block main %}
     {% set jeton = csrf_token('pharmacie-' ~ pharmacie.id) %}
     <div class="row g-3">
         <div class="col-12 col-xl-5 d-flex flex-column gap-3">

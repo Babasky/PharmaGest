@@ -39,6 +39,17 @@ class AuditLogger
     public const DEPENSE_MODIFIEE = 'depense.modifiee';
     public const DEPENSE_ANNULEE = 'depense.annulee';
     public const RECETTE_ANNULEE = 'recette.annulee';
+    public const PRODUIT_PRIX_MODIFIE = 'produit.prix_modifie';
+    public const PARAMETRES_MODIFIES = 'parametres.modifies';
+    public const TAUX_AMO_AJOUTE = 'parametres.taux_amo';
+    public const PHARMACIE_ARCHIVAGE_ANNONCE = 'pharmacie.archivage_annonce';
+    public const DONNEES_EXPORTEES = 'donnees.exportees';
+
+    /** Actions de la plateforme : les seules que le super admin consulte (il ne voit jamais l'activité d'une officine). */
+    public const ACTIONS_PLATEFORME = [
+        self::PHARMACIE_CREEE, self::PHARMACIE_SUSPENDUE, self::PHARMACIE_REACTIVEE, self::PHARMACIE_ARCHIVEE,
+        self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT,
+    ];
 
     public const LIBELLES = [
         self::UTILISATEUR_CREE => 'Utilisateur créé',
@@ -66,7 +77,17 @@ class AuditLogger
         self::DEPENSE_MODIFIEE => 'Dépense modifiée',
         self::DEPENSE_ANNULEE => 'Dépense annulée',
         self::RECETTE_ANNULEE => 'Recette manuelle annulée',
+        self::PRODUIT_PRIX_MODIFIE => 'Prix modifié',
+        self::PARAMETRES_MODIFIES => 'Règles de gestion modifiées',
+        self::TAUX_AMO_AJOUTE => 'Taux AMO enregistré',
+        self::PHARMACIE_ARCHIVAGE_ANNONCE => 'Archivage annoncé au propriétaire',
+        self::DONNEES_EXPORTEES => 'Export complet des données',
     ];
+
+    public static function libelle(string $action): string
+    {
+        return self::LIBELLES[$action] ?? $action;
+    }
 
     public function __construct(
         private readonly EntityManagerInterface $em,

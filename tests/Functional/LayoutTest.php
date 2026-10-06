@@ -68,7 +68,7 @@ final class LayoutTest extends AppWebTestCase
 
     public function testMenuDuSuperAdmin(): void
     {
-        $menu = $this->connecter($this->creerSuperAdmin())->request('GET', '/admin')->filter('#sidebar')->text();
+        $menu = $this->connecter($this->creerSuperAdmin())->request('GET', '/admin')->filter('.sidebar-wrapper')->text();
 
         foreach (['Vue globale', 'Pharmacies', 'Abonnements', 'Offres'] as $present) {
             self::assertStringContainsString($present, $menu);
@@ -78,13 +78,14 @@ final class LayoutTest extends AppWebTestCase
         }
     }
 
-    public function testEntreeActiveEtModulesAVenir(): void
+    public function testEntreeActiveEtTousLesModulesLivres(): void
     {
         $officine = $this->creerOfficine();
         $crawler = $this->connecter($officine->proprietaire)->request('GET', '/equipe/nouveau');
 
         self::assertSelectorExists('#sidebar a[href="/equipe"].active');
-        self::assertGreaterThan(0, $crawler->filter('#sidebar .nav-link.disabled')->count());
+        // Lot 8 : plus aucun module « Bientôt » dans le menu.
+        self::assertSame(0, $crawler->filter('#sidebar .nav-link.disabled')->count());
     }
 
     public function testMenuVerticalFilDArianeEtRecherche(): void

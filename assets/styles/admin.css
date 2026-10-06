@@ -1,0 +1,15 @@
+/* Compléments de l'espace plateforme (EasyAdmin). Hors cascade layers : ces règles l'emportent sur celles d'EasyAdmin. */
+.min-w-0 {
+    min-width: 0;
+}
+
+.chart-container {
+    position: relative;
+    height: 16rem;
+}
+
+.montant {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}

@@ -44,6 +44,23 @@ class StockageFichiers
         return $nom;
     }
 
+    /**
+     * Range un fichier déjà produit (ex. archive d'export) sous un nom aléatoire et renvoie ce nom.
+     */
+    public function deplacer(Pharmacie $pharmacie, string $categorie, string $source, string $extension): string
+    {
+        $dossier = $this->dossier($pharmacie, $categorie);
+        if (!is_dir($dossier) && !mkdir($dossier, 0775, true) && !is_dir($dossier)) {
+            throw new \RuntimeException('Dossier de stockage inaccessible.');
+        }
+        $nom = bin2hex(random_bytes(12)).'.'.$extension;
+        if (!rename($source, $dossier.'/'.$nom)) {
+            throw new \RuntimeException('Impossible de ranger le fichier.');
+        }
+
+        return $nom;
+    }
+
     public function chemin(Pharmacie $pharmacie, string $categorie, string $nom): ?string
     {
         if (1 !== preg_match('/^[a-f0-9]{24}\.[a-z0-9]{1,5}$/', $nom)) {

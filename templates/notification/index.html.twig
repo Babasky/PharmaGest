@@ -1,0 +1,40 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block page_actions %}
+    {% if nombre_non_lues %}
+        <form method="post" action="{{ path('app_notification_tout_lire') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('notifications-tout-lire') }}">
+            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-check2-all"></i> Tout marquer comme lu</button>
+        </form>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <ul class="nav nav-pills mb-3">
+        <li class="nav-item"><a class="nav-link{{ not non_lues ? ' active' }}" href="{{ path('app_notification_index') }}">Toutes</a></li>
+        <li class="nav-item"><a class="nav-link{{ non_lues ? ' active' }}" href="{{ path('app_notification_index', {nonLues: 1}) }}">Non lues <span class="badge text-bg-light">{{ nombre_non_lues }}</span></a></li>
+    </ul>
+    <div class="card shadow-sm">
+        <div class="list-group list-group-flush" id="notifications">
+            {% for n in notifications %}
+                <a class="list-group-item list-group-item-action d-flex gap-3 align-items-start{{ n.lue ? ' text-body-secondary' }}" href="{{ path('app_notification_ouvrir', {id: n.id}) }}">
+                    <i class="bi bi-{{ n.type.icone }} fs-5 text-{{ n.type.couleur }}"></i>
+                    <div class="flex-grow-1">
+                        <div class="small text-body-secondary">{{ n.type.libelle }} · {{ n.creeLe|date('d/m/Y H:i') }}</div>
+                        <div class="{{ n.lue ? '' : 'fw-semibold' }}">{{ n.message }}</div>
+                    </div>
+                    {% if not n.lue %}<span class="badge text-bg-primary">Nouveau</span>{% endif %}
+                </a>
+            {% else %}
+                <div class="list-group-item text-center text-body-secondary py-4">Aucune notification.</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: notifications, route: 'app_notification_index', params: {nonLues: non_lues ? 1 : null}} %}
+    <p class="small text-body-secondary mt-3">
+        Les notifications sont préparées chaque matin : ruptures et péremptions, échéance de l'abonnement, bordereaux AMO
+        transmis et impayés depuis 30, 60 puis 90 jours. Une même alerte n'est pas répétée tant que la situation ne change pas.
+    </p>
+{% endblock %}

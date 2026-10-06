@@ -1,8 +1,9 @@
-{% extends 'layout/app.html.twig' %}
+{% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block title %}Nouvelle pharmacie{% endblock %}
+{% block page_title %}Nouvelle pharmacie{% endblock %}
+{% block content_title %}Nouvelle pharmacie{% endblock %}
 
-{% block content %}
+{% block main %}
     {{ form_start(formulaire) }}
     <div class="row g-3">
         <div class="col-12 col-lg-6">
@@ -31,8 +32,8 @@
         </div>
     </div>
     <div class="d-flex gap-2 mt-3">
-        <button class="btn btn-success" type="submit">Créer la pharmacie</button>
-        <a class="btn btn-outline-secondary" href="{{ path('admin_pharmacie_index') }}">Annuler</a>
+        <button class="btn btn-primary" type="submit">Créer la pharmacie</button>
+        <a class="btn btn-secondary" href="{{ path('admin_pharmacie_index') }}">Annuler</a>
     </div>
     {{ form_end(formulaire) }}
 {% endblock %}

@@ -5,20 +5,21 @@ namespace App\Controller\Admin;
 use App\Entity\Abonnement;
 use App\Pdf\FactureAbonnementPdf;
 use App\Repository\AbonnementRepository;
-use App\Repository\OffreRepository;
 use App\Repository\PharmacieRepository;
 use App\Service\AbonnementService;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Échéances, paiements, factures et offres (SA-02, SA-05, SA-06 ; paramétrage des offres en V1).
+ * Échéances, paiements et factures d'abonnement (SA-02, SA-05, SA-06), dans l'espace plateforme (EasyAdmin).
  */
-#[Route('/admin')]
+#[AdminRoute('/abonnements', name: 'abonnement')]
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class AbonnementController extends AbstractController
 {
-    #[Route('/abonnements', name: 'admin_abonnement_index', methods: ['GET'])]
+    #[AdminRoute('', name: 'index', options: ['methods' => ['GET']])]
     public function index(PharmacieRepository $pharmacies, AbonnementRepository $paiements, AbonnementService $abonnements): Response
     {
         $aujourdhui = $abonnements->aujourdhui();
@@ -33,15 +34,9 @@ final class AbonnementController extends AbstractController
         ]);
     }
 
-    #[Route('/abonnements/{id}/facture', name: 'admin_abonnement_facture', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[AdminRoute('/{id}/facture', name: 'facture', options: ['methods' => ['GET'], 'requirements' => ['id' => '\d+']])]
     public function facture(Abonnement $abonnement, FactureAbonnementPdf $pdf): Response
     {
         return $pdf->reponse($abonnement);
-    }
-
-    #[Route('/offres', name: 'admin_offre_index', methods: ['GET'])]
-    public function offres(OffreRepository $offres): Response
-    {
-        return $this->render('admin/offre/index.html.twig', ['offres' => $offres->toutes()]);
     }
 }

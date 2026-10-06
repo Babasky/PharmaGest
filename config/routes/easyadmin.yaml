@@ -1,0 +1,4 @@
+# Routes de l'espace plateforme (super admin), générées par EasyAdmin à partir de #[AdminDashboard] et #[AdminRoute].
+easyadmin:
+    resource: .
+    type: easyadmin.routes

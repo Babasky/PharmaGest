@@ -1,0 +1,90 @@
+{# Journal d'audit : filtres et liste, partagés par l'officine (audit/index) et la plateforme (admin/journal). #}
+{# Lien vers la donnée concernée, côté officine seulement. #}
+{% set liens = {Vente: 'app_vente_voir', Commande: 'app_commande_voir', Depense: 'app_depense_voir', BordereauAmo: 'app_amo_bordereau_voir', SessionCaisse: 'app_session_caisse_voir', Inventaire: 'app_inventaire_voir', Produit: 'app_produit_voir'} %}
+{% set noms = {Vente: 'Vente', Commande: 'Commande', Depense: 'Dépense', Recette: 'Recette', BordereauAmo: 'Bordereau', ReglementAmo: 'Règlement AMO', SessionCaisse: 'Session de caisse', Inventaire: 'Inventaire', Produit: 'Produit', Lot: 'Lot', Abonnement: 'Abonnement', Pharmacie: 'Pharmacie', Utilisateur: 'Utilisateur', ParametrePharmacie: 'Paramètres', TauxAmo: 'Taux AMO'} %}
+
+<p class="text-body-secondary small">
+    {% if plateforme %}
+        Actions de la plateforme : créations, suspensions et archivages de pharmacies, paiements d'abonnement.
+        L'activité interne des officines n'y figure pas.
+    {% else %}
+        Trace des actions sensibles (annulations, remises hors plafond, ajustements de stock, modifications de prix,
+        écarts de caisse, équipe…). Les entrées ne peuvent être ni modifiées ni supprimées.
+    {% endif %}
+</p>
+<form method="get" class="row g-2 align-items-end mb-3" id="filtres-audit">
+    <div class="col-12 col-sm-6 col-lg-3">
+        <label class="form-label small mb-1" for="audit-utilisateur">Utilisateur</label>
+        <select class="form-select" id="audit-utilisateur" name="utilisateur">
+            <option value="">Tous</option>
+            {% for u in auteurs %}<option value="{{ u.id }}"{{ filtres.utilisateur == u.id ? ' selected' }}>{{ u.nom }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <label class="form-label small mb-1" for="audit-action">Action</label>
+        <select class="form-select" id="audit-action" name="action">
+            <option value="">Toutes</option>
+            {% for code, libelle in actions %}<option value="{{ code }}"{{ filtres.action == code ? ' selected' }}>{{ libelle }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-lg-2">
+        <label class="form-label small mb-1" for="audit-du">Du</label>
+        <input class="form-control" type="date" id="audit-du" name="du" value="{{ filtres.du }}">
+    </div>
+    <div class="col-6 col-lg-2">
+        <label class="form-label small mb-1" for="audit-au">Au</label>
+        <input class="form-control" type="date" id="audit-au" name="au" value="{{ filtres.au }}">
+    </div>
+    <div class="col-12 col-lg-2 d-flex gap-2">
+        <button class="btn btn-outline-secondary flex-grow-1" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+        <a class="btn btn-link" href="{{ path(route) }}" title="Effacer les filtres"><i class="bi bi-x-lg"></i></a>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0" id="journal">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Date</th>
+                    {% if plateforme %}<th>Pharmacie</th>{% endif %}
+                    <th>Utilisateur</th><th>Action</th><th>Détail</th><th class="pe-3">Adresse IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entree in entrees %}
+                    <tr>
+                        <td class="ps-3 small text-nowrap">{{ entree.date|date('d/m/Y H:i') }}</td>
+                        {% if plateforme %}<td class="small">{{ entree.pharmacie ? entree.pharmacie.nom : '—' }}</td>{% endif %}
+                        <td class="small">{{ entree.utilisateur ? entree.utilisateur.nom : 'Système' }}</td>
+                        <td>
+                            <span class="fw-semibold">{{ audit_libelle(entree.action) }}</span>
+                            {% if entree.entite %}
+                                {% set nom = noms[entree.entite] ?? entree.entite %}
+                                <div class="small text-body-secondary">
+                                    {% if not plateforme and liens[entree.entite] is defined and entree.entiteId %}
+                                        <a href="{{ path(liens[entree.entite], {id: entree.entiteId}) }}">{{ nom }} n° {{ entree.entiteId }}</a>
+                                    {% else %}
+                                        {{ nom }}{% if entree.entiteId %} n° {{ entree.entiteId }}{% endif %}
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if entree.avant %}
+                                <div><span class="text-body-secondary">Avant :</span> {{ entree.avant|audit_valeurs }}</div>
+                            {% endif %}
+                            {% if entree.apres %}
+                                <div>{% if entree.avant %}<span class="text-body-secondary">Après :</span> {% endif %}{{ entree.apres|audit_valeurs }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="pe-3 small text-body-secondary">{{ entree.adresseIp ?? '—' }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{{ plateforme ? 6 : 5 }}" class="text-center text-body-secondary py-4">Aucune entrée pour ces critères.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% include 'layout/_pagination.html.twig' with {page: entrees, route: route, params: filtres} %}

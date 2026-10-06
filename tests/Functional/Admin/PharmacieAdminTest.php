@@ -46,8 +46,8 @@ final class PharmacieAdminTest extends AppWebTestCase
         $lien = $this->lienDansDernierEmail();
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-success', 'lien d\'activation a été envoyé à a.traore@fleuve.ml');
-        self::assertSelectorTextContains('main', '+223 76 12 34 56');
-        self::assertSelectorTextContains('main', "Période d'essai");
+        self::assertSelectorTextContains('#main', '+223 76 12 34 56');
+        self::assertSelectorTextContains('#main', "Période d'essai");
 
         $pharmacie = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Pharmacie::class)->findOneBy(['nom' => 'Pharmacie du Fleuve']));
         self::assertInstanceOf(Pharmacie::class, $pharmacie);
@@ -83,7 +83,7 @@ final class PharmacieAdminTest extends AppWebTestCase
         ]);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('main', '+223 XX XX XX XX');
+        self::assertSelectorTextContains('#main', '+223 XX XX XX XX');
         self::assertQueuedEmailCount(0);
     }
 
@@ -129,7 +129,7 @@ final class PharmacieAdminTest extends AppWebTestCase
         $this->client->followRedirect();
         $annee = date('Y');
         self::assertSelectorTextContains('.alert-success', \sprintf('facture FAC-%s-', $annee));
-        self::assertSelectorTextContains('main', "240\u{00A0}000\u{00A0}FCFA");
+        self::assertSelectorTextContains('#main', "240\u{00A0}000\u{00A0}FCFA");
 
         $abonnement = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Abonnement::class)->findOneBy(['reference' => 'OM-778899']));
         self::assertInstanceOf(Abonnement::class, $abonnement);
@@ -208,21 +208,54 @@ final class PharmacieAdminTest extends AppWebTestCase
 
         $crawler = $this->connecter($this->admin)->request('GET', '/admin');
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('main', 'Pharmacie Bientôt');
-        self::assertSelectorTextContains('main', 'Pharmacie Expirée');
+        self::assertSelectorTextContains('#main', 'Pharmacie Bientôt');
+        self::assertSelectorTextContains('#main', 'Pharmacie Expirée');
         self::assertSelectorExists('[data-controller="chart"]');
         self::assertGreaterThanOrEqual(1, (int) $crawler->filter('.card .fs-4')->eq(3)->text());
 
-        $this->client->request('GET', '/admin/pharmacies?q=Essai');
+        $this->client->request('GET', '/admin/pharmacies?query=Essai');
         self::assertSelectorTextContains('tbody', 'Pharmacie En Essai');
         self::assertSelectorTextNotContains('tbody', 'Pharmacie Active');
 
         $this->client->request('GET', '/admin/abonnements');
-        self::assertSelectorTextContains('main', 'Pharmacie Bientôt');
+        self::assertSelectorTextContains('#main', 'Pharmacie Bientôt');
 
         $this->client->request('GET', '/admin/offres');
-        self::assertSelectorTextContains('main', 'Premium');
-        self::assertSelectorTextContains('main', 'Illimités');
+        self::assertSelectorTextContains('#main', 'Premium');
+        self::assertSelectorTextContains('#main', 'Illimités');
+    }
+
+    public function testModificationDeLaFicheDansEasyAdmin(): void
+    {
+        $pharmacie = PharmacieFactory::createOne(['nom' => 'Pharmacie Ancienne']);
+
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/pharmacies/'.$pharmacie->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        $formulaire = $crawler->filter('button[value="saveAndReturn"]')->form();
+        $this->client->submit($formulaire, ['Pharmacie[nom]' => 'Pharmacie Nouvelle', 'Pharmacie[telephone]' => '66 00 11 22']);
+        self::assertResponseRedirects();
+
+        $modifiee = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Pharmacie::class, $pharmacie->getId()));
+        self::assertInstanceOf(Pharmacie::class, $modifiee);
+        self::assertSame('Pharmacie Nouvelle', $modifiee->getNom());
+        self::assertSame('+22366001122', $modifiee->getTelephone());
+
+        $this->client->request('GET', '/admin/pharmacies/'.$pharmacie->getId().'/edit');
+        $this->client->submit($this->client->getCrawler()->filter('button[value="saveAndReturn"]')->form(), ['Pharmacie[telephone]' => '123']);
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testRienNeSeSupprimeDepuisLEspacePlateforme(): void
+    {
+        $pharmacie = PharmacieFactory::createOne();
+
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/pharmacies');
+        self::assertCount(0, $crawler->filter('.action-delete'));
+        $this->client->request('POST', '/admin/pharmacies/'.$pharmacie->getId().'/delete');
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->request('GET', '/admin/offres/'.OffreFactory::parCode(Offre::STANDARD)->getId().'/edit');
+        self::assertResponseStatusCodeSame(403, 'Les offres sont en consultation seule (SA-04 en V1).');
     }
 
     private function soumettreCreation(string $nom, string $emailProprietaire, string $offre): void

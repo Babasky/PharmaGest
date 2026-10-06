@@ -27,6 +27,16 @@
                         Le renouvellement se paie hors de l'application (espèces, virement, Orange Money, Moov Money) auprès de l'éditeur,
                         qui active ensuite la nouvelle période de 12 mois. La facture apparaît ici.
                     </p>
+                    <hr>
+                    <div id="export-donnees">
+                        <div class="fw-semibold mb-1">Vos données vous appartiennent</div>
+                        <p class="small text-body-secondary">
+                            Téléchargez à tout moment, même en lecture seule, une archive ZIP de toutes les données de la pharmacie
+                            (un fichier par table, lisible dans Excel) avec le logo, les justificatifs et les copies d'ordonnances.
+                            Douze mois après l'expiration sans renouvellement, la pharmacie est archivée ; cet export vous est alors envoyé par email.
+                        </p>
+                        <a class="btn btn-outline-success" href="{{ path('app_mon_abonnement_export') }}"><i class="bi bi-file-earmark-zip"></i> Exporter toutes mes données</a>
+                    </div>
                 </div>
             </div>
         </div>

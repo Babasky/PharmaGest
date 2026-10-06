@@ -45,14 +45,41 @@ class PlateformeMailer
     }
 
     /**
-     * @param array<string, mixed> $contexte
+     * Archivage dans 30 jours (12 mois après l'échéance sans renouvellement, § 3.2 étape 8).
      */
-    private function envoyer(Utilisateur $destinataire, string $sujet, string $template, array $contexte): void
+    public function annonceArchivage(Utilisateur $proprietaire, Pharmacie $pharmacie, \DateTimeImmutable $echeance, \DateTimeImmutable $archivage): void
     {
-        $this->mailer->send((new TemplatedEmail())
+        $this->envoyer($proprietaire, \sprintf('%s sera archivée le %s', $pharmacie->getNom(), $archivage->format('d/m/Y')), 'email/annonce_archivage.html.twig', [
+            'pharmacie' => $pharmacie,
+            'echeance' => $echeance,
+            'archivage' => $archivage,
+        ]);
+    }
+
+    /**
+     * Export complet envoyé au propriétaire au moment de l'archivage.
+     */
+    public function exportArchivage(Utilisateur $proprietaire, Pharmacie $pharmacie, string $cheminArchive, string $nomArchive): void
+    {
+        $this->envoyer($proprietaire, \sprintf('%s : export complet de vos données', $pharmacie->getNom()), 'email/export_archivage.html.twig', [
+            'pharmacie' => $pharmacie,
+        ], static fn (TemplatedEmail $email) => $email->attachFromPath($cheminArchive, $nomArchive, 'application/zip'));
+    }
+
+    /**
+     * @param array<string, mixed>                   $contexte
+     * @param (callable(TemplatedEmail): mixed)|null $completer
+     */
+    private function envoyer(Utilisateur $destinataire, string $sujet, string $template, array $contexte, ?callable $completer = null): void
+    {
+        $email = (new TemplatedEmail())
             ->to(new Address($destinataire->getEmail(), $destinataire->getNom()))
             ->subject($sujet)
             ->htmlTemplate($template)
-            ->context(['utilisateur' => $destinataire, ...$contexte]));
+            ->context(['utilisateur' => $destinataire, ...$contexte]);
+        if (null !== $completer) {
+            $completer($email);
+        }
+        $this->mailer->send($email);
     }
 }

@@ -17,6 +17,7 @@ use App\Finance\RecetteService;
 use App\Form\Model\SaisieDepense;
 use App\Security\CodePin;
 use App\Service\AbonnementService;
+use App\Service\GenerateurNotifications;
 use App\Stock\StockService;
 use App\Tenant\TenantContext;
 use App\Tests\Factory\AffectationFactory;
@@ -30,6 +31,8 @@ use App\Tests\Factory\ProduitFactory;
 use App\Tests\Factory\UtilisateurFactory;
 use App\Vente\GestionCaisse;
 use App\Vente\VenteService;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Zenstruck\Foundry\Attribute\AsFixture;
 use Zenstruck\Foundry\Story;
 
@@ -54,6 +57,9 @@ final class AppStory extends Story
         private readonly ReceptionService $receptions,
         private readonly GestionDepenses $depenses,
         private readonly RecetteService $recettes,
+        private readonly GenerateurNotifications $notifications,
+        private readonly TokenStorageInterface $jetons,
+        private readonly \Doctrine\ORM\EntityManagerInterface $em,
     ) {
     }
 
@@ -72,10 +78,16 @@ final class AppStory extends Story
             ['s.diarra@fleuve.ml', 'Seydou Diarra', Utilisateur::ROLE_VENDEUR],
         ]);
         $this->abonnements->enregistrerPaiement($fleuve, $fleuve->getOffre(), 180000, MoyenPaiement::OrangeMoney, 'OM-2026-55871', new \DateTimeImmutable('today'), null);
+        // Les actions de la démo sont faites au nom de la titulaire : le journal d'audit les lui attribue.
+        $aminata = \Zenstruck\Foundry\Persistence\repository(Utilisateur::class)->findOneBy(['email' => 'a.traore@fleuve.ml']);
+        \assert($aminata instanceof Utilisateur);
+        $this->jetons->setToken(new UsernamePasswordToken($aminata, 'main', $aminata->getRoles()));
         $catalogue = $this->catalogue($fleuve);
         $this->caisse($fleuve, $catalogue);
         $this->commandes($fleuve, $catalogue);
         $this->finances($fleuve);
+        $this->finition($fleuve, $catalogue);
+        $this->jetons->setToken(null);
 
         // Officine dont l'abonnement expire bientôt (bandeau d'alerte).
         $kanaga = PharmacieFactory::createOne([
@@ -103,6 +115,36 @@ final class AppStory extends Story
         $koulikoro = PharmacieFactory::createOne(['nom' => 'Pharmacie de Koulikoro', 'ville' => 'Koulikoro', 'offre' => $premium, 'numeroAutorisation' => 'AUT-KLK-0005']);
         $proprietaire = $this->equipe($kati, 'm.dembele@groupe-dembele.ml', 'Mariam Dembélé', [['y.toure@groupe-dembele.ml', 'Yacouba Touré', Utilisateur::ROLE_VENDEUR]]);
         AffectationFactory::createOne(['utilisateur' => $proprietaire, 'pharmacie' => $koulikoro]);
+
+        // Centre de notifications (Lot 8) : alertes du jour pour chaque pharmacie, comme chaque matin.
+        foreach ([$fleuve, $kanaga, $djoliba, $paix, $kati, $koulikoro] as $pharmacie) {
+            $this->notifications->generer($pharmacie);
+        }
+    }
+
+    /**
+     * Finition (Lot 8) : quelques actions sensibles de plus dans le journal d'audit (prix, ajustement de stock) ;
+     * le bordereau INPS est daté d'il y a 40 jours pour illustrer la notification d'impayé.
+     *
+     * @param array<string, \App\Entity\Produit> $catalogue
+     */
+    private function finition(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
+    {
+        $this->tenantContext->forcer($pharmacie);
+        // Le prix est enregistré avec l'ajustement (même flush) : le journal trace les deux.
+        $catalogue['Doliprane']->setPrixVente(1600);
+        $lot = \Zenstruck\Foundry\Persistence\repository(\App\Entity\Lot::class)->findOneBy(['numero' => 'IB772']);
+        \assert($lot instanceof \App\Entity\Lot);
+        $this->stock->ajuster($lot, $lot->getQuantiteRestante() - 2, 'Deux boîtes abîmées à la réception');
+
+        $bordereau = \Zenstruck\Foundry\Persistence\repository(\App\Entity\BordereauAmo::class)->findOneBy([]);
+        \assert($bordereau instanceof \App\Entity\BordereauAmo);
+        $this->em->getConnection()->executeStatement(
+            'UPDATE bordereau_amo SET transmis_le = ? WHERE id = ?',
+            [(new \DateTimeImmutable('today -40 days 10:00'))->format('Y-m-d H:i:s'), $bordereau->getId()],
+        );
+        $this->em->refresh($bordereau);
+        $this->tenantContext->forcer(null);
     }
 
     /**

@@ -37,4 +37,22 @@ class BordereauAmoRepository extends ServiceEntityRepository
         /** @var Page<BordereauAmo> */
         return Page::depuis($qb, $page);
     }
+
+    /**
+     * Bordereaux transmis (ou payés en partie) avant une date et pas encore soldés (NO-01).
+     *
+     * @return list<BordereauAmo>
+     */
+    public function impayesTransmisAvant(\DateTimeImmutable $limite): array
+    {
+        /** @var list<BordereauAmo> */
+        return $this->createQueryBuilder('b')
+            ->addSelect('o')
+            ->join('b.organisme', 'o')
+            ->andWhere('b.statut IN (:statuts)')
+            ->setParameter('statuts', [StatutBordereau::Transmis, StatutBordereau::PayePartiellement])
+            ->andWhere('b.transmisLe <= :limite')->setParameter('limite', $limite)
+            ->orderBy('b.transmisLe', 'ASC')
+            ->getQuery()->getResult();
+    }
 }
