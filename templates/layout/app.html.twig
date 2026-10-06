@@ -1,6 +1,6 @@
 {#
-    Gabarit des pages connectées : sidebar (selon le rôle) + barre supérieure + contenu.
-    Sur grand écran la sidebar est fixe ; sur tablette / petit écran de caisse elle devient un offcanvas.
+    Gabarit des pages connectées : menu vertical repliable + barre supérieure + fil d'Ariane + contenu.
+    Sur grand écran le menu est fixe (réductible en icônes) ; sur tablette / petit écran de caisse il devient un offcanvas.
 #}
 {% extends 'base.html.twig' %}
 
@@ -8,107 +8,144 @@
 
 {% block body %}
     {% set courante = pharmacie_courante() %}
-    <header class="navbar navbar-dark bg-success sticky-top shadow-sm px-2 py-1 layout-topbar">
-        <div class="d-flex align-items-center gap-2 min-w-0">
-            <button class="btn btn-success d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Ouvrir le menu">
-                <i class="bi bi-list fs-4"></i>
-            </button>
-            <a class="navbar-brand fw-semibold d-flex align-items-center gap-2 py-0" href="{{ path('app_tableau_de_bord') }}">
-                <i class="bi bi-capsule-pill"></i> <span class="d-none d-sm-inline">{{ app_name }}</span>
-            </a>
-            {% if courante %}
-                {% set pharmacies = pharmacies_accessibles() %}
-                {% if pharmacies|length > 1 %}
-                    <div class="dropdown min-w-0">
-                        <button class="btn btn-sm btn-outline-light dropdown-toggle text-truncate mw-100" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Changer de pharmacie">
-                            <i class="bi bi-shop"></i> {{ courante.nom }}
-                        </button>
-                        <ul class="dropdown-menu">
-                            {% for p in pharmacies %}
-                                <li>
-                                    <form method="post" action="{{ path('app_pharmacie_basculer') }}">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('basculer-pharmacie') }}">
-                                        <input type="hidden" name="pharmacie" value="{{ p.id }}">
-                                        <button class="dropdown-item{{ p.id == courante.id ? ' active' : '' }}" type="submit">{{ p.nom }} <span class="text-body-secondary small">· {{ p.ville }}</span></button>
-                                    </form>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% else %}
-                    <span class="text-white text-opacity-75 small text-truncate d-none d-md-inline"><i class="bi bi-shop"></i> {{ courante.nom }}</span>
-                {% endif %}
+    {% set route_courante = app.request.attributes.get('_route') %}
+    {% set fil = null %}
+    {% for section in navigation() %}
+        {% for element in section.elements %}
+            {% if fil is null and element.disponible and (route_courante == element.route or (element.prefixe != element.route and route_courante starts with element.prefixe)) %}
+                {% set fil = {section: section.titre, libelle: element.libelle, route: element.route} %}
             {% endif %}
-        </div>
-        {% if app.user %}
-          <div class="d-flex align-items-center gap-1">
-            {% if courante and is_granted('ROLE_ADJOINT') %}
-                {% set non_lues = notifications_non_lues() %}
-                <div class="dropdown" id="cloche">
-                    <button class="btn btn-success position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications{{ non_lues ? ' : ' ~ non_lues ~ ' non lue(s)' }}">
-                        <i class="bi bi-bell{{ non_lues ? '-fill' }}"></i>
-                        {% if non_lues %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cloche-compteur">{{ non_lues > 99 ? '99+' : non_lues }}</span>{% endif %}
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end p-0 shadow" style="width: min(24rem, 92vw)">
-                        <div class="px-3 py-2 border-bottom fw-semibold small">Notifications</div>
-                        <div class="list-group list-group-flush">
-                            {% for n in notifications_recentes() %}
-                                <a class="list-group-item list-group-item-action small d-flex gap-2{{ n.lue ? ' text-body-secondary' }}" href="{{ path('app_notification_ouvrir', {id: n.id}) }}">
-                                    <i class="bi bi-{{ n.type.icone }} text-{{ n.type.couleur }}"></i>
-                                    <span class="flex-grow-1">{% if not n.lue %}<span class="fw-semibold">{{ n.message }}</span>{% else %}{{ n.message }}{% endif %}<br><span class="text-body-secondary">{{ n.creeLe|date('d/m/Y H:i') }}</span></span>
-                                </a>
-                            {% else %}
-                                <div class="list-group-item small text-body-secondary">Aucune notification.</div>
-                            {% endfor %}
-                        </div>
-                        <a class="d-block text-center small py-2 border-top" href="{{ path('app_notification_index') }}">Toutes les notifications</a>
-                    </div>
-                </div>
-            {% endif %}
-            <div class="dropdown">
-                <button class="btn btn-success dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-person-circle"></i>
-                    <span class="d-none d-sm-inline text-truncate" style="max-width: 14rem">{{ app.user.nom }}</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><span class="dropdown-item-text small text-body-secondary">{{ app.user.email }}<br>{{ app.user.libelleRole }}</span></li>
-                    <li><hr class="dropdown-divider"></li>
-                    {% if is_granted('ROLE_VENDEUR') %}
-                        <li><a class="dropdown-item" href="{{ path('app_code_pin') }}"><i class="bi bi-key"></i> Mon code PIN</a></li>
-                    {% endif %}
-                    {% if is_granted('ROLE_PROPRIETAIRE') %}
-                        <li><a class="dropdown-item" href="{{ path('app_mon_abonnement') }}"><i class="bi bi-patch-check"></i> Mon abonnement</a></li>
-                    {% endif %}
-                    <li><a class="dropdown-item" href="{{ logout_path() }}"><i class="bi bi-box-arrow-right"></i> Se déconnecter</a></li>
-                </ul>
-            </div>
-          </div>
-        {% endif %}
-    </header>
+        {% endfor %}
+    {% endfor %}
 
-    <div class="d-flex layout-wrapper">
-        <nav id="sidebar" class="offcanvas-lg offcanvas-start bg-body-tertiary border-end layout-sidebar" tabindex="-1" aria-label="Menu principal">
-            <div class="offcanvas-header border-bottom d-lg-none">
-                <span class="offcanvas-title fw-semibold">Menu</span>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Fermer"></button>
-            </div>
-            <div class="offcanvas-body d-block p-2">
-                {% include 'layout/_sidebar.html.twig' %}
+    <div class="pg-wrapper" {{ stimulus_controller('sidebar') }}>
+        <nav id="sidebar" class="offcanvas-lg offcanvas-start pg-sidebar" tabindex="-1" aria-label="Menu principal"
+             data-action="mouseenter->sidebar#survol mouseleave->sidebar#finSurvol">
+            <div class="pg-sidebar-inner">
+                <div class="pg-sidebar-header">
+                    <a class="pg-logo" href="{{ path('app_tableau_de_bord') }}">
+                        <span class="pg-logo-icon"><i class="bi bi-capsule-pill"></i></span>
+                        <span class="pg-logo-text pg-menu-text">{{ app_name }}</span>
+                    </a>
+                    <button type="button" class="btn pg-sidebar-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Fermer le menu">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <button type="button" class="btn pg-sidebar-toggle d-none d-lg-inline-flex pg-menu-text" data-action="sidebar#basculer" aria-label="Réduire le menu" title="Réduire / déplier le menu">
+                        <i class="bi bi-arrow-bar-left"></i>
+                    </button>
+                </div>
+                <div class="pg-sidebar-nav">
+                    {% include 'layout/_sidebar.html.twig' %}
+                </div>
             </div>
         </nav>
 
-        <main class="flex-grow-1 p-3 p-md-4 layout-main">
-            {% include 'layout/_bandeau_abonnement.html.twig' %}
-            {% include 'layout/_flashes.html.twig' %}
+        <div class="pg-page">
+            <header class="pg-topbar">
+                <button class="btn pg-topbar-btn d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Ouvrir le menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                <button class="btn pg-topbar-btn d-none d-lg-inline-flex" type="button" data-action="sidebar#basculer" aria-label="Réduire ou déplier le menu" title="Réduire / déplier le menu">
+                    <i class="bi bi-list"></i>
+                </button>
 
-            {% block page_header %}
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                    <h1 class="h4 mb-0">{{ block('title') }}</h1>
-                    <div class="d-flex flex-wrap gap-2">{% block page_actions %}{% endblock %}</div>
+                {% if courante and is_granted('ROLE_VENDEUR') %}
+                    {# Le <form> lui-même est placé après le contenu pour que les formulaires de la page restent les premiers du document. #}
+                    <div class="pg-search d-none d-md-flex" role="search">
+                        <i class="bi bi-search"></i>
+                        <input class="form-control" type="search" name="q" form="pg-recherche" placeholder="Rechercher un produit…" aria-label="Rechercher un produit">
+                    </div>
+                {% endif %}
+
+                <div class="d-flex align-items-center gap-1 ms-auto min-w-0">
+                    {% if courante %}
+                        {% set pharmacies = pharmacies_accessibles() %}
+                        {% if pharmacies|length > 1 %}
+                            <div class="dropdown min-w-0">
+                                <button class="btn btn-sm pg-pharmacie dropdown-toggle text-truncate mw-100" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Changer de pharmacie">
+                                    <i class="bi bi-shop"></i> {{ courante.nom }}
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    {% for p in pharmacies %}
+                                        <li>
+                                            <form method="post" action="{{ path('app_pharmacie_basculer') }}">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('basculer-pharmacie') }}">
+                                                <input type="hidden" name="pharmacie" value="{{ p.id }}">
+                                                <button class="dropdown-item{{ p.id == courante.id ? ' active' : '' }}" type="submit">{{ p.nom }} <span class="text-body-secondary small">· {{ p.ville }}</span></button>
+                                            </form>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <span class="pg-pharmacie text-truncate d-none d-md-inline-flex"><i class="bi bi-shop"></i> {{ courante.nom }}</span>
+                        {% endif %}
+                    {% endif %}
+
+                    <button class="btn pg-topbar-btn" type="button" {{ stimulus_controller('theme') }} data-action="theme#basculer" aria-label="Basculer le thème clair / sombre" title="Thème clair / sombre">
+                        <i class="bi bi-moon-stars pg-icone-sombre"></i><i class="bi bi-sun pg-icone-clair"></i>
+                    </button>
+
+                    {% if app.user %}
+                        <div class="dropdown">
+                            <button class="btn pg-user dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="pg-avatar" aria-hidden="true">{{ app.user.nom|split(' ')|map(m => m|first)|slice(0, 2)|join|upper }}</span>
+                                <span class="pg-user-info d-none d-sm-flex">
+                                    <span class="pg-user-nom text-truncate">{{ app.user.nom }}</span>
+                                    <span class="pg-user-role text-truncate">{{ app.user.libelleRole }}</span>
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><span class="dropdown-item-text small text-body-secondary">{{ app.user.email }}<br>{{ app.user.libelleRole }}</span></li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% if is_granted('ROLE_VENDEUR') %}
+                                    <li><a class="dropdown-item" href="{{ path('app_code_pin') }}"><i class="bi bi-key"></i> Mon code PIN</a></li>
+                                {% endif %}
+                                {% if is_granted('ROLE_PROPRIETAIRE') %}
+                                    <li><a class="dropdown-item" href="{{ path('app_mon_abonnement') }}"><i class="bi bi-patch-check"></i> Mon abonnement</a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{{ logout_path() }}"><i class="bi bi-box-arrow-right"></i> Se déconnecter</a></li>
+                            </ul>
+                        </div>
+                    {% endif %}
                 </div>
-            {% endblock %}
+            </header>
 
-            {% block content %}{% endblock %}
-        </main>
+            <main class="pg-main">
+                {% include 'layout/_bandeau_abonnement.html.twig' %}
+                {% include 'layout/_flashes.html.twig' %}
+
+                {% block page_header %}
+                    <div class="pg-page-header">
+                        <div class="d-flex flex-wrap align-items-center gap-2 min-w-0">
+                            <h1 class="pg-page-title">{{ block('title') }}</h1>
+                            {% if fil and fil.route != 'app_tableau_de_bord' %}
+                                <nav aria-label="Fil d'Ariane" class="pg-breadcrumb d-none d-sm-block">
+                                    <ol class="breadcrumb mb-0">
+                                        <li class="breadcrumb-item"><a href="{{ path('app_tableau_de_bord') }}" aria-label="Tableau de bord"><i class="bi bi-house-door"></i></a></li>
+                                        {% if fil.section %}<li class="breadcrumb-item">{{ fil.section }}</li>{% endif %}
+                                        {% if fil.route == route_courante %}
+                                            <li class="breadcrumb-item active" aria-current="page">{{ fil.libelle }}</li>
+                                        {% else %}
+                                            <li class="breadcrumb-item"><a href="{{ path(fil.route) }}">{{ fil.libelle }}</a></li>
+                                        {% endif %}
+                                    </ol>
+                                </nav>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">{% block page_actions %}{% endblock %}</div>
+                    </div>
+                {% endblock %}
+
+                {% block content %}{% endblock %}
+            </main>
+
+            {% if courante and is_granted('ROLE_VENDEUR') %}
+                <form id="pg-recherche" method="get" action="{{ path('app_produit_index') }}" hidden></form>
+            {% endif %}
+            <footer class="pg-footer">
+                © {{ 'now'|date('Y') }} {{ app_name }} · Gestion d'officine
+            </footer>
+        </div>
     </div>
 {% endblock %}

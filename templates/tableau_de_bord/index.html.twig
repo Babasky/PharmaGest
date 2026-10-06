@@ -12,18 +12,17 @@
     <div class="row g-3 mb-4" id="indicateurs">
         {% for indicateur in indicateurs %}
             <div class="col-6 col-xl-3">
-                <div class="card h-100 shadow-sm" id="indicateur-{{ indicateur.id }}">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <i class="bi bi-{{ indicateur.icone }} fs-2 text-success"></i>
+                <div class="card h-100 pg-widget pg-widget-{{ loop.index0 % 8 }}" id="indicateur-{{ indicateur.id }}">
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
-                            <div class="small text-body-secondary">
+                            <div class="small text-body-secondary fw-medium">
                                 {% if indicateur.lien is defined %}
                                     <a class="stretched-link text-reset text-decoration-none" href="{{ path('app_stock_alertes', indicateur.lien) }}">{{ indicateur.libelle }}</a>
                                 {% elseif indicateur.route is defined %}
                                     <a class="stretched-link text-reset text-decoration-none" href="{{ path(indicateur.route) }}">{{ indicateur.libelle }}</a>
                                 {% else %}{{ indicateur.libelle }}{% endif %}
                             </div>
-                            <div class="fs-5 fw-semibold text-nowrap valeur">
+                            <div class="fs-5 fw-bold text-nowrap valeur my-1 text-body-emphasis">
                                 {{ indicateur.montant ? indicateur.valeur|fcfa : indicateur.valeur|number_format(0, ',', ' ') }}
                             </div>
                             {% if indicateur.evolution is defined %}
@@ -38,6 +37,7 @@
                                 {% endif %}
                             {% endif %}
                         </div>
+                        <span class="pg-widget-icon"><i class="bi bi-{{ indicateur.icone }}"></i></span>
                     </div>
                 </div>
             </div>
@@ -47,10 +47,10 @@
     <div class="row g-3">
         {% for code, graphique in graphiques %}
             <div class="col-12{{ code == 'categories' ? ' col-xl-5' : (code == 'mois' ? ' col-xl-7' : '') }}">
-                <div class="card shadow-sm h-100" id="graphique-{{ code }}">
-                    <div class="card-header bg-body d-flex justify-content-between align-items-center">
+                <div class="card h-100" id="graphique-{{ code }}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <span class="fw-semibold">{{ graphique.titre }}</span>
-                        {% if loop.first %}<span class="small text-body-secondary">{{ 'now'|date('d/m/Y H:i') }} (heure de Bamako)</span>{% endif %}
+                        {% if loop.first %}<span class="small text-body-secondary fw-normal">{{ 'now'|date('d/m/Y H:i') }} (heure de Bamako)</span>{% endif %}
                     </div>
                     <div class="card-body">
                         {% if graphique.vide ?? false %}

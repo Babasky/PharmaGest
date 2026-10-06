@@ -87,4 +87,18 @@ final class LayoutTest extends AppWebTestCase
         // Lot 8 : plus aucun module « Bientôt » dans le menu.
         self::assertSame(0, $crawler->filter('#sidebar .nav-link.disabled')->count());
     }
+
+    public function testMenuVerticalFilDArianeEtRecherche(): void
+    {
+        $officine = $this->creerOfficine();
+        $this->connecter($officine->proprietaire)->request('GET', '/equipe/nouveau');
+
+        // Le groupe de la page courante est déplié, les autres restent repliés.
+        self::assertSelectorExists('#sidebar .pg-menu-group-actif .collapse.show a[href="/equipe"].active');
+        self::assertSelectorExists('#sidebar .pg-menu-toggle.collapsed[aria-expanded="false"]');
+        self::assertSelectorTextContains('.pg-breadcrumb', 'Pharmacie');
+        self::assertSelectorTextContains('.pg-breadcrumb', 'Équipe');
+        self::assertSelectorExists('form#pg-recherche[action="/produits"]');
+        self::assertSelectorExists('input[name="q"][form="pg-recherche"]');
+    }
 }

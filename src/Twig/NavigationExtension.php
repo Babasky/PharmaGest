@@ -12,7 +12,7 @@ final class NavigationExtension
     }
 
     /**
-     * @return list<array{titre: string, elements: list<array{libelle: string, icone: string, route: string, disponible: bool, prefixe: string}>}>
+     * @return list<array{titre: string, icone: string, elements: list<array{libelle: string, icone: string, route: string, disponible: bool, prefixe: string}>}>
      */
     #[AsTwigFunction('navigation')]
     public function navigation(): array

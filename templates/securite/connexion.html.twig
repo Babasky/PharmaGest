@@ -2,6 +2,8 @@
 
 {% block title %}Connexion{% endblock %}
 
+{% block intro %}Bienvenue ! Connectez-vous pour accéder à votre pharmacie.{% endblock %}
+
 {% block content %}
     {% if erreur %}
         <div class="alert alert-danger py-2" role="alert">
@@ -19,10 +21,10 @@
             <input type="password" name="mot_de_passe" id="mot_de_passe" class="form-control" autocomplete="current-password" required>
         </div>
         <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-        <button class="btn btn-success" type="submit"><i class="bi bi-box-arrow-in-right"></i> Se connecter</button>
+        <button class="btn btn-success btn-lg fs-6" type="submit"><i class="bi bi-box-arrow-in-right"></i> Se connecter</button>
     </form>
 {% endblock %}
 
 {% block apres_carte %}
-    <p class="text-center mt-3 small"><a href="{{ path('app_mot_de_passe_oublie') }}">Mot de passe oublié ?</a></p>
+    <p class="text-end mt-3 small"><a href="{{ path('app_mot_de_passe_oublie') }}">Mot de passe oublié ?</a></p>
 {% endblock %}

@@ -13,17 +13,19 @@ use Symfony\Component\Routing\RouterInterface;
 final class Navigation
 {
     /**
-     * @var list<array{titre: string, elements: list<array{libelle: string, icone: string, route: string, role: string}>}>
+     * @var list<array{titre: string, icone: string, elements: list<array{libelle: string, icone: string, route: string, role: string}>}>
      */
     private const SECTIONS = [
         [
             'titre' => '',
+            'icone' => '',
             'elements' => [
                 ['libelle' => 'Tableau de bord', 'icone' => 'speedometer2', 'route' => 'app_tableau_de_bord', 'role' => 'ROLE_VENDEUR'],
             ],
         ],
         [
             'titre' => 'Comptoir',
+            'icone' => 'shop',
             'elements' => [
                 ['libelle' => 'Caisse', 'icone' => 'cart-plus', 'route' => 'app_caisse', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Ventes', 'icone' => 'receipt', 'route' => 'app_vente_index', 'role' => 'ROLE_VENDEUR'],
@@ -33,6 +35,7 @@ final class Navigation
         ],
         [
             'titre' => 'Stock',
+            'icone' => 'boxes',
             'elements' => [
                 ['libelle' => 'Produits', 'icone' => 'capsule', 'route' => 'app_produit_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'État du stock', 'icone' => 'box-seam', 'route' => 'app_stock_index', 'role' => 'ROLE_VENDEUR'],
@@ -45,6 +48,7 @@ final class Navigation
         ],
         [
             'titre' => 'Gestion',
+            'icone' => 'briefcase',
             'elements' => [
                 ['libelle' => 'AMO', 'icone' => 'shield-plus', 'route' => 'app_amo_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Dépenses', 'icone' => 'wallet2', 'route' => 'app_depense_index', 'role' => 'ROLE_PROPRIETAIRE'],
@@ -54,6 +58,7 @@ final class Navigation
         ],
         [
             'titre' => 'Pharmacie',
+            'icone' => 'house-gear',
             'elements' => [
                 ['libelle' => 'Équipe', 'icone' => 'person-badge', 'route' => 'app_equipe_index', 'role' => 'ROLE_PROPRIETAIRE'],
                 ['libelle' => 'Paramètres', 'icone' => 'gear', 'route' => 'app_parametres', 'role' => 'ROLE_PROPRIETAIRE'],
@@ -63,6 +68,7 @@ final class Navigation
         ],
         [
             'titre' => 'Administration',
+            'icone' => 'shield-lock',
             'elements' => [
                 // L'espace plateforme a son propre menu (EasyAdmin) ; ce lien y ramène depuis les pages communes.
                 ['libelle' => 'Espace plateforme', 'icone' => 'globe2', 'route' => 'admin', 'role' => 'ROLE_SUPER_ADMIN'],
@@ -77,7 +83,7 @@ final class Navigation
     }
 
     /**
-     * @return list<array{titre: string, elements: list<array{libelle: string, icone: string, route: string, disponible: bool, prefixe: string}>}>
+     * @return list<array{titre: string, icone: string, elements: list<array{libelle: string, icone: string, route: string, disponible: bool, prefixe: string}>}>
      */
     public function sections(): array
     {
@@ -101,7 +107,7 @@ final class Navigation
             }
 
             if ([] !== $elements) {
-                $sections[] = ['titre' => $section['titre'], 'elements' => $elements];
+                $sections[] = ['titre' => $section['titre'], 'icone' => $section['icone'], 'elements' => $elements];
             }
         }
 
