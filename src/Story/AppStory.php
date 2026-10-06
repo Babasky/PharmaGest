@@ -7,10 +7,14 @@ use App\Achat\ReceptionService;
 use App\Amo\GestionBordereaux;
 use App\Entity\Offre;
 use App\Entity\Utilisateur;
+use App\Enum\ModeReglement;
 use App\Enum\MoyenPaiement;
 use App\Enum\TypeRemise;
 use App\Enum\TypeVente;
 use App\Enum\ZoneEtagere;
+use App\Finance\GestionDepenses;
+use App\Finance\RecetteService;
+use App\Form\Model\SaisieDepense;
 use App\Security\CodePin;
 use App\Service\AbonnementService;
 use App\Stock\StockService;
@@ -48,6 +52,8 @@ final class AppStory extends Story
         private readonly GestionBordereaux $bordereaux,
         private readonly CommandeService $commandes,
         private readonly ReceptionService $receptions,
+        private readonly GestionDepenses $depenses,
+        private readonly RecetteService $recettes,
     ) {
     }
 
@@ -69,6 +75,7 @@ final class AppStory extends Story
         $catalogue = $this->catalogue($fleuve);
         $this->caisse($fleuve, $catalogue);
         $this->commandes($fleuve, $catalogue);
+        $this->finances($fleuve);
 
         // Officine dont l'abonnement expire bientôt (bandeau d'alerte).
         $kanaga = PharmacieFactory::createOne([
@@ -264,6 +271,40 @@ final class AppStory extends Story
         ]);
 
         $this->commandes->creer($ppm, [[$catalogue['Coartem'], 25], [$catalogue['Amoxicilline'], 20]]);
+        $this->tenantContext->forcer(null);
+    }
+
+    /**
+     * Finances (Lot 7) : dépenses courantes des deux derniers mois et une recette hors ventes. Les recettes des ventes
+     * et du règlement AMO sont déjà enregistrées par la caisse et l'AMO.
+     */
+    private function finances(\App\Entity\Pharmacie $pharmacie): void
+    {
+        $this->tenantContext->forcer($pharmacie);
+        $categories = [];
+        foreach ($this->depenses->categories() as $categorie) {
+            $categories[$categorie->getNom()] = $categorie;
+        }
+        $debutMois = new \DateTimeImmutable('first day of this month');
+        $aujourdhui = new \DateTimeImmutable('today');
+        foreach ([
+            [$debutMois->modify('-1 month'), 'Loyer', 'Loyer du local', 150000, ModeReglement::Virement, 'SCI Badalabougou'],
+            [$debutMois->modify('-1 month +4 days'), 'Salaires', 'Salaires de l\'équipe', 420000, ModeReglement::Virement, null],
+            [$debutMois->modify('-1 month +11 days'), 'Électricité', 'Facture EDM', 38500, ModeReglement::OrangeMoney, 'EDM-SA'],
+            [$debutMois, 'Loyer', 'Loyer du local', 150000, ModeReglement::Virement, 'SCI Badalabougou'],
+            [$aujourdhui, 'Transport', 'Course livraison grossiste', 3500, ModeReglement::Especes, 'Taxi'],
+            [$aujourdhui, 'Eau', 'Facture SOMAGEP', 12800, ModeReglement::MoovMoney, 'SOMAGEP'],
+        ] as [$date, $categorie, $libelle, $montant, $mode, $beneficiaire]) {
+            $saisie = new SaisieDepense();
+            $saisie->date = $date;
+            $saisie->categorie = $categories[$categorie];
+            $saisie->libelle = $libelle;
+            $saisie->montant = $montant;
+            $saisie->mode = $mode;
+            $saisie->beneficiaire = $beneficiaire;
+            $this->depenses->enregistrer($saisie);
+        }
+        $this->recettes->enregistrerManuelle($aujourdhui, 'Location de la vitrine à un laboratoire', 25000, ModeReglement::Especes);
         $this->tenantContext->forcer(null);
     }
 

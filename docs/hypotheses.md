@@ -9,7 +9,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 |----|-----------|-------------------|
 | H1 | Le taux AMO est paramétrable par organisme (70 % par défaut), et historisé par date d'effet. | Lot 2 (paramètres) et Lot 5 (AMO) |
 | H2 | Sur une vente AMO, la remise ne porte que sur la part assuré. | **Lot 4** : calcul de la vente ; créances au Lot 5 (RG-09) |
-| H3 | La part AMO est une créance ; elle devient une recette au règlement du bordereau. | **Lot 5** : créance à la vente, règlements par bordereau ; recette au Lot 7 (RG-10) |
+| H3 | La part AMO est une créance ; elle devient une recette au règlement du bordereau. | **Lot 5** : créance à la vente, règlements par bordereau ; **Lot 7** : recette à la date du règlement (RG-10) |
 | H4 | L'abonnement est payé hors plateforme et activé manuellement. | **Lot 1** : le super admin enregistre le paiement |
 | H5 | Le nom « PharmaGest » est un nom de travail. | Nom centralisé dans `app.name` et `app.editeur` (`config/services.yaml`) |
 
@@ -352,3 +352,52 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - Elle est **conservée** pour ce qui n'est pas une commande : stock initial à l'installation, don, échantillons,
   régularisation. Le **motif devient obligatoire** et l'écran renvoie vers la réception pour une livraison commandée.
   Elle reste réservée au propriétaire et à l'adjoint et tracée au journal d'audit.
+
+## Décisions — Lot 7 (finances et rapports)
+
+### Dépenses (FI-01, FI-02)
+
+- **Catégories** : à la première ouverture des dépenses, la pharmacie reçoit une copie des catégories proposées par
+  la plateforme (Lot 2). Elle en ajoute et archive ensuite sans toucher aux autres pharmacies (RG-15 : rien n'est
+  supprimé). Deux catégories ne peuvent pas porter le même nom (sans tenir compte des majuscules).
+- Une dépense est numérotée `DEP-AAAA-NNNNNN` **dès l'enregistrement** (RG-02). Elle se **corrige** (ancienne et
+  nouvelle version au journal d'audit) et s'**annule** avec un motif : elle garde son numéro, reste visible et sort
+  des totaux. Date dans le futur refusée.
+- Modes de paiement : espèces, Orange Money, Moov Money, carte, virement, chèque.
+- **Justificatif** : photo (JPEG, PNG, WebP) ou PDF, 5 Mo au plus, stocké tel quel hors du dossier public et servi
+  après contrôle de la pharmacie (404 pour une autre pharmacie). Un nouveau fichier remplace l'ancien.
+- Dépenses et recettes : **propriétaire seul** (matrice des droits).
+
+### Recettes (FI-04, FI-05, RG-10, RG-12)
+
+- **Vente** : une recette **par mode de paiement**, du montant réellement encaissé (après remise, part assuré seulement
+  pour l'AMO), datée du jour de l'encaissement, dans la même transaction que la vente.
+- **Annulation** d'une vente : chacune de ses recettes est **contre-passée** (même mode, montant négatif, datée du jour
+  de l'annulation). Rien n'est supprimé.
+- **Règlement AMO** : une recette du montant reçu, à la **date du règlement**, mode « virement bancaire » (le
+  règlement ne saisit pas de mode ; à ajouter avec la trésorerie, FI-08, V1).
+- **Recette manuelle** (autres produits) : date, libellé, montant, mode ; annulable par contre-passation avec un motif
+  journalisé.
+- **Reprise** : la migration crée les recettes des ventes et règlements AMO déjà enregistrés (et les contre-passations
+  des ventes annulées), à l'identique de ce que fait l'application.
+
+### Rapports et tableau de bord (RA-01 à RA-06, RA-11, RE-05)
+
+- **Périodes** : jour, semaine (lundi → dimanche), mois, année, plage libre (3 ans au plus). La **période précédente**
+  est de même nature (mois précédent entier, même jour la veille…) ou de même durée pour une plage libre.
+- **Chiffre d'affaires** = total net des ventes validées (part AMO comprise), ventes annulées exclues ; panier moyen =
+  CA / nombre de ventes. Le CA d'un produit ou d'une catégorie est le montant de ses lignes après remise de ligne ;
+  la remise sur le total d'une vente n'est pas répartie.
+- **Résultat** = recettes − dépenses de la période (trésorerie, pas une comptabilité d'engagement : la part AMO compte
+  au règlement). Le graphique RA-03 montre les 12 mois finissant avec la période, avec le **solde du mois** en courbe.
+- **Rapport des remises** (RE-05) : par vendeur, par client et le détail des ventes remisées ; le taux est calculé sur
+  la part assuré pour une vente AMO (RG-09). « Autorisée par » = PIN du propriétaire.
+- **Droits** : rapports des ventes et des remises pour le propriétaire et l'adjoint ; rapport financier, dépenses,
+  recettes et résultat pour le propriétaire seul. Le vendeur voit le nombre de ventes du jour et les alertes, pas le CA.
+- **Tableau de bord** : le mois en cours jusqu'à aujourd'hui est comparé aux **mêmes jours du mois précédent**
+  (comparaison équitable en cours de mois). Encours AMO et valeur du stock sont à la date du jour.
+- **Exports** (RA-11) : chaque rapport en Excel (tableaux, montants en nombres) et en PDF A4 ; les graphiques restent
+  à l'écran.
+- Marge (RA-07), performance par vendeur (RA-08), rapport de stock (RA-10), rapport mensuel automatique (RA-12),
+  dépenses récurrentes (FI-03), trésorerie (FI-08) et export SYSCOHADA (FI-09) restent en **V1**.
+

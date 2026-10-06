@@ -18,6 +18,7 @@ use App\Enum\PolitiqueSansOrdonnance;
 use App\Enum\TypeMouvement;
 use App\Enum\TypeRemise;
 use App\Enum\TypeVente;
+use App\Finance\RecetteService;
 use App\Repository\CreanceAmoRepository;
 use App\Repository\VenteRepository;
 use App\Security\CodePin;
@@ -54,6 +55,7 @@ class VenteService
         private readonly ClockInterface $horloge,
         private readonly CreanceAmoRepository $creances,
         private readonly CopieOrdonnance $copies,
+        private readonly RecetteService $recettes,
     ) {
     }
 
@@ -368,6 +370,8 @@ class VenteService
                 foreach ($paiements as [$mode, $montant, $reference, $remis]) {
                     $vente->ajouterPaiement($mode, $montant, $reference, $remis);
                 }
+                // FI-04, RG-10 : le montant encaissé (part assuré seulement pour l'AMO) entre en recette.
+                $this->recettes->enregistrerVente($vente);
                 // AM-05 : la part AMO devient une créance « en attente » sur l'organisme.
                 if (TypeVente::Amo === $vente->getType() && $vente->getPartAmo() > 0) {
                     $this->em->persist(new CreanceAmo($vente));
@@ -434,6 +438,7 @@ class VenteService
             }
             $vente->annuler($this->horloge->now(), $this->tenantContext->getUtilisateur(), mb_substr($motif, 0, 255));
             $creance?->annuler();
+            $this->recettes->contrePasserVente($vente);
             $this->em->flush();
             $this->audit->journaliser(AuditLogger::VENTE_ANNULEE, $vente->getPharmacie(), $vente, null, [
                 'vente' => $numero,

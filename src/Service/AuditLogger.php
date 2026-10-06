@@ -36,6 +36,9 @@ class AuditLogger
     public const AMO_REJET = 'amo.rejet';
     public const COMMANDE_ANNULEE = 'commande.annulee';
     public const COMMANDE_SOLDEE = 'commande.soldee';
+    public const DEPENSE_MODIFIEE = 'depense.modifiee';
+    public const DEPENSE_ANNULEE = 'depense.annulee';
+    public const RECETTE_ANNULEE = 'recette.annulee';
 
     public const LIBELLES = [
         self::UTILISATEUR_CREE => 'Utilisateur créé',
@@ -60,6 +63,9 @@ class AuditLogger
         self::AMO_REJET => 'Rejet AMO',
         self::COMMANDE_ANNULEE => 'Commande fournisseur annulée',
         self::COMMANDE_SOLDEE => 'Reliquat de commande abandonné',
+        self::DEPENSE_MODIFIEE => 'Dépense modifiée',
+        self::DEPENSE_ANNULEE => 'Dépense annulée',
+        self::RECETTE_ANNULEE => 'Recette manuelle annulée',
     ];
 
     public function __construct(

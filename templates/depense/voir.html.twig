@@ -1,0 +1,57 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Dépense {{ depense.numero }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_depense_index', {periode: 'mois', date: depense.date|date('Y-m-d')}) }}"><i class="bi bi-arrow-left"></i> Dépenses</a>
+    {% if not depense.estAnnulee and ecriture_autorisee() %}
+        <a class="btn btn-outline-success" href="{{ path('app_depense_modifier', {id: depense.id}) }}"><i class="bi bi-pencil"></i> Modifier</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            {% if depense.estAnnulee %}
+                <div class="alert alert-secondary" id="annulee">
+                    Annulée le {{ depense.annuleeLe|date('d/m/Y à H:i') }}{{ depense.annuleePar ? ' par ' ~ depense.annuleePar.nom }} : {{ depense.motifAnnulation }}
+                </div>
+            {% endif %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <dl class="row mb-0" id="fiche">
+                        <dt class="col-sm-4">Date</dt><dd class="col-sm-8">{{ depense.date|date('d/m/Y') }}</dd>
+                        <dt class="col-sm-4">Catégorie</dt><dd class="col-sm-8">{{ depense.categorie.nom }}</dd>
+                        <dt class="col-sm-4">Libellé</dt><dd class="col-sm-8">{{ depense.libelle }}</dd>
+                        <dt class="col-sm-4">Montant</dt><dd class="col-sm-8 fw-semibold" id="montant">{{ depense.montant|fcfa }}</dd>
+                        <dt class="col-sm-4">Mode de paiement</dt><dd class="col-sm-8">{{ depense.mode.libelle }}</dd>
+                        <dt class="col-sm-4">Bénéficiaire</dt><dd class="col-sm-8">{{ depense.beneficiaire ?? '—' }}</dd>
+                        <dt class="col-sm-4">Justificatif</dt>
+                        <dd class="col-sm-8">
+                            {% if depense.justificatif %}
+                                <a href="{{ path('app_depense_justificatif', {id: depense.id}) }}" target="_blank" rel="noopener" id="lien-justificatif"><i class="bi bi-{{ depense.justificatifEstPdf ? 'file-earmark-pdf' : 'image' }}"></i> Ouvrir</a>
+                            {% else %}—{% endif %}
+                        </dd>
+                        <dt class="col-sm-4">Saisie</dt><dd class="col-sm-8 small">{{ depense.creeLe|date('d/m/Y à H:i') }}{{ depense.creePar ? ' par ' ~ depense.creePar.nom }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        {% if not depense.estAnnulee and ecriture_autorisee() %}
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm border-danger-subtle" id="annulation">
+                    <div class="card-header bg-body fw-semibold">Annuler la dépense</div>
+                    <div class="card-body">
+                        <p class="small text-body-secondary">Pour une dépense saisie par erreur : elle garde son numéro, reste visible et sort des totaux.</p>
+                        <form method="post" action="{{ path('app_depense_annuler', {id: depense.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('depense-' ~ depense.id) }}">
+                            <label class="form-label" for="motif">Motif</label>
+                            <input class="form-control mb-2" id="motif" name="motif" maxlength="255">
+                            <button class="btn btn-outline-danger" type="submit">Annuler la dépense</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

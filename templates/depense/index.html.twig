@@ -1,0 +1,91 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Dépenses{% endblock %}
+
+{% block page_actions %}
+    {% if ecriture_autorisee() %}
+        <a class="btn btn-success" href="{{ path('app_depense_nouvelle') }}" id="nouvelle-depense"><i class="bi bi-plus-lg"></i> Nouvelle dépense</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_rapport_voir', {code: 'finances'}|merge(periode.parametres)) }}"><i class="bi bi-bar-chart-line"></i> Rapport financier</a>
+{% endblock %}
+
+{% block content %}
+    {% include 'rapport/_periode.html.twig' with {route: 'app_depense_index', params: {categorie: categorie, q: q}} %}
+    <div class="row g-3">
+        <div class="col-12 col-xl-8">
+            <form method="get" class="d-flex flex-wrap gap-2 mb-3">
+                {% for nom, valeur in periode.parametres %}<input type="hidden" name="{{ nom }}" value="{{ valeur }}">{% endfor %}
+                <input type="search" class="form-control" style="max-width: 18rem" name="q" value="{{ q }}" placeholder="N°, libellé, bénéficiaire" aria-label="Rechercher une dépense">
+                <select name="categorie" class="form-select" style="max-width: 16rem" aria-label="Catégorie">
+                    <option value="">Toutes les catégories</option>
+                    {% for c in categories %}<option value="{{ c.id }}"{{ categorie == c.id ? ' selected' }}>{{ c.nom }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+            </form>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="depenses">
+                        <thead class="table-light">
+                            <tr><th class="ps-3">Date</th><th>N°</th><th>Catégorie</th><th>Libellé</th><th>Mode</th><th class="text-end pe-3">Montant</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for depense in depenses %}
+                                <tr class="{{ depense.estAnnulee ? 'text-body-secondary' }}">
+                                    <td class="ps-3 small text-nowrap">{{ depense.date|date('d/m/Y') }}</td>
+                                    <td class="text-nowrap"><a class="fw-semibold text-decoration-none" href="{{ path('app_depense_voir', {id: depense.id}) }}">{{ depense.numero }}</a>{% if depense.justificatif %} <i class="bi bi-paperclip" title="Justificatif joint"></i>{% endif %}</td>
+                                    <td>{{ depense.categorie.nom }}</td>
+                                    <td>{{ depense.libelle }}{% if depense.beneficiaire %} <span class="small text-body-secondary">· {{ depense.beneficiaire }}</span>{% endif %}{% if depense.estAnnulee %} <span class="badge text-bg-secondary">Annulée</span>{% endif %}</td>
+                                    <td class="small">{{ depense.mode.libelle }}</td>
+                                    <td class="montant pe-3">{% if depense.estAnnulee %}<s>{{ depense.montant|fcfa }}</s>{% else %}{{ depense.montant|fcfa }}{% endif %}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucune dépense sur la période.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light fw-semibold">
+                            <tr><td class="ps-3" colspan="5">Total de la période (dépenses annulées exclues)</td><td class="montant pe-3" id="total-depenses">{{ total|fcfa }}</td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            {% include 'layout/_pagination.html.twig' with {page: depenses, route: 'app_depense_index', params: periode.parametres|merge({categorie: categorie, q: q})} %}
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-body fw-semibold">Par catégorie</div>
+                <ul class="list-group list-group-flush small" id="par-categorie">
+                    {% for ligne in par_categorie %}
+                        <li class="list-group-item d-flex justify-content-between"><span>{{ ligne.categorie }} <span class="text-body-secondary">({{ ligne.nombre }})</span></span><span class="text-nowrap">{{ ligne.montant|fcfa }}</span></li>
+                    {% else %}
+                        <li class="list-group-item text-body-secondary">Aucune dépense.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="card shadow-sm" id="categories">
+                <div class="card-header bg-body fw-semibold">Catégories de dépenses</div>
+                <ul class="list-group list-group-flush small">
+                    {% for c in categories %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="{{ c.actif ? '' : 'text-body-secondary text-decoration-line-through' }}">{{ c.nom }}</span>
+                            {% if ecriture_autorisee() %}
+                                <form method="post" action="{{ path('app_depense_categorie_archiver', {id: c.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token(csrf_categories) }}">
+                                    <button class="btn btn-sm btn-link p-0" type="submit">{{ c.actif ? 'Archiver' : 'Restaurer' }}</button>
+                                </form>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                {% if ecriture_autorisee() %}
+                    <div class="card-body border-top">
+                        <form method="post" action="{{ path('app_depense_categorie_ajouter') }}" class="d-flex gap-2" id="nouvelle-categorie">
+                            <input type="hidden" name="_token" value="{{ csrf_token(csrf_categories) }}">
+                            <input class="form-control form-control-sm" name="nom" maxlength="100" placeholder="Nouvelle catégorie" aria-label="Nom de la nouvelle catégorie" required>
+                            <button class="btn btn-sm btn-outline-success" type="submit">Ajouter</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
