@@ -37,7 +37,7 @@ class ExportBordereau
 
         $feuille->setCellValue('A1', \sprintf('Bordereau AMO %s — %s', $bordereau->getLibelle(), $bordereau->getOrganisme()->getNom()));
         $feuille->getStyle('A1')->getFont()->setBold(true)->setSize(13);
-        $feuille->setCellValue('A2', \sprintf('%s · autorisation n° %s', $pharmacie->getNom(), $pharmacie->getNumeroAutorisation()));
+        $feuille->setCellValueExplicit('A2', \sprintf('%s · autorisation n° %s', $pharmacie->getNom(), $pharmacie->getNumeroAutorisation()), DataType::TYPE_STRING);
         $feuille->setCellValue('A3', \sprintf('Ventes du %s au %s · %s', $bordereau->getDebut()->format('d/m/Y'), $bordereau->getFin()->format('d/m/Y'), $bordereau->getStatut()->libelle()));
 
         $entetes = ['N°', 'Date', 'N° vente', 'Assuré', 'N° assuré', 'N° ordonnance', 'Date ordonnance', 'Prescripteur', 'Structure', 'Total vente', 'Base remboursable', 'Taux (%)', 'Part AMO'];

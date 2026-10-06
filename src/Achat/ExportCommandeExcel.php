@@ -36,7 +36,7 @@ class ExportCommandeExcel
         $feuille->setTitle('Bon de commande');
 
         // En-têtes : la pharmacie à gauche, le fournisseur à droite.
-        $feuille->setCellValue('A1', $pharmacie->getNom());
+        $this->texte($feuille, 'A1', $pharmacie->getNom());
         $feuille->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $ligne = 2;
         foreach ($this->coordonneesPharmacie($pharmacie) as $texte) {
@@ -45,7 +45,7 @@ class ExportCommandeExcel
 
         $feuille->setCellValue('E1', 'Fournisseur');
         $feuille->getStyle('E1')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('6C757D');
-        $feuille->setCellValue('E2', $fournisseur->getNom());
+        $this->texte($feuille, 'E2', $fournisseur->getNom());
         $feuille->getStyle('E2')->getFont()->setBold(true)->setSize(12);
         $ligneF = 3;
         foreach (array_filter([

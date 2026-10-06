@@ -75,7 +75,8 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 
 - **SA-07** (référentiels communs) : traité au Lot 2 (voir ci-dessous).
 - **PH-04, code PIN** : livré au **Lot 4** (voir « Décisions — Lot 4 »).
-- **Consultation du journal d'audit** (AU-02) : **Lot 8**. Les actions sensibles du Lot 1 sont déjà journalisées.
+- **Consultation du journal d'audit** (AU-02) : livrée au **Lot 8** (voir « Décisions — Lot 8 »). Les actions sensibles
+  du Lot 1 sont déjà journalisées.
 
 ## Décisions — Lot 2 (référentiels)
 
@@ -400,4 +401,93 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   à l'écran.
 - Marge (RA-07), performance par vendeur (RA-08), rapport de stock (RA-10), rapport mensuel automatique (RA-12),
   dépenses récurrentes (FI-03), trésorerie (FI-08) et export SYSCOHADA (FI-09) restent en **V1**.
+
+## Décisions — Lot 8 (finition)
+
+### Journal d'audit (AU-01, AU-02)
+
+- **Consultation** : menu Pharmacie › Journal d'audit, **propriétaire seul** (matrice des droits), en lecture seule ;
+  filtres utilisateur, action et période (du / au), 25 entrées par page, des plus récentes aux plus anciennes. Chaque
+  entrée montre l'auteur (« Système » pour une tâche automatique), l'action, la donnée concernée (lien vers la vente,
+  le bordereau, la commande… quand une page existe), les valeurs avant / après et l'adresse IP.
+- **Super admin** : espace plateforme › Journal d'audit, limité aux actions de la plateforme (création, suspension,
+  réactivation, archivage et annonce d'archivage d'une pharmacie, paiements d'abonnement). Il ne voit jamais les
+  actions internes d'une officine (§ 2).
+- **Nouvelles traces** : modification du prix de vente ou d'achat d'un produit (formulaire ou import), des règles de
+  gestion (plafond de remise, délai de péremption, politique sans ordonnance, mentions du ticket, délai de la caisse),
+  nouveau taux AMO, export complet des données. Elles sont posées par un listener Doctrine, quel que soit l'écran.
+- Les **avoirs** (V1) et la **connexion « en tant que »** (SA-10, V1) seront tracés quand ils existeront.
+
+### Notifications (NO-01, NO-02)
+
+- **Destinataires** : propriétaire et adjoint (ceux qui gèrent le stock et l'AMO) ; l'échéance d'abonnement va au
+  seul propriétaire. Le vendeur n'a pas de cloche : il voit les alertes de stock sur son tableau de bord.
+- **Sujets** : produits en rupture ou sous le seuil, lots en péremption proche, lots périmés encore en stock (un
+  message récapitulatif par sujet, avec lien vers la liste d'alertes) ; échéance d'abonnement à J-30, J-15, J-7, puis
+  pendant la période de grâce et au passage en lecture seule ; bordereau AMO transmis et impayé depuis 30, 60 puis
+  90 jours (un message par bordereau et par palier).
+- **Pas de répétition** : chaque notification porte une clé (produits ou lots concernés, palier d'échéance…) ; une
+  nouvelle notification n'est créée que si la situation change. Préparées **chaque matin à 7 h 30** pour toutes les
+  pharmacies non archivées ni suspendues (`app:notifications:generer`).
+- Ouvrir une notification la marque comme lue et ouvre la page concernée ; « Tout marquer comme lu » reste possible
+  en lecture seule. Les notifications lues depuis plus de 90 jours sont supprimées (ce ne sont pas des traces
+  d'audit).
+- **Emails** (NO-02) : activation, mot de passe, échéance d'abonnement et envoi des commandes sont en place depuis les
+  lots 1 et 6 ; s'y ajoutent l'annonce d'archivage et l'envoi de l'export. Le rapport mensuel automatique (RA-12) et
+  le résumé quotidien (NO-03) restent en **V1** ; le rappel paramétrable des bordereaux impayés par email (AM-11)
+  aussi : au MVP, la cloche suffit.
+
+### Réversibilité et archivage (§ 6, § 3.2 étape 8)
+
+- **Export complet** : Mon abonnement › « Exporter toutes mes données », pour le propriétaire, à tout moment et même en
+  lecture seule. Archive ZIP : un fichier **CSV par table** (UTF-8, séparateur point-virgule, s'ouvre dans Excel ;
+  lu ligne à ligne, il reste léger quelle que soit la volumétrie et toute nouvelle table y figure d'office), la fiche
+  de la pharmacie, l'équipe (sans mot de passe ni code PIN), les référentiels communs utilisés, et tous les fichiers
+  (logo, justificatifs, copies d'ordonnances). Un texte qui commence par `=`, `+`, `-` ou `@` est précédé d'une
+  apostrophe (injection de formule). Chaque export est journalisé.
+- **Archivage automatique** : **12 mois après l'échéance** (fin de l'abonnement payé, ou de l'essai) sans
+  renouvellement. Le propriétaire est prévenu par email **30 jours avant** (une seule fois, tracée au journal). Le jour
+  de l'archivage, l'export est produit, conservé dans les fichiers de la pharmacie et **envoyé en pièce jointe** au
+  propriétaire, puis la pharmacie est archivée (plus aucun accès). Tâche de nuit à 3 h (`app:pharmacies:archiver`).
+- Une pharmacie **suspendue** n'est pas archivée automatiquement : sa situation relève du super admin.
+- Limite connue : un serveur de messagerie peut refuser une pièce jointe trop lourde (au-delà de 10 à 25 Mo selon les
+  fournisseurs). L'archive reste alors disponible sur le serveur et l'éditeur la transmet autrement.
+
+### Sécurité (§ 6, revue OWASP)
+
+- Revue détaillée dans [securite.md](securite.md) ; points ouverts : chiffrement applicatif des copies d'ordonnances,
+  CSP avec nonce, double authentification (V1), déclaration APDP, test d'intrusion.
+- **Délai d'inactivité de la caisse** : réglé par le propriétaire (Paramètres › Règles, 5 à 720 minutes, 30 par
+  défaut). Il s'applique tant que l'utilisateur a une session de caisse ouverte ; ailleurs, 30 minutes.
+- En-têtes de sécurité sur toutes les réponses, HSTS en HTTPS, cookie de session `HttpOnly` / `SameSite=Lax` /
+  `Secure` en HTTPS.
+
+### Espace plateforme sous EasyAdmin (consigne de Modibo, 06/10/2026)
+
+- **Tout l'espace super admin passe sous EasyAdmin 5** (`easycorp/easyadmin-bundle`) : mise en page, menu et
+  listes d'EasyAdmin, à la place de la mise en page de l'officine. Les adresses restent sous `/admin` et l'accès reste
+  réservé au super admin (`access_control` sur `/admin` et `#[IsGranted('ROLE_SUPER_ADMIN')]` sur chaque contrôleur).
+- **Écrans CRUD d'EasyAdmin** : pharmacies (liste avec recherche, statut et échéance ; modification de la fiche),
+  offres (consultation seule, paramétrage en V1 : SA-04), organismes AMO, formes galéniques et catégories de dépenses
+  par défaut (création, modification, désactivation par la case « Proposé aux pharmacies »).
+- **Rien ne se supprime** depuis l'espace plateforme : les actions « Supprimer » d'EasyAdmin sont désactivées (RG-15) ;
+  une pharmacie se suspend ou s'archive, une valeur de référentiel se désactive.
+- **Écrans métier gardés tels quels dans la mise en page EasyAdmin** (`#[AdminRoute]`) : vue globale (SA-05), création
+  d'une pharmacie avec son propriétaire, fiche d'une pharmacie (paiement, suspension, archivage, renvoi du lien
+  d'activation), échéances et paiements, factures PDF, journal de la plateforme. Ils appellent les mêmes services
+  qu'avant ; seule la présentation change.
+- La recherche des listes passe par le champ « Rechercher » d'EasyAdmin (paramètre `query`).
+- EasyAdmin affiche les messages flash sans échappement : les contrôleurs de l'espace plateforme échappent les noms
+  saisis qu'ils y mettent.
+- La mise en page de l'officine (fil « Design façon Yashika ») n'est pas touchée ; l'espace plateforme garde le thème
+  d'EasyAdmin.
+
+### Données de démonstration et mise en production
+
+- La démo (`composer demo`) est complétée : actions de la Pharmacie du Fleuve attribuées à sa titulaire dans le
+  journal, modification de prix et ajustement de stock tracés, bordereau INPS transmis il y a 40 jours, notifications
+  du jour pour chaque officine.
+- [Guide de mise en production](mise-en-production.md) et fichiers d'exemple dans `deploy/` : Nginx (HTTPS, seul
+  `public/` servi), Supervisor pour le worker, script de déploiement par version, sauvegarde nocturne chiffrée (GPG)
+  copiée hors du serveur avec rétention de 30 jours, procédure de restauration à tester chaque mois.
 

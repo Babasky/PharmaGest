@@ -34,6 +34,11 @@ final class ParametresType extends AbstractType
                 'choice_label' => static fn (PolitiqueSansOrdonnance $p) => $p->libelle(),
                 'expanded' => true,
             ])
+            ->add('inactiviteCaisse', IntegerType::class, [
+                'label' => 'Déconnexion de la caisse après inactivité (minutes)',
+                'help' => 'S\'applique tant qu\'une session de caisse est ouverte. Ailleurs dans l\'application, la déconnexion intervient après 30 minutes d\'inactivité.',
+                'attr' => ['min' => 5, 'max' => 720],
+            ])
             ->add('mentionsTicket', TextareaType::class, [
                 'label' => 'Mentions en bas du ticket',
                 'required' => false,

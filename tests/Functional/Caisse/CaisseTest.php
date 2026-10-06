@@ -6,7 +6,6 @@ use App\Entity\JournalAudit;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
 use App\Entity\OrganismeAmo;
-use App\Entity\ParametrePharmacie;
 use App\Entity\Vente;
 use App\Enum\ModePaiement;
 use App\Enum\PolitiqueSansOrdonnance;
@@ -227,12 +226,11 @@ final class CaisseTest extends CaisseTestCase
         $this->encaisser();
         self::assertStringContainsString('Ordonnance obligatoire pour Amoxicilline', $this->erreur(), 'Politique par défaut : blocage (VE-03).');
 
-        $this->sansFiltre(function (EntityManagerInterface $em): void {
-            $parametres = $em->getRepository(ParametrePharmacie::class)->findOneBy(['pharmacie' => $this->officine->pharmacie->getId()]);
-            self::assertInstanceOf(ParametrePharmacie::class, $parametres);
-            $parametres->setPolitiqueSansOrdonnance(PolitiqueSansOrdonnance::Confirmation);
-            $em->flush();
-        });
+        // Réglage changé par le propriétaire entre-temps (écrit directement : le vendeur reste connecté).
+        $this->sansFiltre(fn (EntityManagerInterface $em) => $em->getConnection()->executeStatement(
+            'UPDATE parametre_pharmacie SET politique_sans_ordonnance = ? WHERE pharmacie_id = ?',
+            [PolitiqueSansOrdonnance::Confirmation->value, $this->officine->pharmacie->getId()],
+        ));
         $this->client->request('GET', '/caisse');
         self::assertSelectorTextContains('#encaissement .alert-warning', 'le propriétaire doit confirmer');
         $this->encaisser([], '4826');

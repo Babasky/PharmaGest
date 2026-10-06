@@ -1,0 +1,14 @@
+{% extends 'email/base.html.twig' %}
+
+{% block contenu %}
+    <p>
+        L'abonnement PharmaGest de <strong>{{ pharmacie.nom }}</strong> a pris fin le {{ echeance|date('d/m/Y') }} et n'a pas été
+        renouvelé. Comme prévu par les conditions d'abonnement, la pharmacie sera <strong>archivée le {{ archivage|date('d/m/Y') }}</strong> :
+        plus personne ne pourra s'y connecter.
+    </p>
+    <p>
+        Ce jour-là, un export complet de vos données (Excel et fichiers) vous sera envoyé par email. Vous pouvez aussi le
+        télécharger dès maintenant depuis « Mon abonnement › Exporter toutes mes données ».
+    </p>
+    <p>Pour conserver l'accès, il suffit de renouveler l'abonnement auprès de l'éditeur avant cette date.</p>
+{% endblock %}

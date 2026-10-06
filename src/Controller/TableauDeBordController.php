@@ -28,7 +28,7 @@ final class TableauDeBordController extends AbstractAppController
     public function index(AlertesStock $alertes, VenteRepository $ventes, Indicateurs $indicateurs, DepenseRepository $depenses, ClockInterface $horloge): Response
     {
         if ($this->isGranted('ROLE_SUPER_ADMIN')) {
-            return $this->redirectToRoute('admin_tableau_de_bord');
+            return $this->redirectToRoute('admin');
         }
         $nombres = $alertes->compter();
         $aujourdhui = $horloge->now()->setTime(0, 0);
