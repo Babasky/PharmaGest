@@ -753,3 +753,10 @@ body {
         padding: 0.85rem;
     }
 }
+
+/* Compteur de la cloche de notifications, posé sur le bouton rond. */
+.pg-cloche-compteur {
+    top: 0.1rem;
+    right: -0.2rem;
+    font-size: 0.65rem;
+}
