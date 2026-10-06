@@ -68,7 +68,7 @@ final class LayoutTest extends AppWebTestCase
 
     public function testMenuDuSuperAdmin(): void
     {
-        $menu = $this->connecter($this->creerSuperAdmin())->request('GET', '/admin')->filter('#sidebar')->text();
+        $menu = $this->connecter($this->creerSuperAdmin())->request('GET', '/admin')->filter('.sidebar-wrapper')->text();
 
         foreach (['Vue globale', 'Pharmacies', 'Abonnements', 'Offres'] as $present) {
             self::assertStringContainsString($present, $menu);

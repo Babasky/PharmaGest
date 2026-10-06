@@ -64,12 +64,8 @@ final class Navigation
         [
             'titre' => 'Administration',
             'elements' => [
-                ['libelle' => 'Vue globale', 'icone' => 'globe2', 'route' => 'admin_tableau_de_bord', 'role' => 'ROLE_SUPER_ADMIN'],
-                ['libelle' => 'Pharmacies', 'icone' => 'hospital', 'route' => 'admin_pharmacie_index', 'role' => 'ROLE_SUPER_ADMIN'],
-                ['libelle' => 'Abonnements', 'icone' => 'calendar-check', 'route' => 'admin_abonnement_index', 'role' => 'ROLE_SUPER_ADMIN'],
-                ['libelle' => 'Offres', 'icone' => 'tags', 'route' => 'admin_offre_index', 'role' => 'ROLE_SUPER_ADMIN'],
-                ['libelle' => 'Référentiels', 'icone' => 'list-check', 'route' => 'admin_referentiel_index', 'role' => 'ROLE_SUPER_ADMIN'],
-                ['libelle' => "Journal d'audit", 'icone' => 'journal-text', 'route' => 'admin_journal_index', 'role' => 'ROLE_SUPER_ADMIN'],
+                // L'espace plateforme a son propre menu (EasyAdmin) ; ce lien y ramène depuis les pages communes.
+                ['libelle' => 'Espace plateforme', 'icone' => 'globe2', 'route' => 'admin', 'role' => 'ROLE_SUPER_ADMIN'],
             ],
         ],
     ];

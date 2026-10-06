@@ -410,7 +410,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   filtres utilisateur, action et période (du / au), 25 entrées par page, des plus récentes aux plus anciennes. Chaque
   entrée montre l'auteur (« Système » pour une tâche automatique), l'action, la donnée concernée (lien vers la vente,
   le bordereau, la commande… quand une page existe), les valeurs avant / après et l'adresse IP.
-- **Super admin** : Administration › Journal d'audit, limité aux actions de la plateforme (création, suspension,
+- **Super admin** : espace plateforme › Journal d'audit, limité aux actions de la plateforme (création, suspension,
   réactivation, archivage et annonce d'archivage d'une pharmacie, paiements d'abonnement). Il ne voit jamais les
   actions internes d'une officine (§ 2).
 - **Nouvelles traces** : modification du prix de vente ou d'achat d'un produit (formulaire ou import), des règles de
@@ -461,6 +461,26 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   défaut). Il s'applique tant que l'utilisateur a une session de caisse ouverte ; ailleurs, 30 minutes.
 - En-têtes de sécurité sur toutes les réponses, HSTS en HTTPS, cookie de session `HttpOnly` / `SameSite=Lax` /
   `Secure` en HTTPS.
+
+### Espace plateforme sous EasyAdmin (consigne de Modibo, 06/10/2026)
+
+- **Tout l'espace super admin passe sous EasyAdmin 5** (`easycorp/easyadmin-bundle`) : mise en page, menu et
+  listes d'EasyAdmin, à la place de la mise en page de l'officine. Les adresses restent sous `/admin` et l'accès reste
+  réservé au super admin (`access_control` sur `/admin` et `#[IsGranted('ROLE_SUPER_ADMIN')]` sur chaque contrôleur).
+- **Écrans CRUD d'EasyAdmin** : pharmacies (liste avec recherche, statut et échéance ; modification de la fiche),
+  offres (consultation seule, paramétrage en V1 : SA-04), organismes AMO, formes galéniques et catégories de dépenses
+  par défaut (création, modification, désactivation par la case « Proposé aux pharmacies »).
+- **Rien ne se supprime** depuis l'espace plateforme : les actions « Supprimer » d'EasyAdmin sont désactivées (RG-15) ;
+  une pharmacie se suspend ou s'archive, une valeur de référentiel se désactive.
+- **Écrans métier gardés tels quels dans la mise en page EasyAdmin** (`#[AdminRoute]`) : vue globale (SA-05), création
+  d'une pharmacie avec son propriétaire, fiche d'une pharmacie (paiement, suspension, archivage, renvoi du lien
+  d'activation), échéances et paiements, factures PDF, journal de la plateforme. Ils appellent les mêmes services
+  qu'avant ; seule la présentation change.
+- La recherche des listes passe par le champ « Rechercher » d'EasyAdmin (paramètre `query`).
+- EasyAdmin affiche les messages flash sans échappement : les contrôleurs de l'espace plateforme échappent les noms
+  saisis qu'ils y mettent.
+- La mise en page de l'officine (fil « Design façon Yashika ») n'est pas touchée ; l'espace plateforme garde le thème
+  d'EasyAdmin.
 
 ### Données de démonstration et mise en production
 

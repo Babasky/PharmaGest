@@ -42,7 +42,7 @@ La cloche de la barre supérieure (propriétaire et adjoint) montre les notifica
 lot périmé et bordereau INPS impayé pour la Pharmacie du Fleuve ; échéance proche, fin d'essai ou lecture seule pour
 les autres officines. Le **Journal d'audit** (propriétaire) liste les actions sensibles de la démo, et
 « Mon abonnement › Exporter toutes mes données » télécharge l'export complet (ZIP). Le super admin consulte le
-journal de la plateforme (menu Administration).
+journal de la plateforme (espace plateforme, construit avec EasyAdmin).
 
 ## Sans DDEV
 
@@ -55,12 +55,13 @@ php bin/console importmap:install       # ou bin/importmap-from-npm.sh si jsDeli
 php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate
 php bin/console app:super-admin:creer admin@exemple.ml "Nom de l'éditeur"
-symfony serve                           # ou : php -S 127.0.0.1:8000 -t public public/index.php
+symfony serve                           # ou : php -S 127.0.0.1:8000 -t public bin/serveur-dev.php
 php bin/console messenger:consume async scheduler_default   # worker (emails, rappels, notifications)
 ```
 
-Avec le serveur intégré de PHP, le dernier argument `public/index.php` est indispensable : sans lui, les fichiers
-d'assets (CSS, JavaScript) ne sont pas servis.
+Avec le serveur intégré de PHP, le dernier argument `bin/serveur-dev.php` est indispensable : sans lui, les fichiers
+d'assets (CSS, JavaScript) ne sont pas servis. Ce routeur sert aussi les assets d'EasyAdmin (`public/bundles`, installés
+par `composer install`), ce que `public/index.php` seul ne fait pas.
 
 Tâches planifiées (lancées par le worker, ou à la main) : `app:notifications:generer` (centre de notifications),
 `app:abonnements:rappels` (emails d'échéance), `app:pharmacies:archiver` (archivage 12 mois après l'échéance).
@@ -108,6 +109,10 @@ ligne ; la confirmation importe les lignes valides.
 - Pages connectées : étendre `layout/app.html.twig` (blocs `title`, `page_actions`, `content`).
   Le menu est décrit dans `App\Menu\Navigation` (rôle requis par entrée ; une route absente apparaît « Bientôt »).
 - Graphiques : `{{ stimulus_controller('chart', {config: {...}, devise: true}) }}` sur un `<canvas>`.
+- Espace plateforme (super admin, `/admin`) : **EasyAdmin 5**. Tableau de bord et menu dans
+  `App\Controller\Admin\DashboardController` ; un `*CrudController` par entité gérée ; les pages propres utilisent
+  `#[AdminRoute]` et étendent `@EasyAdmin/page/content.html.twig` (blocs `content_title`, `page_actions`, `main`).
+  Aucune action « Supprimer ». Point d'entrée des assets : `assets/admin.js`.
 
 ## Documentation
 

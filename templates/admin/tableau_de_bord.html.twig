@@ -1,12 +1,13 @@
-{% extends 'layout/app.html.twig' %}
+{% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block title %}Vue globale{% endblock %}
+{% block page_title %}Vue globale{% endblock %}
+{% block content_title %}Vue globale{% endblock %}
 
 {% block page_actions %}
-    <a class="btn btn-success" href="{{ path('admin_pharmacie_nouvelle') }}"><i class="bi bi-plus-lg"></i> Nouvelle pharmacie</a>
+    <a class="btn btn-primary" href="{{ path('admin_pharmacie_nouvelle') }}"><i class="bi bi-plus-lg"></i> Nouvelle pharmacie</a>
 {% endblock %}
 
-{% block content %}
+{% block main %}
     {% set tuiles = [
         ['Actives', compteurs.actif + compteurs.alerte + compteurs.grace, 'check-circle', 'success'],
         ["En période d'essai", compteurs.essai, 'hourglass-split', 'info'],
@@ -53,7 +54,7 @@
                     {% for ligne in a_surveiller|slice(0, 10) %}
                         <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
                             <div class="min-w-0">
-                                <a class="fw-semibold text-decoration-none" href="{{ path('admin_pharmacie_voir', {id: ligne.pharmacie.id}) }}">{{ ligne.pharmacie.nom }}</a>
+                                <a class="fw-semibold text-decoration-none" href="{{ path('admin_pharmacie_detail', {entityId: ligne.pharmacie.id}) }}">{{ ligne.pharmacie.nom }}</a>
                                 <div class="small text-body-secondary">{{ ligne.pharmacie.ville }} · échéance {{ ligne.etat.echeance ? ligne.etat.echeance|date('d/m/Y') : '—' }}</div>
                             </div>
                             <span class="badge text-bg-{{ ligne.etat.statut.couleur }} text-nowrap">{{ ligne.etat.statut.libelle }}</span>
@@ -75,7 +76,7 @@
                     {% for paiement in derniers_paiements %}
                         <tr>
                             <td class="ps-3">{{ paiement.datePaiement|date('d/m/Y') }}</td>
-                            <td><a href="{{ path('admin_pharmacie_voir', {id: paiement.pharmacie.id}) }}">{{ paiement.pharmacie.nom }}</a></td>
+                            <td><a href="{{ path('admin_pharmacie_detail', {entityId: paiement.pharmacie.id}) }}">{{ paiement.pharmacie.nom }}</a></td>
                             <td><a href="{{ path('admin_abonnement_facture', {id: paiement.id}) }}" target="_blank" rel="noopener">{{ paiement.numeroFacture }}</a></td>
                             <td class="montant pe-3">{{ paiement.montant|fcfa }}</td>
                         </tr>

@@ -1,8 +1,9 @@
-{% extends 'layout/app.html.twig' %}
+{% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block title %}Abonnements{% endblock %}
+{% block page_title %}Abonnements{% endblock %}
+{% block content_title %}Abonnements{% endblock %}
 
-{% block content %}
+{% block main %}
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-body fw-semibold">Échéances : 7 derniers jours et 60 prochains</div>
         <div class="table-responsive">
@@ -11,7 +12,7 @@
                 <tbody>
                     {% for ligne in echeances %}
                         <tr>
-                            <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('admin_pharmacie_voir', {id: ligne.pharmacie.id}) }}#paiement">{{ ligne.pharmacie.nom }}</a><div class="small text-body-secondary">{{ ligne.pharmacie.ville }} · {{ ligne.pharmacie.telephone|telephone }}</div></td>
+                            <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('admin_pharmacie_detail', {entityId: ligne.pharmacie.id}) }}#paiement">{{ ligne.pharmacie.nom }}</a><div class="small text-body-secondary">{{ ligne.pharmacie.ville }} · {{ ligne.pharmacie.telephone|telephone }}</div></td>
                             <td>{{ ligne.pharmacie.offre.nom }}</td>
                             <td class="text-nowrap">{{ ligne.etat.echeance|date('d/m/Y') }}</td>
                             <td class="text-end">{{ ligne.etat.joursRestants }}</td>
@@ -34,7 +35,7 @@
                     {% for paiement in paiements %}
                         <tr>
                             <td class="ps-3">{{ paiement.datePaiement|date('d/m/Y') }}</td>
-                            <td><a href="{{ path('admin_pharmacie_voir', {id: paiement.pharmacie.id}) }}">{{ paiement.pharmacie.nom }}</a></td>
+                            <td><a href="{{ path('admin_pharmacie_detail', {entityId: paiement.pharmacie.id}) }}">{{ paiement.pharmacie.nom }}</a></td>
                             <td><a href="{{ path('admin_abonnement_facture', {id: paiement.id}) }}" target="_blank" rel="noopener">{{ paiement.numeroFacture }}</a></td>
                             <td>{{ paiement.moyen.libelle }}</td>
                             <td class="montant pe-3">{{ paiement.montant|fcfa }}</td>

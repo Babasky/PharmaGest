@@ -10,7 +10,7 @@ ce qui reste à faire. À relire à chaque lot qui ajoute un écran, un fichier 
 |---|---|
 | Matrice des droits appliquée par rôle sur chaque contrôleur (`#[IsGranted]`), hiérarchie propriétaire ⊃ adjoint ⊃ vendeur ; tout le reste exige une connexion (`access_control`). | `config/packages/security.yaml`, `src/Controller/*` |
 | Isolation multi-tenant : filtre Doctrine activé à chaque requête, fermé par défaut ; affectation automatique de la pharmacie ; refus des liens entre deux pharmacies ; Voter de seconde ligne. Une donnée d'une autre pharmacie répond **404**. | `src/Tenant/*`, `AbstractAppController::exigerMemePharmacie()` |
-| Le super admin n'a aucun rôle d'officine ; son journal ne montre que les actions de la plateforme. | `Navigation`, `Admin\JournalController` |
+| Le super admin n'a aucun rôle d'officine ; son journal ne montre que les actions de la plateforme. L'espace plateforme (EasyAdmin) est protégé deux fois : `access_control` sur `/admin` et `#[IsGranted('ROLE_SUPER_ADMIN')]` sur chaque contrôleur ; les suppressions y sont désactivées. | `src/Controller/Admin/*` |
 | Fichiers (logos, justificatifs, ordonnances, exports) hors du dossier public, noms aléatoires, servis après contrôle de la pharmacie. | `StockageFichiers`, contrôleurs de téléchargement |
 | Lecture seule à l'expiration : toute requête d'écriture est refusée côté serveur, pas seulement masquée. | `AccesAbonnementListener` |
 | Une notification ne s'ouvre que pour son destinataire ; la redirection n'accepte qu'un chemin de l'application. | `NotificationController::ouvrir()` |
@@ -33,6 +33,8 @@ Tests : `IsolationTenantTest`, `IsolationReferentielsTest`, `DroitsReferentielsT
   identifiants protégés et paramètre lié pour la pharmacie.
 - Twig échappe toute sortie par défaut ; les seuls `|raw` affichent du HTML composé par les gabarits eux-mêmes, dont les
   données sont déjà échappées (bandeau d'abonnement, filtres des listes).
+- EasyAdmin affiche sans échappement les messages flash et les valeurs mises en forme par `formatValue()` : l'espace
+  plateforme échappe (`htmlspecialchars`) toute donnée saisie qu'il y place.
 - **Injection de formules** dans les fichiers Excel/CSV : les textes saisis sont écrits comme texte
   (`setCellValueExplicit`) dans les exports Excel, et précédés d'une apostrophe dans l'export CSV quand ils commencent
   par `=`, `+`, `-` ou `@`. Corrigé au Lot 8 pour le nom de la pharmacie et du fournisseur (bon de commande,
