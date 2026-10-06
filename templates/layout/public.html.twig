@@ -1,27 +1,42 @@
 {#
-    Pages publiques (connexion, mot de passe) : carte centrée, sans menu.
+    Pages publiques (connexion, mot de passe) : visuel de marque à gauche (grand écran), formulaire à droite.
 #}
 {% extends 'base.html.twig' %}
 
 {% block body_class %}layout-public{% endblock %}
 
 {% block body %}
-    <main class="layout-public-main d-flex align-items-start justify-content-center px-3 py-5">
-        <div class="w-100" style="max-width: 26rem">
-            <div class="text-center mb-4">
-                <div class="d-inline-flex align-items-center gap-2 fs-3 fw-semibold text-success">
-                    <i class="bi bi-capsule-pill"></i> {{ app_name }}
+    <div class="pg-auth">
+        <aside class="pg-auth-visuel d-none d-lg-flex">
+            <div class="pg-auth-croix"><i class="bi bi-capsule-pill"></i></div>
+            <h2 class="display-6 fw-bold mb-2">{{ app_name }}</h2>
+            <p class="fs-5 text-white text-opacity-75 mb-0">La gestion de votre officine, simple et complète.</p>
+            <ul class="pg-auth-atouts">
+                <li><i class="bi bi-cart-check"></i> Caisse rapide, tickets et factures</li>
+                <li><i class="bi bi-box-seam"></i> Stock par lot, péremptions et inventaires</li>
+                <li><i class="bi bi-shield-plus"></i> Tiers payant AMO et bordereaux</li>
+                <li><i class="bi bi-bar-chart-line"></i> Tableau de bord, finances et rapports</li>
+            </ul>
+        </aside>
+        <main class="pg-auth-formulaire">
+            <div class="pg-auth-boite">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <span class="pg-logo-icon"><i class="bi bi-capsule-pill"></i></span>
+                    <div>
+                        <div class="fs-5 fw-bold lh-1">{{ app_name }}</div>
+                        <div class="text-body-secondary small">Gestion d'officine</div>
+                    </div>
                 </div>
-                <div class="text-body-secondary small">Gestion d'officine</div>
+                <h1 class="h4 fw-semibold mb-1">{{ block('title') }}</h1>
+                {% if block('intro') is defined and block('intro')|trim %}
+                    <p class="text-body-secondary mb-4">{{ block('intro') }}</p>
+                {% else %}
+                    <div class="mb-4"></div>
+                {% endif %}
+                {% include 'layout/_flashes.html.twig' %}
+                {% block content %}{% endblock %}
+                {% block apres_carte %}{% endblock %}
             </div>
-            {% include 'layout/_flashes.html.twig' %}
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <h1 class="h5 mb-3">{{ block('title') }}</h1>
-                    {% block content %}{% endblock %}
-                </div>
-            </div>
-            {% block apres_carte %}{% endblock %}
-        </div>
-    </main>
+        </main>
+    </div>
 {% endblock %}

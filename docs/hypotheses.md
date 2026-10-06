@@ -401,3 +401,15 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - Marge (RA-07), performance par vendeur (RA-08), rapport de stock (RA-10), rapport mensuel automatique (RA-12),
   dépenses récurrentes (FI-03), trésorerie (FI-08) et export SYSCOHADA (FI-09) restent en **V1**.
 
+
+## Décisions — Design de l'espace pharmacie
+
+- Demande de Modibo : une apparence « pareille » au modèle Yashika (codervent, menu vertical). Yashika est un thème
+  commercial : son **apparence** est reproduite avec notre propre CSS sur Bootstrap 5.3 et Bootstrap Icons, sans
+  reprendre ses fichiers.
+- **Menu vertical** blanc, groupé par section (groupes repliables, celui de la page courante ouvert) ; sur grand écran
+  il se **réduit en icônes** (déplié au survol), état mémorisé dans le navigateur ; offcanvas sur tablette et mobile.
+- **Barre supérieure** : recherche de produit, pharmacie courante, thème clair / sombre (mémorisé), avatar et menu du
+  compte. **Fil d'Ariane** à côté du titre de page.
+- Couleur principale : le vert PharmaGest (#198754) est conservé (logo, tickets, PDF) ; police Noto Sans (Google Fonts,
+  repli sur la police système hors ligne).

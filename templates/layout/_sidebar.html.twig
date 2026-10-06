@@ -1,24 +1,47 @@
+{#
+    Menu vertical : les entrées sans section sont à plat, chaque section est un groupe repliable
+    (ouvert d'office quand il contient la page courante).
+#}
 {% set route_courante = app.request.attributes.get('_route') %}
-{% for section in navigation() %}
-    {% if section.titre %}
-        <div class="text-uppercase text-body-secondary small fw-semibold px-2 mt-3 mb-1">{{ section.titre }}</div>
-    {% endif %}
-    <ul class="nav nav-pills flex-column flex-nowrap gap-1">
-        {% for element in section.elements %}
-            <li class="nav-item">
-                {% if element.disponible %}
-                    {% set actif = route_courante == element.route or (element.prefixe != element.route and route_courante starts with element.prefixe) %}
-                    <a class="nav-link d-flex align-items-center gap-2 {{ actif ? 'active' : 'link-body-emphasis' }}"
-                       href="{{ path(element.route) }}"{% if actif %} aria-current="page"{% endif %}>
-                        <i class="bi bi-{{ element.icone }}"></i> <span class="text-truncate min-w-0">{{ element.libelle }}</span>
-                    </a>
-                {% else %}
-                    <span class="nav-link d-flex align-items-center gap-2 disabled" aria-disabled="true">
-                        <i class="bi bi-{{ element.icone }}"></i> <span class="text-truncate min-w-0">{{ element.libelle }}</span>
-                        <span class="badge text-bg-light border ms-auto fw-normal flex-shrink-0">Bientôt</span>
-                    </span>
-                {% endif %}
+{% macro entree(element, route_courante) %}
+    <li class="nav-item">
+        {% if element.disponible %}
+            {% set actif = route_courante == element.route or (element.prefixe != element.route and route_courante starts with element.prefixe) %}
+            <a class="nav-link pg-menu-link{{ actif ? ' active' }}" href="{{ path(element.route) }}"{% if actif %} aria-current="page"{% endif %} title="{{ element.libelle }}">
+                <i class="bi bi-{{ element.icone }} pg-menu-icon"></i> <span class="pg-menu-text">{{ element.libelle }}</span>
+            </a>
+        {% else %}
+            <span class="nav-link pg-menu-link disabled" aria-disabled="true" title="{{ element.libelle }} (bientôt)">
+                <i class="bi bi-{{ element.icone }} pg-menu-icon"></i> <span class="pg-menu-text">{{ element.libelle }}</span>
+                <span class="badge rounded-pill text-bg-light border ms-auto fw-normal flex-shrink-0 pg-menu-text">Bientôt</span>
+            </span>
+        {% endif %}
+    </li>
+{% endmacro %}
+
+<ul class="nav flex-column flex-nowrap pg-menu">
+    {% for section in navigation() %}
+        {% if not section.titre %}
+            {% for element in section.elements %}{{ _self.entree(element, route_courante) }}{% endfor %}
+        {% else %}
+            {% set ouvert = false %}
+            {% for element in section.elements %}
+                {% if element.disponible and (route_courante == element.route or (element.prefixe != element.route and route_courante starts with element.prefixe)) %}{% set ouvert = true %}{% endif %}
+            {% endfor %}
+            {% set id_groupe = 'menu-' ~ loop.index %}
+            <li class="nav-item pg-menu-group{{ ouvert ? ' pg-menu-group-actif' }}">
+                <button class="nav-link pg-menu-link pg-menu-toggle{{ ouvert ? '' : ' collapsed' }}" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#{{ id_groupe }}" aria-expanded="{{ ouvert ? 'true' : 'false' }}" aria-controls="{{ id_groupe }}" title="{{ section.titre }}">
+                    <i class="bi bi-{{ section.icone ?: 'folder' }} pg-menu-icon"></i>
+                    <span class="pg-menu-text">{{ section.titre }}</span>
+                    <i class="bi bi-chevron-down ms-auto pg-menu-chevron pg-menu-text"></i>
+                </button>
+                <div class="collapse{{ ouvert ? ' show' }}" id="{{ id_groupe }}">
+                    <ul class="nav flex-column flex-nowrap pg-submenu">
+                        {% for element in section.elements %}{{ _self.entree(element, route_courante) }}{% endfor %}
+                    </ul>
+                </div>
             </li>
-        {% endfor %}
-    </ul>
-{% endfor %}
+        {% endif %}
+    {% endfor %}
+</ul>
