@@ -21,44 +21,93 @@
     <div class="centre">
         <h1>{{ pharmacie.nom }}</h1>
         <div>{{ [pharmacie.adresse, pharmacie.ville]|filter(v => v)|join(', ') }}</div>
-        {% if pharmacie.telephone %}<div>Tél. {{ pharmacie.telephone|telephone }}</div>{% endif %}
+        {% if pharmacie.telephone %}
+            <div>Tél. {{ pharmacie.telephone|telephone }}</div>
+        {% endif %}
     </div>
     <hr>
-    <div>Ticket <span class="gras">{{ vente.numero }}</span></div>
+    <div>
+        Ticket <span class="gras">{{ vente.numero }}</span>
+    </div>
     <div>{{ vente.valideeLe|date('d/m/Y H:i') }} · {{ vente.vendeur.nom }}</div>
     {% if vente.client %}<div>Client : {{ vente.client.nom }}</div>{% endif %}
     {% if vente.statut.value == 'annulee' %}<div class="gras">*** VENTE ANNULÉE ***</div>{% endif %}
     {% if vente.ordonnance %}
-        <div class="petit">Ordonnance{{ vente.ordonnance.numero ? ' n° ' ~ vente.ordonnance.numero }} du {{ vente.ordonnance.date|date('d/m/Y') }}, {{ vente.ordonnance.prescripteur }}</div>
+        <div class="petit">
+            Ordonnance{{ vente.ordonnance.numero ? ' n° ' ~ vente.ordonnance.numero }} du {{ vente.ordonnance.date|date('d/m/Y') }}, {{ vente.ordonnance.prescripteur }}
+        </div>
     {% endif %}
-    {% if vente.type.value == 'amo' %}<div class="petit">Assuré {{ vente.organismeAmo.code }} n° {{ vente.numeroAssure }}</div>{% endif %}
+    {% if vente.type.value == 'amo' %}
+        <div class="petit">Assuré {{ vente.organismeAmo.code }} n° {{ vente.numeroAssure }}</div>
+    {% endif %}
     <hr>
     <table>
         {% for ligne in vente.lignes %}
-            <tr><td colspan="2">{{ ligne.produit.nomCommercial }} {{ ligne.produit.dosage }}{% if vente.type.value == 'amo' and not ligne.remboursable %} <span class="gras">(NR)</span>{% endif %}</td></tr>
             <tr>
-                <td>&nbsp;&nbsp;{{ ligne.quantite }} × {{ ligne.prixUnitaire|fcfa(false) }}{% if ligne.remise > 0 %} − {{ ligne.remise|fcfa(false) }}{% endif %}</td>
-                <td class="droite">{{ (ligne.montantBrut - ligne.remise)|fcfa(false) }}</td>
+                <td colspan="2">
+                    {{ ligne.produit.nomCommercial }} {{ ligne.produit.dosage }}
+                    {% if vente.type.value == 'amo' and not ligne.remboursable %} 
+                        <span class="gras">(NR)</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    &nbsp;&nbsp;{{ ligne.quantite }} × {{ ligne.prixUnitaire|fcfa(false) }}
+                    {% if ligne.remise > 0 %} − {{ ligne.remise|fcfa(false) }}{% endif %}
+                </td>
+                <td class="droite">
+                    {{ (ligne.montantBrut - ligne.remise)|fcfa(false) }}
+                </td>
             </tr>
         {% endfor %}
     </table>
     <hr>
     <table>
-        <tr><td>Total</td><td class="droite">{{ vente.totalBrut|fcfa }}</td></tr>
+        <tr>
+            <td>Total</td>
+            <td class="droite">{{ vente.totalBrut|fcfa }}</td>
+        </tr>
         {% if vente.type.value == 'amo' %}
-            <tr><td>Part AMO ({{ vente.tauxAmo }} %)</td><td class="droite">{{ vente.partAmo|fcfa }}</td></tr>
-            <tr><td>Part assuré</td><td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td></tr>
+            <tr>
+                <td>Part AMO ({{ vente.tauxAmo }} %)</td>
+                <td class="droite">{{ vente.partAmo|fcfa }}</td>
+            </tr>
+            <tr>
+                <td>Part assuré</td>
+                <td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td>
+            </tr>
         {% endif %}
-        {% if vente.remise > 0 %}<tr><td>Remise</td><td class="droite">− {{ vente.remise|fcfa }}</td></tr>{% endif %}
-        <tr class="total"><td>À PAYER</td><td class="droite">{{ vente.montantEncaisse|fcfa }}</td></tr>
+        {% if vente.remise > 0 %}
+            <tr>
+                <td>Remise</td>
+                <td class="droite">− {{ vente.remise|fcfa }}</td>
+            </tr>
+        {% endif %}
+        <tr class="total">
+            <td>À PAYER</td>
+            <td class="droite">{{ vente.montantEncaisse|fcfa }}</td>
+        </tr>
         {% for paiement in vente.paiements %}
-            <tr><td>{{ paiement.mode.libelle }}{{ paiement.reference ? ' ' ~ paiement.reference }}</td><td class="droite">{{ (paiement.montantRemis ?? paiement.montant)|fcfa }}</td></tr>
+            <tr>
+                <td>{{ paiement.mode.libelle }}{{ paiement.reference ? ' ' ~ paiement.reference }}</td>
+                <td class="droite">{{ (paiement.montantRemis ?? paiement.montant)|fcfa }}</td>
+            </tr>
         {% endfor %}
-        {% if vente.monnaieRendue > 0 %}<tr><td>Monnaie rendue</td><td class="droite">{{ vente.monnaieRendue|fcfa }}</td></tr>{% endif %}
+        {% if vente.monnaieRendue > 0 %}
+            <tr>
+                <td>Monnaie rendue</td>
+                <td class="droite">{{ vente.monnaieRendue|fcfa }}</td>
+            </tr>
+        {% endif %}
     </table>
-    {% if vente.type.value == 'amo' %}<div class="petit">(NR) : non remboursable, payé à 100 % par l'assuré.</div>{% endif %}
+    {% if vente.type.value == 'amo' %}
+        <div class="petit">(NR) : non remboursable, payé à 100 % par l'assuré.</div>
+    {% endif %}
     <hr>
-    {% if mentions %}<div class="centre petit">{{ mentions|nl2br }}</div>{% endif %}
+    {% if mentions %}
+        <div class="centre petit">{{ mentions|nl2br }}</div>
+    {% endif %}
     <div class="centre">Merci de votre visite</div>
 </body>
 </html>

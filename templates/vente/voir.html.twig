@@ -117,7 +117,7 @@
                     <input type="hidden" name="_token" value="{{ csrf_token('annuler-vente-' ~ vente.id) }}">
                     <div class="card-body">
                         <label class="form-label small" for="motif">Motif de l'annulation</label>
-                        <input type="text" class="form-control form-control-sm mb-2" id="motif" name="motif" maxlength="255" required>
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Entrez le motif de l'annulation" id="motif" name="motif" maxlength="255" required>
                         <button class="btn btn-sm btn-outline-danger" type="submit" data-turbo-confirm="Annuler la vente {{ vente.numero }} ? Les produits reviendront en stock.">Annuler la vente</button>
                         <div class="form-text">Possible le jour même, avant la clôture de la caisse ; ensuite il faut un avoir.</div>
                     </div>

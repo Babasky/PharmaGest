@@ -16,11 +16,17 @@
                     <tr>
                         {% for valeur in ligne %}
                             {% set type = tableau.type(n, loop.index0) %}
-                            <td class="{{ loop.first ? 'ps-3' }}{{ loop.last ? ' pe-3' }}{{ type not in ['texte', 'date'] ? ' text-end text-nowrap' }}">{{ valeur|cellule(type) }}</td>
+                            <td class="{{ loop.first ? 'ps-3' }}{{ loop.last ? ' pe-3' }}{{ type not in ['texte', 'date'] ? ' text-end text-nowrap' }}">
+                                {{ valeur|cellule(type) }}
+                            </td>
                         {% endfor %}
                     </tr>
                 {% else %}
-                    <tr><td colspan="{{ tableau.colonnes|length }}" class="text-center text-body-secondary py-3">Aucune donnée sur la période.</td></tr>
+                    <tr>
+                        <td colspan="{{ tableau.colonnes|length }}" class="text-center text-body-secondary py-3">
+                            Aucune donnée sur la période.
+                        </td>
+                    </tr>
                 {% endfor %}
             </tbody>
             {% if tableau.total and tableau.lignes is not empty %}
@@ -28,12 +34,16 @@
                     <tr>
                         {% for valeur in tableau.total %}
                             {% set type = tableau.types[loop.index0] %}
-                            <td class="{{ loop.first ? 'ps-3' }}{{ loop.last ? ' pe-3' }}{{ type not in ['texte', 'date'] ? ' text-end text-nowrap' }}">{{ valeur is null ? '' : valeur|cellule(type) }}</td>
+                            <td class="{{ loop.first ? 'ps-3' }}{{ loop.last ? ' pe-3' }}{{ type not in ['texte', 'date'] ? ' text-end text-nowrap' }}">
+                                {{ valeur is null ? '' : valeur|cellule(type) }}
+                            </td>
                         {% endfor %}
                     </tr>
                 </tfoot>
             {% endif %}
         </table>
     </div>
-    {% if tableau.note %}<div class="card-footer bg-body small text-body-secondary">{{ tableau.note }}</div>{% endif %}
+    {% if tableau.note %}
+        <div class="card-footer bg-body small text-body-secondary">{{ tableau.note }}</div>
+    {% endif %}
 </div>

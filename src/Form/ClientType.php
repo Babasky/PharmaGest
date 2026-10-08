@@ -23,14 +23,47 @@ final class ClientType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom', TextType::class, ['label' => 'Nom et prénom'])
-            ->add('telephone', TelType::class, ['label' => 'Téléphone', 'required' => false, 'attr' => ['placeholder' => '+223 XX XX XX XX']])
+            ->add('nom', TextType::class, [
+                    'label' => 'Prénom et nom',
+                    'attr' =>[
+                        'placeholder' => "Entrez le prénom et le nom du client"
+                    ]
+
+                ],
+                
+            )
+            ->add('telephone', TelType::class, [
+                'label' => 'Téléphone', 
+                'required' => false, 
+                'attr' => [
+                    'placeholder' => 'N° de télephone du client'
+                    ]
+                ]
+            )
             ->add('organismeAmo', EntityType::class, [
-                'label' => 'Organisme AMO', 'class' => OrganismeAmo::class, 'required' => false, 'placeholder' => '— Non assuré —',
+                'label' => "Organisme d'assurance", 
+                'class' => OrganismeAmo::class, 
+                'required' => false, 
+                'placeholder' => 'Non assuré',
                 'query_builder' => static fn (OrganismeAmoRepository $r) => $r->createQueryBuilder('o')->andWhere('o.actif = true')->orderBy('o.nom'),
             ])
-            ->add('numeroAssure', TextType::class, ['label' => 'N° d\'assuré AMO', 'required' => false])
-            ->add('entreprise', TextType::class, ['label' => 'Entreprise ou mutuelle', 'required' => false]);
+            ->add('numeroAssure', TextType::class, [
+                    'label' => "N° d'assuré", 
+                    'required' => false,
+                    'attr' =>[
+                        'placeholder' => "N° de l'assuré"
+                    ]
+                
+                ]
+            )
+            ->add('entreprise', TextType::class, [
+                    'label' => 'Entreprise ou mutuelle', 
+                    'required' => false,
+                    'attr' =>[
+                            'placeholder' => "Entreprise ou mutuelle"
+                    ]
+                ]
+            );
 
         if ($options['peut_privilegier']) {
             $builder->add('privilegie', CheckboxType::class, [

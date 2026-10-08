@@ -35,7 +35,7 @@ abstract class ReferentielCrudController extends AbstractCrudController
 
     public function configureFields(string $pageName): iterable
     {
-        yield TextField::new('nom', 'Nom');
+        yield TextField::new('nom', 'Nom')->setFormTypeOption('attr', ['placeholder' => "Nom de l'organisme"]);
         yield BooleanField::new('actif', 'Proposé aux pharmacies')->hideWhenCreating();
     }
 }
