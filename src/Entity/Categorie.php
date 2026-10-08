@@ -28,7 +28,7 @@ class Categorie implements TenantAwareInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
-    #[Assert\NotBlank(message: "Ce champ ne doit pas être vide")]
+    #[Assert\NotBlank(message: 'Ce champ ne doit pas être vide')]
     #[Assert\Length(max: 100)]
     private string $nom = '';
 

@@ -24,21 +24,19 @@ final class ClientType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                    'label' => 'Prénom et nom',
-                    'attr' =>[
-                        'placeholder' => "Entrez le prénom et le nom du client"
-                    ]
-
+                'label' => 'Prénom et nom',
+                'attr' => [
+                    'placeholder' => 'Entrez le prénom et le nom du client',
                 ],
-                
+            ],
             )
             ->add('telephone', TelType::class, [
-                'label' => 'Téléphone', 
-                'required' => false, 
+                'label' => 'Téléphone',
+                'required' => false,
                 'attr' => [
-                    'placeholder' => 'N° de télephone du client'
-                    ]
-                ]
+                    'placeholder' => 'N° de télephone du client',
+                ],
+            ]
             )
             ->add('organismeAmo', EntityType::class, [
                 'label' => 'Assurance (AMO ou autre)', 'class' => OrganismeAmo::class, 'required' => false, 'placeholder' => '— Non assuré —',

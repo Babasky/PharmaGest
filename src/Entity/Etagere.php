@@ -33,7 +33,7 @@ class Etagere implements TenantAwareInterface
     private string $code = '';
 
     #[ORM\Column(length: 100)]
-    #[Assert\NotBlank(message: "Ce champ ne doit pas être vide")]
+    #[Assert\NotBlank(message: 'Ce champ ne doit pas être vide')]
     #[Assert\Length(max: 100)]
     private string $libelle = '';
 

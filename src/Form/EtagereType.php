@@ -19,18 +19,18 @@ final class EtagereType extends AbstractType
     {
         $builder
             ->add('code', TextType::class, [
-                'label' => 'Code', 
+                'label' => 'Code',
                 'attr' => [
-                    'placeholder' => "Entrez le code de l'étagère(E1-R1)"
-                    ]
-                ]
+                    'placeholder' => "Entrez le code de l'étagère(E1-R1)",
+                ],
+            ]
             )
             ->add('libelle', TextType::class, [
-                    'label' => 'Libellé', 
-                    'attr' => [
-                        'placeholder' => 'Antalgiques, Antibiotique...'
-                    ]
-                ]
+                'label' => 'Libellé',
+                'attr' => [
+                    'placeholder' => 'Antalgiques, Antibiotique...',
+                ],
+            ]
             )
             ->add('zone', EnumType::class, [
                 'label' => 'Zone',
