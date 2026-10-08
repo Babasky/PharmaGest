@@ -526,8 +526,9 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - Une vente « À encaisser » que le client ne paie pas est **annulée** depuis l'encaissement, avec un motif obligatoire :
   ses produits reviennent dans leurs lots, aucune recette n'est créée, l'annulation est tracée au journal d'audit.
   Ticket et facture ne sont disponibles qu'après l'encaissement.
-- Démo : Kadiatou Sangaré (k.sangare@fleuve.ml, PIN 4826) est caissière à la Pharmacie du Fleuve ; une vente de Seydou
-  Diarra l'attend à l'encaissement.
+- Démo : Awa Konaté (a.konate@fleuve.ml, PIN 4826) est caissière à la Pharmacie du Fleuve. Sa session est ouverte :
+  Seydou Diarra lui a envoyé quatre ventes ; elle en a encaissé deux (espèces, et Orange Money pour une vente prise en
+  charge à 80 % par la mutuelle de l'ONG), une a été annulée (client reparti sans payer) et une attend l'encaissement.
 
 ### Page d'arrivée à la connexion (VE-16)
 
