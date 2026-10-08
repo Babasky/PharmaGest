@@ -183,7 +183,7 @@ class VenteService
         if ($valeur > 0) {
             $this->exigerRemisePossible($vente, $type, $valeur);
             if (TypeVente::Amo === $vente->getType()) {
-                throw new VenteException('Sur une vente AMO, la remise porte sur la part assuré : utilisez la remise sur le total (RG-09).');
+                throw new VenteException('Sur une vente AMO / assurance, la remise porte sur la part assuré : utilisez la remise sur le total (RG-09).');
             }
         }
         $ligne->definirRemise($type, $valeur);
@@ -273,7 +273,7 @@ class VenteService
             $controle->blocages[] = 'Renseignez la date et le prescripteur de l\'ordonnance.';
         }
         if (TypeVente::Amo === $vente->getType() && !($vente->getClient()?->isAssureAmo() ?? false)) {
-            $controle->blocages[] = 'Vente AMO : choisissez un client assuré, avec son n° d\'assuré et son organisme (AM-02).';
+            $controle->blocages[] = 'Vente AMO / assurance : choisissez un client assuré, avec son n° d\'assuré et son organisme (AM-02).';
         }
 
         if (TypeVente::SansOrdonnance === $vente->getType()) {
@@ -286,7 +286,7 @@ class VenteService
             if ([] !== $exigeant) {
                 $noms = implode(', ', $exigeant);
                 if (PolitiqueSansOrdonnance::Blocage === $parametres->getPolitiqueSansOrdonnance()) {
-                    $controle->blocages[] = \sprintf('Ordonnance obligatoire pour %s : choisissez « Ordonnance classique » ou « Ordonnance AMO ».', $noms);
+                    $controle->blocages[] = \sprintf('Ordonnance obligatoire pour %s : choisissez « Ordonnance classique » ou « Ordonnance AMO / assurance ».', $noms);
                 } else {
                     $controle->sansOrdonnance = $exigeant;
                     if (!$proprietaire) {

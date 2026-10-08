@@ -26,10 +26,11 @@ final class ClientType extends AbstractType
             ->add('nom', TextType::class, ['label' => 'Nom et prénom'])
             ->add('telephone', TelType::class, ['label' => 'Téléphone', 'required' => false, 'attr' => ['placeholder' => '+223 XX XX XX XX']])
             ->add('organismeAmo', EntityType::class, [
-                'label' => 'Organisme AMO', 'class' => OrganismeAmo::class, 'required' => false, 'placeholder' => '— Non assuré —',
+                'label' => 'Assurance (AMO ou autre)', 'class' => OrganismeAmo::class, 'required' => false, 'placeholder' => '— Non assuré —',
                 'query_builder' => static fn (OrganismeAmoRepository $r) => $r->createQueryBuilder('o')->andWhere('o.actif = true')->orderBy('o.nom'),
+                'group_by' => static fn (OrganismeAmo $o) => $o->getType()->libelle(),
             ])
-            ->add('numeroAssure', TextType::class, ['label' => 'N° d\'assuré AMO', 'required' => false])
+            ->add('numeroAssure', TextType::class, ['label' => 'N° d\'assuré', 'required' => false])
             ->add('entreprise', TextType::class, ['label' => 'Entreprise ou mutuelle', 'required' => false]);
 
         if ($options['peut_privilegier']) {

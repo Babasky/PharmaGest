@@ -31,16 +31,16 @@ class ExportBordereau
     {
         $pharmacie = $this->pharmacie($bordereau);
         $classeur = new Spreadsheet();
-        $classeur->getProperties()->setCreator('PharmaGest')->setTitle('Bordereau AMO '.$bordereau->getLibelle());
+        $classeur->getProperties()->setCreator('PharmaGest')->setTitle('Bordereau '.$bordereau->getLibelle());
         $feuille = $classeur->getActiveSheet();
         $feuille->setTitle('Bordereau');
 
-        $feuille->setCellValue('A1', \sprintf('Bordereau AMO %s — %s', $bordereau->getLibelle(), $bordereau->getOrganisme()->getNom()));
+        $feuille->setCellValue('A1', \sprintf('Bordereau %s — %s', $bordereau->getLibelle(), $bordereau->getOrganisme()->getNom()));
         $feuille->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $feuille->setCellValueExplicit('A2', \sprintf('%s · autorisation n° %s', $pharmacie->getNom(), $pharmacie->getNumeroAutorisation()), DataType::TYPE_STRING);
         $feuille->setCellValue('A3', \sprintf('Ventes du %s au %s · %s', $bordereau->getDebut()->format('d/m/Y'), $bordereau->getFin()->format('d/m/Y'), $bordereau->getStatut()->libelle()));
 
-        $entetes = ['N°', 'Date', 'N° vente', 'Assuré', 'N° assuré', 'N° ordonnance', 'Date ordonnance', 'Prescripteur', 'Structure', 'Total vente', 'Base remboursable', 'Taux (%)', 'Part AMO'];
+        $entetes = ['N°', 'Date', 'N° vente', 'Assuré', 'N° assuré', 'N° ordonnance', 'Date ordonnance', 'Prescripteur', 'Structure', 'Total vente', $bordereau->getOrganisme()->appliqueTarifAmo() ? 'Base remboursable (prix AMO)' : 'Base remboursable', 'Taux (%)', 'Part '.$bordereau->getOrganisme()->getCode()];
         $transmis = $bordereau->estTransmis();
         if ($transmis) {
             array_push($entetes, 'Réglé', 'Statut', 'Motif du rejet');

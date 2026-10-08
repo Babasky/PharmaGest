@@ -21,9 +21,10 @@ final class TauxAmoType extends AbstractType
     {
         $builder
             ->add('organisme', EntityType::class, [
-                'label' => 'Organisme',
+                'label' => 'Organisme (AMO ou assurance)',
                 'class' => OrganismeAmo::class,
                 'query_builder' => static fn (OrganismeAmoRepository $r) => $r->createQueryBuilder('o')->andWhere('o.actif = true')->orderBy('o.nom'),
+                'group_by' => static fn (OrganismeAmo $o) => $o->getType()->libelle(),
                 'placeholder' => 'Choisir…',
             ])
             ->add('taux', IntegerType::class, ['label' => 'Part prise en charge (%)', 'attr' => ['min' => 0, 'max' => 100]])

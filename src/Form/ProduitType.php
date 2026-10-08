@@ -58,7 +58,11 @@ final class ProduitType extends AbstractType
             ->add('seuilAlerte', IntegerType::class, ['label' => 'Seuil d\'alerte (unités)', 'help' => 'En dessous, le produit est signalé en rupture.', 'attr' => ['min' => 0]])
             ->add('stockMax', IntegerType::class, ['label' => 'Stock maximum (unités)', 'required' => false, 'help' => 'Sert à proposer les quantités à commander.', 'attr' => ['min' => 0]])
             ->add('ordonnanceObligatoire', CheckboxType::class, ['label' => 'Ordonnance obligatoire', 'required' => false])
-            ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable AMO', 'required' => false]);
+            ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable (AMO et assurances)', 'required' => false])
+            ->add('prixVenteAmo', IntegerType::class, [
+                'label' => 'Prix de vente AMO (FCFA)', 'required' => false, ...$montant,
+                'help' => 'Prix fixé par l\'AMO : le taux AMO s\'applique sur ce prix. Vide : prix de vente de la pharmacie.',
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

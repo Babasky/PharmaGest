@@ -55,6 +55,9 @@ class LigneVente implements TenantAwareInterface
         /** Remboursable AMO au moment de la vente (RG-06). */
         #[ORM\Column]
         private bool $remboursable,
+        /** Prix de vente AMO unitaire au moment de la vente (RG-06) ; null : pas de prix AMO propre au médicament. */
+        #[ORM\Column(nullable: true)]
+        private ?int $prixUnitaireAmo = null,
     ) {
         $this->lots = new ArrayCollection();
         if (null !== $vente->getPharmacie()) {
@@ -99,10 +102,30 @@ class LigneVente implements TenantAwareInterface
         return $this->remboursable;
     }
 
+    public function getPrixUnitaireAmo(): ?int
+    {
+        return $this->prixUnitaireAmo;
+    }
+
     /** Montant avant remise. */
     public function getMontantBrut(): int
     {
         return $this->prixUnitaire * $this->quantite;
+    }
+
+    /**
+     * Prix unitaire sur lequel s'applique le taux de prise en charge : le prix de vente AMO du médicament pour un
+     * organisme AMO, sinon le prix de vente de la pharmacie.
+     */
+    public function prixPriseEnCharge(bool $tarifAmo): int
+    {
+        return $tarifAmo ? $this->prixUnitaireAmo ?? $this->prixUnitaire : $this->prixUnitaire;
+    }
+
+    /** Base de prise en charge de la ligne (0 si le produit n'est pas remboursable). */
+    public function basePriseEnCharge(bool $tarifAmo): int
+    {
+        return $this->remboursable ? $this->prixPriseEnCharge($tarifAmo) * $this->quantite : 0;
     }
 
     public function getRemiseType(): ?TypeRemise
