@@ -3,7 +3,11 @@
 {% block title %}Ventes{% endblock %}
 
 {% block page_actions %}
-    <a class="btn btn-success" href="{{ path('app_caisse') }}"><i class="bi bi-cart-plus"></i> Caisse</a>
+    {% if is_granted('ROLE_VENDEUR') %}
+        <a class="btn btn-success" href="{{ path('app_caisse') }}"><i class="bi bi-cart-plus"></i> Caisse</a>
+    {% else %}
+        <a class="btn btn-success" href="{{ path('app_encaissement_index') }}"><i class="bi bi-cash-stack"></i> Encaissement</a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -13,6 +17,7 @@
         <select name="statut" class="form-select" style="max-width: 12rem" aria-label="Statut">
             <option value="">Tous les statuts</option>
             <option value="validee"{{ statut == 'validee' ? ' selected' }}>Validées</option>
+            <option value="a_encaisser"{{ statut == 'a_encaisser' ? ' selected' }}>À encaisser</option>
             <option value="annulee"{{ statut == 'annulee' ? ' selected' }}>Annulées</option>
         </select>
         <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Filtrer</button>
@@ -37,14 +42,14 @@
                         <tr class="{{ vente.statut.value == 'annulee' ? 'text-body-secondary' }}">
                             <td class="ps-3">
                                 <a class="fw-semibold text-decoration-none font-monospace" href="{{ path('app_vente_voir', {id: vente.id}) }}">{{ vente.numero }}</a>
-                                {% if vente.statut.value == 'annulee' %}<span class="badge text-bg-secondary">Annulée</span>{% endif %}
+                                {% if vente.statut.value != 'validee' %}<span class="badge text-bg-{{ vente.statut.couleur }}">{{ vente.statut.libelle }}</span>{% endif %}
                             </td>
                             <td class="small text-nowrap">{{ vente.valideeLe|date('d/m/Y H:i') }}</td>
                             <td class="small">{{ vente.type.libelle }}</td>
                             <td class="d-none d-md-table-cell">{{ vente.client ? vente.client.nom : '—' }}</td>
                             <td class="d-none d-md-table-cell small">{{ vente.vendeur.nom }}</td>
                             <td class="montant">{{ vente.totalNet|fcfa }}</td>
-                            <td class="montant pe-3">{{ vente.montantEncaisse|fcfa }}</td>
+                            <td class="montant pe-3">{{ vente.statut.value == 'a_encaisser' ? '—' : vente.montantEncaisse|fcfa }}</td>
                         </tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center text-body-secondary py-4">Aucune vente.</td></tr>

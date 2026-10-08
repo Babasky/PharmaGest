@@ -1,6 +1,6 @@
 {% extends 'layout/app.html.twig' %}
 
-{% block title %}Caisse{% endblock %}
+{% block title %}{{ (retour ?? 'caisse') == 'encaissement' ? 'Encaissement' : 'Caisse' }}{% endblock %}
 
 {% block content %}
     <div class="card shadow-sm" style="max-width: 32rem">
@@ -12,6 +12,7 @@
             {% if ecriture_autorisee() %}
                 <form method="post" action="{{ path('app_caisse_ouvrir') }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('caisse') }}">
+                    <input type="hidden" name="retour" value="{{ retour ?? 'caisse' }}">
                     <label class="form-label" for="fond">Fond de caisse (FCFA)</label>
                     <div class="input-group mb-3">
                         <input type="text" inputmode="numeric" class="form-control form-control-lg text-end" id="fond" name="fond" value="0" autofocus autocomplete="off">

@@ -33,7 +33,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
  * Écran de caisse (VE-01) : recherche produit (nom, DCI, code-barres), panier, type de vente, client,
- * remises, encaissement et mise en attente. Chaque action est un formulaire classique suivi d'une
+ * remises, encaissement ou envoi à la caisse, et mise en attente. Chaque action est un formulaire classique suivi d'une
  * redirection : l'écran reste utilisable au clavier et à la douchette, même sans JavaScript.
  */
 #[Route('/caisse')]
@@ -61,10 +61,8 @@ final class CaisseController extends AbstractAppController
         #[MapQueryParameter] ?string $client = null,
     ): Response {
         $utilisateur = $this->utilisateur();
+        // Sans caisse ouverte, le vendeur prépare ses ventes et les envoie à la caisse.
         $session = $this->caisse->sessionOuverte($utilisateur);
-        if (null === $session) {
-            return $this->render('caisse/ouvrir.html.twig');
-        }
 
         $panier = $this->ventes->panier($utilisateur);
         $resultats = null !== $q && '' !== trim($q) ? $produits->rechercher($q, null, false, 1)->elements : [];
@@ -82,27 +80,13 @@ final class CaisseController extends AbstractAppController
             'recherche_client' => $client,
             'clients' => null !== $client && '' !== trim($client) ? $clients->rechercher($client, false, false, 1)->elements : [],
             'en_attente' => $ventesRepo->enAttente(),
+            'a_encaisser' => $ventesRepo->aEncaisser(),
             'types' => TypeVente::cases(),
             'vendeurs' => array_filter(
                 array_map(static fn ($a) => $a->getUtilisateur(), $affectations->equipe($this->pharmacie())),
                 static fn (Utilisateur $u) => $u->aUnCodePin() && $u->isActif() && $u->getId() !== $utilisateur->getId(),
             ),
         ]);
-    }
-
-    #[Route('/ouvrir', name: 'app_caisse_ouvrir', methods: ['POST'])]
-    #[IsCsrfTokenValid(self::CSRF)]
-    public function ouvrir(Request $requete): Response
-    {
-        try {
-            $fond = $this->montant($requete->getPayload()->get('fond'), 'Fond de caisse') ?? 0;
-            $session = $this->caisse->ouvrir($this->pharmacie(), $this->utilisateur(), $fond);
-            $this->addFlash('success', \sprintf('Caisse ouverte (session %s, fond de caisse %s).', $session->getNumero(), Fcfa::format($fond)));
-        } catch (VenteException $e) {
-            $this->addFlash('error', $e->getMessage());
-        }
-
-        return $this->redirectToRoute('app_caisse');
     }
 
     /**
@@ -288,6 +272,31 @@ final class CaisseController extends AbstractAppController
         $this->addFlash('success', \sprintf('Vente %s encaissée : %s.%s', $vente->getNumero(), Fcfa::format($vente->getMontantEncaisse()), $monnaie > 0 ? ' Monnaie à rendre : '.Fcfa::format($monnaie).'.' : ''));
 
         return $this->redirectToRoute('app_vente_voir', ['id' => $vente->getId(), 'caisse' => 1]);
+    }
+
+    /**
+     * Le vendeur valide la vente sans l'encaisser : elle part dans la file du caissier, qui encaisse
+     * pendant que le vendeur sert le client suivant.
+     */
+    #[Route('/envoyer', name: 'app_caisse_envoyer', methods: ['POST'])]
+    #[IsCsrfTokenValid(self::CSRF)]
+    public function envoyer(Request $requete): Response
+    {
+        $vente = $this->ventes->panier($this->utilisateur());
+        try {
+            if (null === $vente) {
+                throw new VenteException('Le panier est vide.');
+            }
+            $this->ventes->envoyerEnCaisse($vente, $this->utilisateur(), (string) $requete->getPayload()->get('code_pin'));
+        } catch (VenteException $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->redirectToRoute('app_caisse');
+        }
+
+        $this->addFlash('success', \sprintf('Vente %s envoyée à la caisse : le client règle %s auprès du caissier.', $vente->getNumero(), Fcfa::format($vente->getMontantEncaisse())));
+
+        return $this->redirectToRoute('app_caisse');
     }
 
     /**

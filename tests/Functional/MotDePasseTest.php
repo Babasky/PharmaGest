@@ -40,7 +40,7 @@ final class MotDePasseTest extends AppWebTestCase
         $this->seConnecter($officine->vendeur->getEmail());
         self::assertResponseRedirects('/connexion');
         $this->seConnecter($officine->vendeur->getEmail(), 'nouveau-secret-42');
-        self::assertResponseRedirects('/');
+        self::assertResponseRedirects('/caisse');
     }
 
     public function testEmailInconnuMemeReponseSansEnvoi(): void

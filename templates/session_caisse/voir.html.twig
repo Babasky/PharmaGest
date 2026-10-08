@@ -5,7 +5,7 @@
 {% block page_actions %}
     <a class="btn btn-outline-secondary" href="{{ path('app_session_caisse_index') }}"><i class="bi bi-arrow-left"></i> Sessions</a>
     {% if session.estOuverte %}
-        {% if session.utilisateur.id == app.user.id %}<a class="btn btn-success" href="{{ path('app_caisse') }}"><i class="bi bi-cart-plus"></i> Retour à la caisse</a>{% endif %}
+        {% if session.utilisateur.id == app.user.id %}<a class="btn btn-success" href="{{ path(is_granted('ROLE_VENDEUR') ? 'app_caisse' : 'app_encaissement_index') }}"><i class="bi bi-cart-plus"></i> Retour à la caisse</a>{% endif %}
     {% else %}
         <a class="btn btn-success" href="{{ path('app_session_caisse_rapport_z', {id: session.id}) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Rapport Z</a>
     {% endif %}

@@ -51,7 +51,23 @@ class VenteRepository extends ServiceEntityRepository
     }
 
     /**
-     * Ventes validées ou annulées, des plus récentes aux plus anciennes.
+     * Ventes envoyées à la caisse par les vendeurs, qui attendent leur encaissement, les plus anciennes d'abord.
+     *
+     * @return list<Vente>
+     */
+    public function aEncaisser(): array
+    {
+        /** @var list<Vente> */
+        return $this->createQueryBuilder('v')
+            ->leftJoin('v.client', 'c')->addSelect('c')
+            ->join('v.vendeur', 'u')->addSelect('u')
+            ->andWhere('v.statut = :statut')->setParameter('statut', StatutVente::AEncaisser)
+            ->orderBy('v.valideeLe', 'ASC')->addOrderBy('v.id', 'ASC')
+            ->getQuery()->getResult();
+    }
+
+    /**
+     * Ventes validées, à encaisser ou annulées, des plus récentes aux plus anciennes.
      *
      * @return Page<Vente>
      */
@@ -61,7 +77,7 @@ class VenteRepository extends ServiceEntityRepository
             ->leftJoin('v.client', 'c')->addSelect('c')
             ->join('v.vendeur', 'u')->addSelect('u')
             ->andWhere('v.statut IN (:statuts)')
-            ->setParameter('statuts', null !== $statut ? [$statut] : [StatutVente::Validee, StatutVente::Annulee])
+            ->setParameter('statuts', null !== $statut ? [$statut] : [StatutVente::Validee, StatutVente::AEncaisser, StatutVente::Annulee])
             ->orderBy('v.valideeLe', 'DESC')->addOrderBy('v.id', 'DESC');
 
         if (null !== $recherche && '' !== trim($recherche)) {

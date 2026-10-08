@@ -19,11 +19,11 @@ final class CategorieType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                    'label' => 'Nom',
-                    'attr' => [
-                        'placeholder' => 'Entrez le nom de la catégorie'
-                    ]
-                ]
+                'label' => 'Nom',
+                'attr' => [
+                    'placeholder' => 'Entrez le nom de la catégorie',
+                ],
+            ]
             )
             ->add('parent', EntityType::class, [
                 'label' => 'Catégorie principale',

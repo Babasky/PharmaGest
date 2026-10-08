@@ -24,7 +24,8 @@ final class AuthentificationTest extends AppWebTestCase
 
         $this->seConnecter($officine->vendeur->getEmail());
 
-        self::assertResponseRedirects('/');
+        // Le vendeur arrive sur l'écran de vente, pas sur le tableau de bord.
+        self::assertResponseRedirects('/caisse');
         $this->client->followRedirect();
         self::assertSelectorTextContains('header', $officine->vendeur->getNom());
         self::assertSelectorTextContains('header', $officine->pharmacie->getNom());
