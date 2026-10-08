@@ -55,7 +55,8 @@ class ServiceImport
     }
 
     /**
-     * Fichier modèle : en-têtes (obligatoires marqués d'un *), une ligne d'exemple, et une feuille d'aide.
+     * Fichier modèle : en-têtes (obligatoires marqués d'un *), des lignes d'exemple importables telles quelles,
+     * et une feuille d'aide.
      */
     public function modele(DefinitionImport $definition): Spreadsheet
     {
@@ -63,7 +64,10 @@ class ServiceImport
         $feuille = $classeur->getActiveSheet()->setTitle($definition->libelle());
         foreach ($definition->colonnes() as $i => $colonne) {
             $feuille->setCellValue([$i + 1, 1], $colonne->entete.($colonne->obligatoire ? ' *' : ''));
-            $feuille->setCellValueExplicit([$i + 1, 2], $colonne->exemple, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            // En texte, pour qu'Excel garde les zéros et les longs codes-barres tels quels.
+            foreach ($definition->exemples() as $j => $exemple) {
+                $feuille->setCellValueExplicit([$i + 1, $j + 2], $exemple[$colonne->cle] ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            }
             $feuille->getColumnDimensionByColumn($i + 1)->setAutoSize(true);
         }
         $entete = $feuille->getStyle([1, 1, \count($definition->colonnes()), 1]);

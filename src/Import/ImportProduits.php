@@ -80,6 +80,11 @@ final class ImportProduits extends AbstractDefinitionImport
         $this->formes = null;
     }
 
+    public function exemples(): array
+    {
+        return ExemplesImport::produits();
+    }
+
     public function preparer(int $numero, array $valeurs, bool $simulation): array
     {
         $erreurs = [];

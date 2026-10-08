@@ -43,6 +43,11 @@ final class ImportFournisseurs extends AbstractDefinitionImport
         ];
     }
 
+    public function exemples(): array
+    {
+        return ExemplesImport::fournisseurs();
+    }
+
     public function preparer(int $numero, array $valeurs, bool $simulation): array
     {
         $erreurs = [];
