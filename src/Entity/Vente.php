@@ -51,7 +51,7 @@ class Vente implements TenantAwareInterface
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Ordonnance $ordonnance = null;
 
-    /** Session de caisse où la vente a été encaissée. */
+    /** Session de caisse où la vente a été encaissée : celle du vendeur, ou du caissier qui l'a encaissée. */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
     private ?SessionCaisse $session = null;
@@ -123,7 +123,7 @@ class Vente implements TenantAwareInterface
     private Collection $paiements;
 
     public function __construct(
-        /** Vendeur du panier, puis vendeur qui a encaissé. */
+        /** Vendeur du panier, puis vendeur qui l'a validée (l'encaissement peut revenir à un caissier). */
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
         private Utilisateur $vendeur,
@@ -157,6 +157,12 @@ class Vente implements TenantAwareInterface
     public function estValidee(): bool
     {
         return StatutVente::Validee === $this->statut;
+    }
+
+    /** Validée par le vendeur et envoyée à la caisse, pas encore payée. */
+    public function estAEncaisser(): bool
+    {
+        return StatutVente::AEncaisser === $this->statut;
     }
 
     public function getType(): TypeVente
@@ -373,11 +379,46 @@ class Vente implements TenantAwareInterface
     }
 
     /**
-     * Valide la vente : numéro, session, montants et remises figés (RG-02, RG-06).
+     * Valide et encaisse la vente d'un coup : numéro, session, montants et remises figés (RG-02, RG-06).
      *
      * @internal réservé à {@see \App\Vente\VenteService}
      */
     public function valider(string $numero, SessionCaisse $session, \DateTimeImmutable $le, ?Utilisateur $autorisePar): void
+    {
+        $this->figer($numero, $le, $autorisePar);
+        $this->session = $session;
+        $this->statut = StatutVente::Validee;
+    }
+
+    /**
+     * Le vendeur valide la vente sans l'encaisser : elle est numérotée, ses montants sont figés et
+     * elle attend qu'un caissier l'encaisse.
+     *
+     * @internal réservé à {@see \App\Vente\VenteService}
+     */
+    public function envoyerEnCaisse(string $numero, \DateTimeImmutable $le, ?Utilisateur $autorisePar): void
+    {
+        $this->figer($numero, $le, $autorisePar);
+        $this->statut = StatutVente::AEncaisser;
+    }
+
+    /**
+     * Encaissement par le caissier d'une vente envoyée à la caisse : la vente prend la date de l'encaissement,
+     * celle de la recette et du chiffre d'affaires.
+     *
+     * @internal réservé à {@see \App\Vente\VenteService}
+     */
+    public function encaisserEnCaisse(SessionCaisse $session, \DateTimeImmutable $le): void
+    {
+        if (!$this->estAEncaisser()) {
+            throw new \LogicException('Cette vente n\'attend pas d\'encaissement.');
+        }
+        $this->session = $session;
+        $this->valideeLe = $le;
+        $this->statut = StatutVente::Validee;
+    }
+
+    private function figer(string $numero, \DateTimeImmutable $le, ?Utilisateur $autorisePar): void
     {
         if (!$this->estModifiable()) {
             throw new \LogicException('Cette vente est déjà validée.');
@@ -387,10 +428,8 @@ class Vente implements TenantAwareInterface
             $ligne->figerRemise(TypeVente::Amo === $this->type ? 0 : $ligne->calculerRemise());
         }
         $this->numero = $numero;
-        $this->session = $session;
         $this->valideeLe = $le;
         $this->autorisePar = $autorisePar;
-        $this->statut = StatutVente::Validee;
         $this->repere = null;
         $this->totalBrut = $totaux->totalBrut;
         $this->remise = $totaux->remiseTotale();
@@ -485,7 +524,7 @@ class Vente implements TenantAwareInterface
      */
     public function annuler(\DateTimeImmutable $le, ?Utilisateur $par, string $motif): void
     {
-        if (!$this->estValidee()) {
+        if (!$this->estValidee() && !$this->estAEncaisser()) {
             throw new \LogicException('Seule une vente validée peut être annulée.');
         }
         $this->statut = StatutVente::Annulee;

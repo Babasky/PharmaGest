@@ -47,7 +47,7 @@ PharmaGest est un logiciel en ligne, vendu par abonnement annuel, qui permet à 
 
 ## 2. Acteurs, rôles et droits
 
-La plateforme compte quatre rôles. Un rôle de pharmacien adjoint a été ajouté entre le propriétaire et le vendeur, pour déléguer le stock, les commandes et l'AMO sans donner accès aux paramètres ni aux finances.
+La plateforme compte cinq rôles. Un rôle de pharmacien adjoint a été ajouté entre le propriétaire et le vendeur, pour déléguer le stock, les commandes et l'AMO sans donner accès aux paramètres ni aux finances. Un rôle de caissier (ajouté à la demande de Modibo) encaisse l'argent : le vendeur peut toujours encaisser lui-même, mais quand il est débordé, ou si la pharmacie s'organise ainsi, il valide la vente et le caissier l'encaisse.
 
 | Rôle | Qui | Créé par |
 |---|---|---|
@@ -55,37 +55,43 @@ La plateforme compte quatre rôles. Un rôle de pharmacien adjoint a été ajout
 | Propriétaire | Pharmacien titulaire | Super admin |
 | Pharmacien adjoint | Pharmacien ou gestionnaire salarié | Propriétaire |
 | Vendeur | Personnel de comptoir | Propriétaire |
+| Caissier | Personnel de caisse | Propriétaire |
 
 ### Matrice des droits
 
 O = autorisé, L = lecture seule, — = interdit.
 
-| Fonction | Super admin | Propriétaire | Adjoint | Vendeur |
-|---|---|---|---|---|
-| Créer une pharmacie et son propriétaire | O | — | — | — |
-| Gérer les abonnements | O | L | — | — |
-| Paramètres de la pharmacie (taux AMO, plafond de remise…) | — | O | — | — |
-| Créer et désactiver des utilisateurs | — | O | — | — |
-| Produits, catégories, étagères, fournisseurs | — | O | O | L |
-| Clients (création) | — | O | O | O |
-| Marquer un client « privilégié » | — | O | O | — |
-| Vendre (caisse) | — | O | O | O |
-| Remise dans le plafond | — | O | O | O |
-| Remise au-delà du plafond | — | O | — | — |
-| Annuler une vente ou faire un avoir | — | O | O | — |
-| Ajustement de stock et inventaire | — | O | O | — |
-| Commandes fournisseurs (brouillon) | — | O | O | O |
-| Envoyer une commande, réceptionner | — | O | O | — |
-| Bordereaux et règlements AMO | — | O | O | — |
-| Dépenses | — | O | — | — |
-| Ouvrir et clôturer sa session de caisse | — | O | O | O |
-| Rapports financiers | — | O | — | — |
-| Rapports stock et ventes | — | O | O | — |
-| Journal d'audit | L (plateforme) | L | — | — |
+| Fonction | Super admin | Propriétaire | Adjoint | Vendeur | Caissier |
+|---|---|---|---|---|---|
+| Créer une pharmacie et son propriétaire | O | — | — | — | — |
+| Gérer les abonnements | O | L | — | — | — |
+| Paramètres de la pharmacie (taux AMO, plafond de remise…) | — | O | — | — | — |
+| Créer et désactiver des utilisateurs | — | O | — | — | — |
+| Produits, catégories, étagères, fournisseurs | — | O | O | L | — |
+| Clients (création) | — | O | O | O | — |
+| Marquer un client « privilégié » | — | O | O | — | — |
+| Vendre (caisse) | — | O | O | O | — |
+| Valider une vente et l'envoyer à la caisse | — | O | O | O | — |
+| Encaisser une vente envoyée à la caisse | — | O | O | O | O |
+| Annuler une vente envoyée à la caisse et non payée | — | O | O | O | O |
+| Remise dans le plafond | — | O | O | O | — |
+| Remise au-delà du plafond | — | O | — | — | — |
+| Annuler une vente ou faire un avoir | — | O | O | — | — |
+| Ajustement de stock et inventaire | — | O | O | — | — |
+| Commandes fournisseurs (brouillon) | — | O | O | O | — |
+| Envoyer une commande, réceptionner | — | O | O | — | — |
+| Bordereaux et règlements AMO | — | O | O | — | — |
+| Dépenses | — | O | — | — | — |
+| Ouvrir et clôturer sa session de caisse | — | O | O | O | O |
+| Rapports financiers | — | O | — | — | — |
+| Rapports stock et ventes | — | O | O | — | — |
+| Journal d'audit | L (plateforme) | L | — | — | — |
 
 ### Règles d'accès
 
 - Le super admin ne voit jamais les ventes, clients ni ordonnances d'une pharmacie.
+- Chacun arrive sur son écran à la connexion : le vendeur sur l'écran de vente, le caissier sur l'encaissement, le propriétaire et l'adjoint sur le tableau de bord.
+- Le caissier consulte les ventes (pour réimprimer un ticket) et ses sessions de caisse ; il n'a accès ni aux produits, ni au stock, ni aux clients.
 - Pour le support, il peut se connecter « en tant que » un utilisateur seulement si le propriétaire a activé l'autorisation, pour une durée limitée (24 h). Chaque session de ce type est tracée et visible par le propriétaire.
 - Le propriétaire peut ajuster finement les droits de l'adjoint (cases à cocher par fonction).
 - Le modèle de données permet à un même propriétaire de détenir plusieurs pharmacies (offre Premium). Il bascule alors de l'une à l'autre depuis le menu.
@@ -203,6 +209,8 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | VE-12 | Clients conventionnés (entreprises, ONG, mutuelles) : prise en charge à un taux défini, facture mensuelle à l'entreprise | V2 |
 | VE-13 | Historique des achats du patient, consultable à la caisse | V1 |
 | VE-14 | Mode caisse dégradé hors ligne (enregistrement local, synchronisation au retour du réseau) | V2 |
+| VE-15 | Encaissement séparé : le vendeur valide la vente et l'envoie à la caisse (produits sortis du stock), le caissier l'encaisse dans sa session ; le vendeur peut toujours encaisser lui-même | MVP |
+| VE-16 | Page d'arrivée selon le rôle : écran de vente pour le vendeur, encaissement pour le caissier | MVP |
 
 ### 4.6 Ordonnances et AMO
 

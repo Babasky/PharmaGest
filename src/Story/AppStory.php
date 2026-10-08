@@ -76,6 +76,7 @@ final class AppStory extends Story
             ['f.keita@fleuve.ml', 'Fatoumata Keïta', Utilisateur::ROLE_ADJOINT],
             ['m.coulibaly@fleuve.ml', 'Moussa Coulibaly', Utilisateur::ROLE_VENDEUR],
             ['s.diarra@fleuve.ml', 'Seydou Diarra', Utilisateur::ROLE_VENDEUR],
+            ['k.sangare@fleuve.ml', 'Kadiatou Sangaré', Utilisateur::ROLE_CAISSIER],
         ]);
         $this->abonnements->enregistrerPaiement($fleuve, $fleuve->getOffre(), 180000, MoyenPaiement::OrangeMoney, 'OM-2026-55871', new \DateTimeImmutable('today'), null);
         // Les actions de la démo sont faites au nom de la titulaire : le journal d'audit les lui attribue.
@@ -229,7 +230,7 @@ final class AppStory extends Story
     private function caisse(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
     {
         $equipe = [];
-        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590'] as $email => $pin) {
+        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590', 'k.sangare@fleuve.ml' => '4826'] as $email => $pin) {
             $utilisateur = \Zenstruck\Foundry\Persistence\repository(Utilisateur::class)->findOneBy(['email' => $email]);
             \assert($utilisateur instanceof Utilisateur);
             $this->codePin->definir($utilisateur, $pin);
@@ -281,6 +282,13 @@ final class AppStory extends Story
             }
         }
         $this->caisse->cloturer($session, $comptage, null);
+
+        // Rôle caissier : Seydou a validé une vente et l'a envoyée à la caisse, Kadiatou l'encaissera.
+        $seydou = $equipe['s.diarra@fleuve.ml'];
+        $vente = $this->ventes->panierOuNouveau($seydou);
+        $this->ventes->ajouter($vente, $catalogue['Doliprane']);
+        $this->ventes->ajouter($vente, $catalogue['Efferalgan']);
+        $this->ventes->envoyerEnCaisse($vente, $seydou, null);
 
         $inps = $mariam->getOrganismeAmo();
         \assert($inps instanceof \App\Entity\OrganismeAmo);

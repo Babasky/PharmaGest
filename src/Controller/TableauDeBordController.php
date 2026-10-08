@@ -30,6 +30,10 @@ final class TableauDeBordController extends AbstractAppController
         if ($this->isGranted('ROLE_SUPER_ADMIN')) {
             return $this->redirectToRoute('admin');
         }
+        // Le caissier n'a pas de tableau de bord : son écran est l'encaissement.
+        if (!$this->isGranted(Utilisateur::ROLE_VENDEUR)) {
+            return $this->redirectToRoute('app_encaissement_index');
+        }
         $nombres = $alertes->compter();
         $aujourdhui = $horloge->now()->setTime(0, 0);
         $jour = $indicateurs->ventes(Periode::pour(Periode::JOUR, $aujourdhui));

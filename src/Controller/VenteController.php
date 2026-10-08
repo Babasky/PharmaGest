@@ -23,11 +23,11 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Ventes validées et annulées : consultation, ticket et facture (VE-06), annulation (VE-09),
- * copie de l'ordonnance (AM-01).
+ * Ventes validées, à encaisser et annulées : consultation, ticket et facture (VE-06), annulation (VE-09),
+ * copie de l'ordonnance (AM-01). Le caissier y retrouve les ventes pour réimprimer un ticket.
  */
 #[Route('/ventes')]
-#[IsGranted(Utilisateur::ROLE_VENDEUR)]
+#[IsGranted(Utilisateur::ROLE_CAISSIER)]
 final class VenteController extends AbstractAppController
 {
     #[Route('', name: 'app_vente_index', methods: ['GET'])]
@@ -40,7 +40,7 @@ final class VenteController extends AbstractAppController
     ): Response {
         $date = null !== $jour && '' !== $jour ? (\DateTimeImmutable::createFromFormat('!Y-m-d', $jour) ?: null) : null;
         $filtreStatut = null !== $statut ? StatutVente::tryFrom($statut) : null;
-        if (null !== $filtreStatut && !\in_array($filtreStatut, [StatutVente::Validee, StatutVente::Annulee], true)) {
+        if (null !== $filtreStatut && !\in_array($filtreStatut, [StatutVente::Validee, StatutVente::AEncaisser, StatutVente::Annulee], true)) {
             $filtreStatut = null;
         }
 
@@ -110,6 +110,7 @@ final class VenteController extends AbstractAppController
     public function ticket(Vente $vente, VentePdf $pdf): Response
     {
         $this->exigerVenteEnregistree($vente);
+        $this->exigerEncaissee($vente);
 
         return $pdf->reponseTicket($vente);
     }
@@ -118,6 +119,7 @@ final class VenteController extends AbstractAppController
     public function facture(Vente $vente, VentePdf $pdf): Response
     {
         $this->exigerVenteEnregistree($vente);
+        $this->exigerEncaissee($vente);
 
         return $pdf->reponseFacture($vente);
     }
@@ -136,6 +138,14 @@ final class VenteController extends AbstractAppController
         }
 
         return $this->redirectToRoute('app_vente_voir', ['id' => $vente->getId()]);
+    }
+
+    /** Ticket et facture attendent l'encaissement d'une vente envoyée à la caisse. */
+    private function exigerEncaissee(Vente $vente): void
+    {
+        if ($vente->estAEncaisser()) {
+            throw $this->createNotFoundException();
+        }
     }
 
     /** Un panier ou une vente en attente n'est pas une vente : introuvable ici. */

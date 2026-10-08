@@ -22,12 +22,14 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_PROPRIETAIRE = 'ROLE_PROPRIETAIRE';
     public const ROLE_ADJOINT = 'ROLE_ADJOINT';
     public const ROLE_VENDEUR = 'ROLE_VENDEUR';
+    public const ROLE_CAISSIER = 'ROLE_CAISSIER';
 
     /** Libellés des rôles d'officine, du plus élevé au plus bas. */
     public const LIBELLES_ROLES = [
         self::ROLE_PROPRIETAIRE => 'Propriétaire',
         self::ROLE_ADJOINT => 'Pharmacien adjoint',
         self::ROLE_VENDEUR => 'Vendeur',
+        self::ROLE_CAISSIER => 'Caissier',
     ];
 
     #[ORM\Id]

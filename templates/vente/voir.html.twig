@@ -3,13 +3,19 @@
 {% block title %}Vente {{ vente.numero }}{% endblock %}
 
 {% block page_actions %}
-    {% if depuis_caisse %}
+    {% if depuis_caisse and is_granted('ROLE_VENDEUR') %}
         <a class="btn btn-success" href="{{ path('app_caisse') }}" autofocus><i class="bi bi-cart-plus"></i> Vente suivante</a>
+    {% elseif depuis_caisse %}
+        <a class="btn btn-success" href="{{ path('app_encaissement_index') }}" autofocus><i class="bi bi-cash-stack"></i> Encaissement suivant</a>
     {% else %}
         <a class="btn btn-outline-secondary" href="{{ path('app_vente_index') }}"><i class="bi bi-arrow-left"></i> Ventes</a>
     {% endif %}
-    <a class="btn btn-outline-success" href="{{ path('app_vente_ticket', {id: vente.id}) }}" target="_blank"><i class="bi bi-printer"></i> Ticket</a>
-    <a class="btn btn-outline-success" href="{{ path('app_vente_facture', {id: vente.id}) }}" target="_blank"><i class="bi bi-file-earmark-text"></i> Facture A4</a>
+    {% if vente.statut.value == 'a_encaisser' %}
+        <a class="btn btn-success" href="{{ path('app_encaissement_voir', {id: vente.id}) }}"><i class="bi bi-cash-coin"></i> Encaisser</a>
+    {% else %}
+        <a class="btn btn-outline-success" href="{{ path('app_vente_ticket', {id: vente.id}) }}" target="_blank"><i class="bi bi-printer"></i> Ticket</a>
+        <a class="btn btn-outline-success" href="{{ path('app_vente_facture', {id: vente.id}) }}" target="_blank"><i class="bi bi-file-earmark-text"></i> Facture A4</a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -17,7 +23,9 @@
     <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
         <span class="badge fs-6 text-bg-{{ vente.statut.couleur }}" id="statut">{{ vente.statut.libelle }}</span>
         <span>{{ vente.type.libelle }}</span>
-        <span class="small text-body-secondary">{{ vente.valideeLe|date('d/m/Y H:i') }} · {{ vente.vendeur.nom }} · session {{ vente.session ? vente.session.numero }}</span>
+        <span class="small text-body-secondary" id="intervenants">{{ vente.valideeLe|date('d/m/Y H:i') }} · {{ vente.vendeur.nom }}
+            {%- if vente.session %} · session {{ vente.session.numero }}{% if vente.session.utilisateur.id != vente.vendeur.id %}, encaissée par {{ vente.session.utilisateur.nom }}{% endif %}
+            {%- elseif vente.statut.value == 'a_encaisser' %} · envoyée à la caisse{% endif %}</span>
     </div>
 
     {% if vente.statut.value == 'annulee' %}
@@ -62,7 +70,7 @@
                             <dt class="col-7 fw-normal">Part AMO ({{ vente.organismeAmo.code }}, {{ vente.tauxAmo }} %)</dt><dd class="col-5 montant">{{ vente.partAmo|fcfa }}</dd>
                         {% endif %}
                         {% if vente.remise > 0 %}<dt class="col-7 fw-normal text-success">Remise</dt><dd class="col-5 montant text-success">− {{ vente.remise|fcfa }}</dd>{% endif %}
-                        <dt class="col-7">Encaissé</dt><dd class="col-5 montant fw-bold" id="encaisse">{{ vente.montantEncaisse|fcfa }}</dd>
+                        <dt class="col-7">{{ vente.statut.value == 'a_encaisser' ? 'À encaisser' : 'Encaissé' }}</dt><dd class="col-5 montant fw-bold" id="encaisse">{{ vente.montantEncaisse|fcfa }}</dd>
                         {% for paiement in vente.paiements %}
                             <dt class="col-7 fw-normal small text-body-secondary ps-3">{{ paiement.mode.libelle }}{{ paiement.reference ? ' (' ~ paiement.reference ~ ')' }}</dt><dd class="col-5 montant small">{{ paiement.montant|fcfa }}</dd>
                         {% endfor %}

@@ -503,3 +503,34 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   `public/` servi), Supervisor pour le worker, script de déploiement par version, sauvegarde nocturne chiffrée (GPG)
   copiée hors du serveur avec rétention de 30 jours, procédure de restauration à tester chaque mois.
 
+
+## Décisions — Rôle caissier et page d'arrivée (demande de Modibo, 08/10/2026)
+
+### Rôle caissier (VE-15)
+
+- Nouveau rôle `ROLE_CAISSIER`, attribuable par le propriétaire depuis l'équipe. Hiérarchie : propriétaire ⊃ adjoint ⊃
+  vendeur ⊃ caissier. Le vendeur hérite donc du droit d'encaisser et peut toujours encaisser lui-même.
+- Le caissier voit l'**Encaissement**, les **Ventes** (pour réimprimer un ticket) et ses **sessions de caisse**. Il n'a
+  accès ni aux produits, ni au stock, ni aux clients, ni au tableau de bord (il est renvoyé sur l'encaissement).
+- Sur l'écran de vente, le vendeur choisit entre **Encaisser** (sa caisse doit être ouverte) et **Envoyer à la caisse**.
+  Sans caisse ouverte, il prépare ses ventes et les envoie à la caisse ; il n'a plus besoin d'ouvrir une caisse pour
+  vendre.
+- **Envoyer à la caisse** fait tout ce que faisait la validation, sauf l'argent : contrôles (ordonnance, AMO, remise),
+  code PIN du propriétaire si besoin, numéro de vente, **sortie FEFO du stock** et montants figés. La vente passe au
+  statut « À encaisser ». Le stock est pris à la validation pour qu'un autre vendeur ne vende pas le même produit
+  pendant que le client va payer.
+- L'**encaissement** par le caissier se fait dans **sa** session de caisse : paiements (espèces, Orange Money, Moov
+  Money, carte, paiement mixte), recette, créance AMO. La vente prend alors la date de l'encaissement (date de la
+  recette et du chiffre d'affaires) ; le vendeur reste celui qui a validé, le caissier est celui de la session.
+  Deux caissiers ne peuvent pas encaisser la même vente.
+- Une vente « À encaisser » que le client ne paie pas est **annulée** depuis l'encaissement, avec un motif obligatoire :
+  ses produits reviennent dans leurs lots, aucune recette n'est créée, l'annulation est tracée au journal d'audit.
+  Ticket et facture ne sont disponibles qu'après l'encaissement.
+- Démo : Kadiatou Sangaré (k.sangare@fleuve.ml, PIN 4826) est caissière à la Pharmacie du Fleuve ; une vente de Seydou
+  Diarra l'attend à l'encaissement.
+
+### Page d'arrivée à la connexion (VE-16)
+
+- Le vendeur arrive sur l'écran de vente (`/caisse`), le caissier sur l'encaissement (`/encaissement`), le propriétaire
+  et l'adjoint sur le tableau de bord. Une page protégée demandée avant la connexion reste la destination (sauf
+  l'accueil « / »).

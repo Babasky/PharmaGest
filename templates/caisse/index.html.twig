@@ -3,9 +3,11 @@
 {% block title %}Caisse{% endblock %}
 
 {% block page_actions %}
-    <span class="align-self-center small text-body-secondary">
-        <i class="bi bi-safe"></i> Session {{ session.numero }} · {{ app.user.nom }} · ouverte à {{ session.ouverteLe|date('H:i') }}
-    </span>
+    {% if session %}
+        <span class="align-self-center small text-body-secondary">
+            <i class="bi bi-safe"></i> Session {{ session.numero }} · {{ app.user.nom }} · ouverte à {{ session.ouverteLe|date('H:i') }}
+        </span>
+    {% endif %}
     {% if vendeurs is not empty %}
         <div class="dropdown">
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-people"></i> Changer de vendeur</button>
@@ -21,12 +23,31 @@
             </form>
         </div>
     {% endif %}
-    <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer ma caisse</a>
+    {% if session %}
+        <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer ma caisse</a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
     {% set token = csrf_token('caisse') %}
     {% set remise_possible = panier and panier.remiseAutorisee %}
+    {% if not session %}
+        {# Sans caisse ouverte, le vendeur prépare la vente et l'envoie à la caisse ; il peut aussi ouvrir la sienne. #}
+        <div class="alert alert-info d-flex flex-wrap align-items-center gap-3" id="caisse-fermee">
+            {% if ecriture_autorisee() %}
+                <span class="flex-grow-1"><i class="bi bi-info-circle"></i> Votre caisse n'est pas ouverte : validez vos ventes avec « Envoyer à la caisse », le caissier les encaissera. Pour encaisser vous-même, ouvrez votre caisse.</span>
+                <form method="post" action="{{ path('app_caisse_ouvrir') }}" class="d-flex gap-2 align-items-center">
+                    <input type="hidden" name="_token" value="{{ token }}">
+                    <input type="hidden" name="retour" value="caisse">
+                    <label class="small text-nowrap" for="fond">Fond de caisse</label>
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm text-end" id="fond" name="fond" value="0" autocomplete="off" style="width: 8rem">
+                    <button class="btn btn-sm btn-success text-nowrap" type="submit"><i class="bi bi-unlock"></i> Ouvrir la caisse</button>
+                </form>
+            {% else %}
+                <span>Abonnement expiré : la caisse est bloquée.</span>
+            {% endif %}
+        </div>
+    {% endif %}
     <div class="row g-3" {{ stimulus_controller('caisse') }}>
         <div class="col-12 col-xl-7">
             {# --- Recherche produit (nom, DCI, code-barres) --- #}
@@ -174,6 +195,26 @@
                     </ul>
                 </div>
             {% endif %}
+
+            {% if a_encaisser is not empty %}
+                <div class="card shadow-sm mt-3" id="a-encaisser">
+                    <div class="card-header bg-body d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold"><i class="bi bi-hourglass-split"></i> Envoyées à la caisse, à encaisser</span>
+                        <a class="small" href="{{ path('app_encaissement_index') }}">Encaissement</a>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for v in a_encaisser %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                                <span>
+                                    <span class="fw-semibold font-monospace">{{ v.numero }}</span>
+                                    <span class="small text-body-secondary">· {{ v.client ? v.client.nom : 'client de passage' }} · {{ v.montantEncaisse|fcfa }} · {{ v.vendeur.nom }}, {{ v.valideeLe|date('H:i') }}</span>
+                                </span>
+                                {% if session %}<a class="btn btn-sm btn-outline-success" href="{{ path('app_encaissement_voir', {id: v.id}) }}"><i class="bi bi-cash-coin"></i> Encaisser</a>{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
         </div>
 
         <div class="col-12 col-xl-5">
@@ -293,33 +334,25 @@
                     {% endif %}
 
                     {% if panier and panier.lignes is not empty and ecriture_autorisee() %}
-                        <form method="post" action="{{ path('app_caisse_encaisser') }}">
+                        {% set bloquee = controle and controle.estBloquee %}
+                        <form method="post" action="{{ path(session ? 'app_caisse_encaisser' : 'app_caisse_envoyer') }}">
                             <input type="hidden" name="_token" value="{{ token }}">
-                            <div class="row g-2 align-items-end">
-                                <div class="col-6">
-                                    <label class="form-label small mb-1" for="paiement-especes">Espèces remises</label>
-                                    <input type="text" inputmode="numeric" class="form-control text-end" id="paiement-especes" name="paiement[especes][remis]" placeholder="{{ totaux.aEncaisser }}" autocomplete="off" data-caisse-target="remis" data-action="input->caisse#monnaie">
+                            {% if session %}
+                                {% include 'caisse/_paiements.html.twig' with {du: totaux.aEncaisser} %}
+                            {% endif %}
+                            {% if controle and controle.exigeCodePin %}
+                                <div class="mb-2">
+                                    <label class="form-label small mb-1" for="code-pin">Code PIN du propriétaire</label>
+                                    <input type="password" inputmode="numeric" maxlength="4" class="form-control" id="code-pin" name="code_pin" autocomplete="off">
                                 </div>
-                                <div class="col-6 small">Monnaie à rendre : <strong data-caisse-target="monnaie">—</strong></div>
-                                {% for mode in ['orange_money', 'moov_money', 'carte'] %}
-                                    {% set libelle = {orange_money: 'Orange Money', moov_money: 'Moov Money', carte: 'Carte bancaire'}[mode] %}
-                                    <div class="col-6">
-                                        <label class="form-label small mb-1" for="paiement-{{ mode }}">{{ libelle }}</label>
-                                        <input type="text" inputmode="numeric" class="form-control form-control-sm text-end" id="paiement-{{ mode }}" name="paiement[{{ mode }}][montant]" autocomplete="off" data-action="input->caisse#monnaie" data-caisse-target="autre">
-                                    </div>
-                                    <div class="col-6">
-                                        <input type="text" class="form-control form-control-sm" name="paiement[{{ mode }}][reference]" placeholder="Référence" aria-label="Référence {{ libelle }}" autocomplete="off">
-                                    </div>
-                                {% endfor %}
-                                {% if controle and controle.exigeCodePin %}
-                                    <div class="col-12">
-                                        <label class="form-label small mb-1" for="code-pin">Code PIN du propriétaire</label>
-                                        <input type="password" inputmode="numeric" maxlength="4" class="form-control" id="code-pin" name="code_pin" autocomplete="off">
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <p class="small text-body-secondary mt-2 mb-2">Paiement mixte : saisissez les montants Orange Money, Moov Money ou carte ; le reste est payé en espèces.</p>
-                            <button class="btn btn-success btn-lg w-100" type="submit"{{ controle and controle.estBloquee ? ' disabled' }}><i class="bi bi-cash-coin"></i> Encaisser</button>
+                            {% endif %}
+                            {% if session %}
+                                <button class="btn btn-success btn-lg w-100" type="submit"{{ bloquee ? ' disabled' }}><i class="bi bi-cash-coin"></i> Encaisser</button>
+                                <button class="btn btn-outline-success w-100 mt-2" type="submit" formaction="{{ path('app_caisse_envoyer') }}"{{ bloquee ? ' disabled' }}><i class="bi bi-send"></i> Envoyer à la caisse</button>
+                            {% else %}
+                                <button class="btn btn-success btn-lg w-100" type="submit"{{ bloquee ? ' disabled' }}><i class="bi bi-send"></i> Envoyer à la caisse</button>
+                            {% endif %}
+                            <div class="form-text">« Envoyer à la caisse » valide la vente et sort les produits du stock ; le client la règle auprès du caissier.</div>
                         </form>
                     {% endif %}
                 </div>
