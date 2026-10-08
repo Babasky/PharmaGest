@@ -22,12 +22,14 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_PROPRIETAIRE = 'ROLE_PROPRIETAIRE';
     public const ROLE_ADJOINT = 'ROLE_ADJOINT';
     public const ROLE_VENDEUR = 'ROLE_VENDEUR';
+    public const ROLE_CAISSIER = 'ROLE_CAISSIER';
 
     /** Libellés des rôles d'officine, du plus élevé au plus bas. */
     public const LIBELLES_ROLES = [
         self::ROLE_PROPRIETAIRE => 'Propriétaire',
         self::ROLE_ADJOINT => 'Pharmacien adjoint',
         self::ROLE_VENDEUR => 'Vendeur',
+        self::ROLE_CAISSIER => 'Caissier',
     ];
 
     #[ORM\Id]
@@ -36,13 +38,13 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180, unique: true)]
-    #[Assert\NotBlank]
-    #[Assert\Email]
+    #[Assert\NotBlank(message: 'Ce champ ne doit pas être vide')]
+    #[Assert\Email(message: 'Email invalide')]
     #[Assert\Length(max: 180)]
     private string $email = '';
 
     #[ORM\Column(length: 120)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'Ce champ ne doit pas être vide')]
     #[Assert\Length(max: 120)]
     private string $nom = '';
 

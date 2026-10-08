@@ -51,7 +51,7 @@ class Vente implements TenantAwareInterface
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Ordonnance $ordonnance = null;
 
-    /** Session de caisse où la vente a été encaissée. */
+    /** Session de caisse où la vente a été encaissée : celle du vendeur, ou du caissier qui l'a encaissée. */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
     private ?SessionCaisse $session = null;
@@ -76,6 +76,10 @@ class Vente implements TenantAwareInterface
 
     #[ORM\Column(nullable: true)]
     private ?int $tauxAmo = null;
+
+    /** Le taux porte sur le prix de vente AMO des médicaments (organisme AMO) plutôt que sur le prix de la pharmacie. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $tarifAmo = false;
 
     // Montants figés à la validation.
     #[ORM\Column]
@@ -123,7 +127,7 @@ class Vente implements TenantAwareInterface
     private Collection $paiements;
 
     public function __construct(
-        /** Vendeur du panier, puis vendeur qui a encaissé. */
+        /** Vendeur du panier, puis vendeur qui l'a validée (l'encaissement peut revenir à un caissier). */
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
         private Utilisateur $vendeur,
@@ -157,6 +161,12 @@ class Vente implements TenantAwareInterface
     public function estValidee(): bool
     {
         return StatutVente::Validee === $this->statut;
+    }
+
+    /** Validée par le vendeur et envoyée à la caisse, pas encore payée. */
+    public function estAEncaisser(): bool
+    {
+        return StatutVente::AEncaisser === $this->statut;
     }
 
     public function getType(): TypeVente
@@ -300,6 +310,7 @@ class Vente implements TenantAwareInterface
         $this->organismeAmo = $organisme;
         $this->numeroAssure = $numeroAssure;
         $this->tauxAmo = $taux;
+        $this->tarifAmo = $organisme?->appliqueTarifAmo() ?? false;
     }
 
     /**
@@ -323,7 +334,7 @@ class Vente implements TenantAwareInterface
 
     public function ajouterLigne(Produit $produit, int $quantite): LigneVente
     {
-        $ligne = new LigneVente($this, $produit, $quantite, (int) $produit->getPrixVente(), $produit->isRemboursableAmo());
+        $ligne = new LigneVente($this, $produit, $quantite, (int) $produit->getPrixVente(), $produit->isRemboursableAmo(), $produit->getPrixVenteAmo());
         $this->lignes->add($ligne);
 
         return $ligne;
@@ -350,11 +361,15 @@ class Vente implements TenantAwareInterface
         $remiseLignes = 0;
         $tauxMax = 0.0;
 
+        $tarifAmo = $this->tarifAmo();
+        $brutRemboursable = 0;
+
         foreach ($this->lignes as $ligne) {
             $brut = $ligne->getMontantBrut();
             $totalBrut += $brut;
             if ($amo && $ligne->isRemboursable()) {
-                $baseAmo += $brut;
+                $baseAmo += $ligne->basePriseEnCharge($tarifAmo);
+                $brutRemboursable += $brut;
             }
             if (!$amo) {
                 $remise = $ligne->calculerRemise();
@@ -363,7 +378,8 @@ class Vente implements TenantAwareInterface
             }
         }
 
-        $partAmo = $amo ? Fcfa::arrondir($baseAmo * ($this->tauxAmo ?? 0) / 100) : 0;
+        // La part de l'organisme ne dépasse jamais ce que la pharmacie facture pour les lignes remboursables.
+        $partAmo = $amo ? min($brutRemboursable, Fcfa::arrondir($baseAmo * ($this->tauxAmo ?? 0) / 100)) : 0;
         $baseRemise = $totalBrut - $partAmo;
         $baseRemiseGlobale = $baseRemise - $remiseLignes;
         $remiseGlobale = $this->remiseType?->montantSur($baseRemiseGlobale, $this->remiseValeur) ?? 0;
@@ -373,11 +389,46 @@ class Vente implements TenantAwareInterface
     }
 
     /**
-     * Valide la vente : numéro, session, montants et remises figés (RG-02, RG-06).
+     * Valide et encaisse la vente d'un coup : numéro, session, montants et remises figés (RG-02, RG-06).
      *
      * @internal réservé à {@see \App\Vente\VenteService}
      */
     public function valider(string $numero, SessionCaisse $session, \DateTimeImmutable $le, ?Utilisateur $autorisePar): void
+    {
+        $this->figer($numero, $le, $autorisePar);
+        $this->session = $session;
+        $this->statut = StatutVente::Validee;
+    }
+
+    /**
+     * Le vendeur valide la vente sans l'encaisser : elle est numérotée, ses montants sont figés et
+     * elle attend qu'un caissier l'encaisse.
+     *
+     * @internal réservé à {@see \App\Vente\VenteService}
+     */
+    public function envoyerEnCaisse(string $numero, \DateTimeImmutable $le, ?Utilisateur $autorisePar): void
+    {
+        $this->figer($numero, $le, $autorisePar);
+        $this->statut = StatutVente::AEncaisser;
+    }
+
+    /**
+     * Encaissement par le caissier d'une vente envoyée à la caisse : la vente prend la date de l'encaissement,
+     * celle de la recette et du chiffre d'affaires.
+     *
+     * @internal réservé à {@see \App\Vente\VenteService}
+     */
+    public function encaisserEnCaisse(SessionCaisse $session, \DateTimeImmutable $le): void
+    {
+        if (!$this->estAEncaisser()) {
+            throw new \LogicException('Cette vente n\'attend pas d\'encaissement.');
+        }
+        $this->session = $session;
+        $this->valideeLe = $le;
+        $this->statut = StatutVente::Validee;
+    }
+
+    private function figer(string $numero, \DateTimeImmutable $le, ?Utilisateur $autorisePar): void
     {
         if (!$this->estModifiable()) {
             throw new \LogicException('Cette vente est déjà validée.');
@@ -387,10 +438,8 @@ class Vente implements TenantAwareInterface
             $ligne->figerRemise(TypeVente::Amo === $this->type ? 0 : $ligne->calculerRemise());
         }
         $this->numero = $numero;
-        $this->session = $session;
         $this->valideeLe = $le;
         $this->autorisePar = $autorisePar;
-        $this->statut = StatutVente::Validee;
         $this->repere = null;
         $this->totalBrut = $totaux->totalBrut;
         $this->remise = $totaux->remiseTotale();
@@ -452,17 +501,28 @@ class Vente implements TenantAwareInterface
         return $this->partAmo;
     }
 
-    /** Base AMO : total des lignes remboursables, au prix plein (RG-07). */
+    /**
+     * Base de prise en charge : total des lignes remboursables, au prix de vente AMO pour un organisme AMO,
+     * au prix plein de la pharmacie pour une autre assurance (RG-07).
+     */
     public function getBaseAmo(): int
     {
+        if (TypeVente::Amo !== $this->type) {
+            return 0;
+        }
+        $tarifAmo = $this->tarifAmo();
         $base = 0;
         foreach ($this->lignes as $ligne) {
-            if ($ligne->isRemboursable()) {
-                $base += $ligne->getMontantBrut();
-            }
+            $base += $ligne->basePriseEnCharge($tarifAmo);
         }
 
-        return TypeVente::Amo === $this->type ? $base : 0;
+        return $base;
+    }
+
+    /** Le taux s'applique au prix de vente AMO des médicaments (organisme AMO), ou au prix de la pharmacie. */
+    public function tarifAmo(): bool
+    {
+        return $this->tarifAmo;
     }
 
     public function getMontantEncaisse(): int
@@ -485,7 +545,7 @@ class Vente implements TenantAwareInterface
      */
     public function annuler(\DateTimeImmutable $le, ?Utilisateur $par, string $motif): void
     {
-        if (!$this->estValidee()) {
+        if (!$this->estValidee() && !$this->estAEncaisser()) {
             throw new \LogicException('Seule une vente validée peut être annulée.');
         }
         $this->statut = StatutVente::Annulee;

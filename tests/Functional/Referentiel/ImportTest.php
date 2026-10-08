@@ -97,6 +97,38 @@ final class ImportTest extends AppWebTestCase
         self::assertSame(1, $this->compter(Produit::class));
     }
 
+    public function testPrixDeVenteAmoImporteOuConserve(): void
+    {
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Coartem', 'codeBarres' => '777', 'prixVente' => 3800, 'prixVenteAmo' => 3500]);
+
+        // Fichier sans la colonne : le prix AMO déjà saisi ne bouge pas.
+        $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'code_barres', 'prix_vente'], ['Coartem', '777', 3900]])]);
+        $this->client->submitForm('Importer les 1 ligne valide');
+        self::assertSame([3900, 3500], $this->prix('777'));
+
+        $this->client->request('GET', '/imports/produits');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([
+            ['nom_commercial', 'code_barres', 'prix_vente', 'prix_vente_amo'],
+            ['Coartem', '777', 3900, '3 600'],
+            ['Doliprane', '888', 1500, ''],
+        ])]);
+        $this->client->submitForm('Importer les 2 lignes valides');
+        self::assertSame([3900, 3600], $this->prix('777'));
+        self::assertSame([1500, null], $this->prix('888'), 'Cellule vide : pas de prix AMO, le prix de la pharmacie sert de base.');
+    }
+
+    /**
+     * @return array{?int, ?int} prix de vente et prix de vente AMO
+     */
+    private function prix(string $codeBarres): array
+    {
+        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['codeBarres' => $codeBarres]));
+        self::assertInstanceOf(Produit::class, $produit);
+
+        return [$produit->getPrixVente(), $produit->getPrixVenteAmo()];
+    }
+
     public function testImportDeClientsEnCsvPointVirguleEtAccents(): void
     {
         $csv = sys_get_temp_dir().'/clients-'.uniqid().'.csv';

@@ -19,7 +19,7 @@ use Doctrine\ORM\Events;
 #[AsDoctrineListener(event: Events::onFlush)]
 final class AuditModificationsListener
 {
-    private const CHAMPS_PRIX = ['prixVente', 'prixAchat'];
+    private const CHAMPS_PRIX = ['prixVente', 'prixAchat', 'prixVenteAmo'];
 
     public function __construct(
         private readonly AuditLogger $audit,

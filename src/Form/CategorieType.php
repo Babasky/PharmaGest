@@ -18,12 +18,18 @@ final class CategorieType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom', TextType::class, ['label' => 'Nom'])
+            ->add('nom', TextType::class, [
+                'label' => 'Nom',
+                'attr' => [
+                    'placeholder' => 'Entrez le nom de la catégorie',
+                ],
+            ]
+            )
             ->add('parent', EntityType::class, [
                 'label' => 'Catégorie principale',
                 'class' => Categorie::class,
                 'required' => false,
-                'placeholder' => '— Aucune (catégorie principale) —',
+                'placeholder' => 'Choisir une catégorie',
                 'query_builder' => static fn (CategorieRepository $r) => $r->principalesActives(),
                 'choice_label' => 'nom',
                 'help' => 'Laissez vide pour créer une catégorie principale ; choisissez-en une pour créer une sous-catégorie.',

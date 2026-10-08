@@ -31,21 +31,64 @@ final class ProduitType extends AbstractType
     {
         $montant = ['attr' => ['min' => 0, 'step' => 1, 'inputmode' => 'numeric']];
         $builder
-            ->add('nomCommercial', TextType::class, ['label' => 'Nom commercial'])
-            ->add('dci', TextType::class, ['label' => 'DCI (molécule)', 'required' => false])
+            ->add('nomCommercial', TextType::class, [
+                'label' => 'Nom commercial',
+                'attr' => [
+                    'placeholder' => 'Nom commercial',
+                ],
+            ]
+            )
+            ->add('dci', TextType::class, [
+                'label' => 'DCI (molécule)',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'DCI(molécule)',
+                ],
+            ]
+            )
             ->add('forme', EntityType::class, [
-                'label' => 'Forme', 'class' => FormeGalenique::class, 'required' => false, 'placeholder' => '—',
+                'label' => 'Forme',
+                'class' => FormeGalenique::class,
+                'required' => false,
+                'placeholder' => 'forme du produit',
                 'query_builder' => static fn (FormeGaleniqueRepository $r) => $r->createQueryBuilder('f')->andWhere('f.actif = true')->orderBy('f.nom'),
             ])
-            ->add('dosage', TextType::class, ['label' => 'Dosage', 'required' => false, 'attr' => ['placeholder' => '500 mg']])
-            ->add('conditionnement', TextType::class, ['label' => 'Conditionnement', 'required' => false, 'attr' => ['placeholder' => 'Boîte de 16 comprimés']])
-            ->add('codeBarres', TextType::class, ['label' => 'Code-barres', 'required' => false, 'help' => 'Scannez-le avec la douchette.'])
+            ->add('dosage', TextType::class, [
+                'label' => 'Dosage',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Dosage (500 mg)',
+                ],
+            ]
+            )
+            ->add('conditionnement', TextType::class, [
+                'label' => 'Conditionnement',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Boîte de 16 comprimés',
+                ],
+            ]
+            )
+            ->add('codeBarres', TextType::class, [
+                'label' => 'Code-barres(Facultatif)',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Code-barres(Facultatif)',
+                ],
+            ]
+            )
             ->add('categorie', EntityType::class, [
-                'label' => 'Catégorie', 'class' => Categorie::class, 'required' => false, 'placeholder' => '—',
+                'label' => 'Catégorie',
+                'class' => Categorie::class,
+                'required' => false,
+                'placeholder' => 'Catégorie',
                 'query_builder' => static fn (CategorieRepository $r) => $r->choixActifs(), 'choice_label' => 'nomComplet',
             ])
             ->add('etagere', EntityType::class, [
-                'label' => 'Étagère', 'class' => Etagere::class, 'required' => false, 'placeholder' => '—',
+                'label' => 'Étagère',
+                'class' => Etagere::class,
+                'required' => false,
+                'placeholder' => 'Etagère',
                 'query_builder' => static fn (EtagereRepository $r) => $r->choixActifs(),
             ])
             ->add('fournisseurHabituel', EntityType::class, [
@@ -58,11 +101,17 @@ final class ProduitType extends AbstractType
             ->add('seuilAlerte', IntegerType::class, ['label' => 'Seuil d\'alerte (unités)', 'help' => 'En dessous, le produit est signalé en rupture.', 'attr' => ['min' => 0]])
             ->add('stockMax', IntegerType::class, ['label' => 'Stock maximum (unités)', 'required' => false, 'help' => 'Sert à proposer les quantités à commander.', 'attr' => ['min' => 0]])
             ->add('ordonnanceObligatoire', CheckboxType::class, ['label' => 'Ordonnance obligatoire', 'required' => false])
-            ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable AMO', 'required' => false]);
+            ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable (AMO et assurances)', 'required' => false])
+            ->add('prixVenteAmo', IntegerType::class, [
+                'label' => 'Prix de vente AMO (FCFA)', 'required' => false, ...$montant,
+                'help' => 'Prix fixé par l\'AMO : le taux AMO s\'applique sur ce prix. Vide : prix de vente de la pharmacie.',
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['data_class' => Produit::class]);
+        $resolver->setDefaults([
+            'data_class' => Produit::class,
+        ]);
     }
 }

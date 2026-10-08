@@ -15,6 +15,7 @@ use App\Entity\Utilisateur;
 use App\Entity\Vente;
 use App\Enum\ModePaiement;
 use App\Enum\PolitiqueSansOrdonnance;
+use App\Enum\StatutVente;
 use App\Enum\TypeMouvement;
 use App\Enum\TypeRemise;
 use App\Enum\TypeVente;
@@ -36,7 +37,8 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
  * Caisse (VE-01 à VE-09, RE-01 à RE-04) : panier du vendeur, mise en attente, contrôles, encaissement
- * avec sortie FEFO du stock, et annulation le jour même.
+ * avec sortie FEFO du stock, et annulation le jour même. Le vendeur encaisse lui-même, ou valide la vente
+ * et l'envoie à la caisse où un caissier l'encaisse.
  */
 class VenteService
 {
@@ -183,7 +185,7 @@ class VenteService
         if ($valeur > 0) {
             $this->exigerRemisePossible($vente, $type, $valeur);
             if (TypeVente::Amo === $vente->getType()) {
-                throw new VenteException('Sur une vente AMO, la remise porte sur la part assuré : utilisez la remise sur le total (RG-09).');
+                throw new VenteException('Sur une vente AMO / assurance, la remise porte sur la part assuré : utilisez la remise sur le total (RG-09).');
             }
         }
         $ligne->definirRemise($type, $valeur);
@@ -227,7 +229,7 @@ class VenteService
      */
     public function reprendre(Vente $vente, Utilisateur $vendeur): void
     {
-        if (\App\Enum\StatutVente::EnAttente !== $vente->getStatut()) {
+        if (StatutVente::EnAttente !== $vente->getStatut()) {
             throw new VenteException('Cette vente n\'est plus en attente.');
         }
         $courant = $this->ventes->panierDe($vendeur);
@@ -273,7 +275,7 @@ class VenteService
             $controle->blocages[] = 'Renseignez la date et le prescripteur de l\'ordonnance.';
         }
         if (TypeVente::Amo === $vente->getType() && !($vente->getClient()?->isAssureAmo() ?? false)) {
-            $controle->blocages[] = 'Vente AMO : choisissez un client assuré, avec son n° d\'assuré et son organisme (AM-02).';
+            $controle->blocages[] = 'Vente AMO / assurance : choisissez un client assuré, avec son n° d\'assuré et son organisme (AM-02).';
         }
 
         if (TypeVente::SansOrdonnance === $vente->getType()) {
@@ -286,7 +288,7 @@ class VenteService
             if ([] !== $exigeant) {
                 $noms = implode(', ', $exigeant);
                 if (PolitiqueSansOrdonnance::Blocage === $parametres->getPolitiqueSansOrdonnance()) {
-                    $controle->blocages[] = \sprintf('Ordonnance obligatoire pour %s : choisissez « Ordonnance classique » ou « Ordonnance AMO ».', $noms);
+                    $controle->blocages[] = \sprintf('Ordonnance obligatoire pour %s : choisissez « Ordonnance classique » ou « Ordonnance AMO / assurance ».', $noms);
                 } else {
                     $controle->sansOrdonnance = $exigeant;
                     if (!$proprietaire) {
@@ -322,82 +324,22 @@ class VenteService
     public function encaisser(Vente $vente, Utilisateur $vendeur, SessionCaisse $session, array $saisie, ?string $codePin): void
     {
         $this->exigerModifiable($vente);
-        if (!$session->estOuverte() || $session->getUtilisateur()->getId() !== $vendeur->getId()) {
-            throw new VenteException('Ouvrez votre session de caisse avant d\'encaisser.');
-        }
+        $this->exigerSessionDe($session, $vendeur);
         $pharmacie = $this->tenantContext->exigerPharmacie();
-
-        // Le taux AMO est celui du jour de la validation (RG-06).
-        $this->actualiserAmo($vente);
-        $controle = $this->controler($vente, $vendeur, $pharmacie);
-        if ($controle->estBloquee()) {
-            throw new VenteException($controle->blocages[0]);
-        }
-
-        $autorisePar = null;
-        if ($controle->exigeCodePin()) {
-            try {
-                $autorisePar = $this->codePin->autorisationProprietaire($pharmacie, $codePin);
-            } catch (CodePinException $e) {
-                throw new VenteException($e->getMessage(), 0, $e);
-            }
-        } elseif ($controle->remiseHorsPlafond || [] !== $controle->sansOrdonnance) {
-            $autorisePar = $vendeur; // Le propriétaire lui-même.
-        }
-
-        $totaux = $vente->calculer();
-        $paiements = $this->analyserPaiements($saisie, $totaux->aEncaisser());
-
-        // Tout est vérifié avant la première écriture : un refus ne laisse aucun lot entamé.
-        try {
-            foreach ($vente->getLignes() as $ligne) {
-                $this->stock->verifierDisponible($ligne->getProduit(), $ligne->getQuantite());
-            }
-        } catch (StockException $e) {
-            throw new VenteException($e->getMessage(), 0, $e);
-        }
+        [$controle, $autorisePar] = $this->autoriser($vente, $vendeur, $pharmacie, $codePin);
+        $paiements = $this->analyserPaiements($saisie, $vente->calculer()->aEncaisser());
+        $this->verifierStock($vente);
 
         try {
-            $this->stock->transaction(function () use ($vente, $vendeur, $session, $pharmacie, $paiements, $autorisePar, $controle, $totaux): void {
+            $this->stock->transaction(function () use ($vente, $vendeur, $session, $pharmacie, $paiements, $autorisePar, $controle): void {
+                $totaux = $vente->calculer();
                 $numero = $this->numeroteur->suivant('V', $pharmacie);
-                foreach ($vente->getLignes() as $ligne) {
-                    foreach ($this->stock->prelever($ligne->getProduit(), $ligne->getQuantite(), TypeMouvement::Vente, $numero) as $prelevement) {
-                        $ligne->ajouterLot($prelevement->lot, $prelevement->quantite);
-                    }
-                }
+                $this->preleverStock($vente, $numero);
                 $vente->setVendeur($vendeur);
                 $vente->valider($numero, $session, $this->horloge->now(), $autorisePar);
-                foreach ($paiements as [$mode, $montant, $reference, $remis]) {
-                    $vente->ajouterPaiement($mode, $montant, $reference, $remis);
-                }
-                // FI-04, RG-10 : le montant encaissé (part assuré seulement pour l'AMO) entre en recette.
-                $this->recettes->enregistrerVente($vente);
-                // AM-05 : la part AMO devient une créance « en attente » sur l'organisme.
-                if (TypeVente::Amo === $vente->getType() && $vente->getPartAmo() > 0) {
-                    $this->em->persist(new CreanceAmo($vente));
-                }
+                $this->enregistrerPaiements($vente, $paiements);
                 $this->em->flush();
-
-                if ($controle->remiseHorsPlafond) {
-                    // RE-04 : vendeur, client, montant, % et vente concernée.
-                    $this->audit->journaliser(AuditLogger::VENTE_REMISE_HORS_PLAFOND, $pharmacie, $vente, null, [
-                        'vente' => $numero,
-                        'vendeur' => $vendeur->getNom(),
-                        'client' => $vente->getClient()?->getNom(),
-                        'remise' => $totaux->remiseTotale(),
-                        'taux' => self::pourcentage($totaux->tauxRemiseMaximal),
-                        'plafond' => $this->parametres->pour($pharmacie)->getPlafondRemise(),
-                        'autorise_par' => $autorisePar?->getNom(),
-                    ]);
-                }
-                if ([] !== $controle->sansOrdonnance) {
-                    $this->audit->journaliser(AuditLogger::VENTE_SANS_ORDONNANCE, $pharmacie, $vente, null, [
-                        'vente' => $numero,
-                        'vendeur' => $vendeur->getNom(),
-                        'produits' => $controle->sansOrdonnance,
-                        'autorise_par' => $autorisePar?->getNom(),
-                    ]);
-                }
+                $this->journaliserControles($vente, $vendeur, $pharmacie, $controle, $totaux, $autorisePar);
                 $this->em->flush();
             });
         } catch (StockException $e) {
@@ -406,21 +348,85 @@ class VenteService
     }
 
     /**
-     * Annule une vente le jour même, avant la clôture de sa session de caisse (VE-09, RG-12) : les produits
-     * retournent dans leurs lots d'origine, la vente reste numérotée avec le statut « annulée ».
+     * Le vendeur valide la vente sans l'encaisser et l'envoie à la caisse : mêmes contrôles et autorisations
+     * qu'à l'encaissement, numéro, sortie FEFO du stock et montants figés. Le caissier n'a plus qu'à encaisser.
+     *
+     * @throws VenteException
+     */
+    public function envoyerEnCaisse(Vente $vente, Utilisateur $vendeur, ?string $codePin): void
+    {
+        $this->exigerModifiable($vente);
+        $pharmacie = $this->tenantContext->exigerPharmacie();
+        [$controle, $autorisePar] = $this->autoriser($vente, $vendeur, $pharmacie, $codePin);
+        $this->verifierStock($vente);
+
+        try {
+            $this->stock->transaction(function () use ($vente, $vendeur, $pharmacie, $autorisePar, $controle): void {
+                $totaux = $vente->calculer();
+                $numero = $this->numeroteur->suivant('V', $pharmacie);
+                $this->preleverStock($vente, $numero);
+                $vente->setVendeur($vendeur);
+                $vente->envoyerEnCaisse($numero, $this->horloge->now(), $autorisePar);
+                $this->em->flush();
+                $this->journaliserControles($vente, $vendeur, $pharmacie, $controle, $totaux, $autorisePar);
+                $this->em->flush();
+            });
+        } catch (StockException $e) {
+            throw new VenteException($e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Encaissement par le caissier, dans sa session, d'une vente envoyée à la caisse : seuls les paiements
+     * sont saisis, le reste a été contrôlé et figé par le vendeur.
+     *
+     * @param array<array-key, mixed> $saisie
+     *
+     * @throws VenteException
+     */
+    public function encaisserEnCaisse(Vente $vente, Utilisateur $caissier, SessionCaisse $session, array $saisie): void
+    {
+        if (!$vente->estAEncaisser()) {
+            throw new VenteException(\sprintf('La vente %s n\'est plus à encaisser.', $vente->getNumero()));
+        }
+        $this->exigerSessionDe($session, $caissier);
+        $paiements = $this->analyserPaiements($saisie, $vente->getMontantEncaisse());
+
+        $this->stock->transaction(function () use ($vente, $session, $paiements): void {
+            // Deux caissiers ne peuvent pas encaisser la même vente : seul le premier change son statut.
+            $pris = $this->em->createQueryBuilder()
+                ->update(Vente::class, 'v')
+                ->set('v.statut', ':encaissee')->setParameter('encaissee', StatutVente::Validee)
+                ->andWhere('v.id = :id')->setParameter('id', $vente->getId())
+                ->andWhere('v.statut = :statut')->setParameter('statut', StatutVente::AEncaisser)
+                ->getQuery()->execute();
+            if (1 !== $pris) {
+                throw new VenteException(\sprintf('La vente %s vient d\'être encaissée ou annulée.', $vente->getNumero()));
+            }
+            $vente->encaisserEnCaisse($session, $this->horloge->now());
+            $this->enregistrerPaiements($vente, $paiements);
+            $this->em->flush();
+        });
+    }
+
+    /**
+     * Annule une vente le jour même, avant la clôture de sa session de caisse (VE-09, RG-12), ou une vente
+     * envoyée à la caisse que le client n'a pas payée : les produits retournent dans leurs lots d'origine,
+     * la vente reste numérotée avec le statut « annulée ».
      *
      * @throws VenteException
      */
     public function annuler(Vente $vente, string $motif): void
     {
-        if (!$vente->estValidee()) {
+        if (!$vente->estValidee() && !$vente->estAEncaisser()) {
             throw new VenteException('Seule une vente validée peut être annulée.');
         }
         $motif = trim($motif);
         if ('' === $motif) {
             throw new VenteException('Le motif de l\'annulation est obligatoire.');
         }
-        if (!($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d')) {
+        // Une vente envoyée à la caisse et jamais payée s'annule tant qu'elle attend : rien n'a été encaissé.
+        if ($vente->estValidee() && !($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d')) {
             throw new VenteException('Une vente ne s\'annule que le jour même, avant la clôture de sa session de caisse. Au-delà, il faut établir un avoir.');
         }
         $creance = $this->creances->pourVente($vente);
@@ -452,6 +458,113 @@ class VenteService
     }
 
     // --- Outils ---------------------------------------------------------------------------------
+
+    /**
+     * Contrôles avant validation et autorisation du propriétaire par code PIN si besoin. Le taux AMO
+     * est celui du jour de la validation (RG-06).
+     *
+     * @return array{ControleVente, ?Utilisateur} contrôle et propriétaire qui a autorisé
+     *
+     * @throws VenteException
+     */
+    private function autoriser(Vente $vente, Utilisateur $vendeur, Pharmacie $pharmacie, ?string $codePin): array
+    {
+        $this->actualiserAmo($vente);
+        $controle = $this->controler($vente, $vendeur, $pharmacie);
+        if ($controle->estBloquee()) {
+            throw new VenteException($controle->blocages[0]);
+        }
+
+        $autorisePar = null;
+        if ($controle->exigeCodePin()) {
+            try {
+                $autorisePar = $this->codePin->autorisationProprietaire($pharmacie, $codePin);
+            } catch (CodePinException $e) {
+                throw new VenteException($e->getMessage(), 0, $e);
+            }
+        } elseif ($controle->remiseHorsPlafond || [] !== $controle->sansOrdonnance) {
+            $autorisePar = $vendeur; // Le propriétaire lui-même.
+        }
+
+        return [$controle, $autorisePar];
+    }
+
+    /**
+     * Tout est vérifié avant la première écriture : un refus ne laisse aucun lot entamé.
+     *
+     * @throws VenteException
+     */
+    private function verifierStock(Vente $vente): void
+    {
+        try {
+            foreach ($vente->getLignes() as $ligne) {
+                $this->stock->verifierDisponible($ligne->getProduit(), $ligne->getQuantite());
+            }
+        } catch (StockException $e) {
+            throw new VenteException($e->getMessage(), 0, $e);
+        }
+    }
+
+    private function preleverStock(Vente $vente, string $numero): void
+    {
+        foreach ($vente->getLignes() as $ligne) {
+            foreach ($this->stock->prelever($ligne->getProduit(), $ligne->getQuantite(), TypeMouvement::Vente, $numero) as $prelevement) {
+                $ligne->ajouterLot($prelevement->lot, $prelevement->quantite);
+            }
+        }
+    }
+
+    /**
+     * Paiements de la vente, recette (FI-04, RG-10 : part assuré seulement pour l'AMO) et créance AMO (AM-05).
+     *
+     * @param list<array{ModePaiement, int, ?string, ?int}> $paiements
+     */
+    private function enregistrerPaiements(Vente $vente, array $paiements): void
+    {
+        foreach ($paiements as [$mode, $montant, $reference, $remis]) {
+            $vente->ajouterPaiement($mode, $montant, $reference, $remis);
+        }
+        $this->recettes->enregistrerVente($vente);
+        // AM-05 : la part AMO devient une créance « en attente » sur l'organisme.
+        if (TypeVente::Amo === $vente->getType() && $vente->getPartAmo() > 0) {
+            $this->em->persist(new CreanceAmo($vente));
+        }
+    }
+
+    private function journaliserControles(Vente $vente, Utilisateur $vendeur, Pharmacie $pharmacie, ControleVente $controle, TotauxVente $totaux, ?Utilisateur $autorisePar): void
+    {
+        $numero = $vente->getNumero();
+        if ($controle->remiseHorsPlafond) {
+            // RE-04 : vendeur, client, montant, % et vente concernée.
+            $this->audit->journaliser(AuditLogger::VENTE_REMISE_HORS_PLAFOND, $pharmacie, $vente, null, [
+                'vente' => $numero,
+                'vendeur' => $vendeur->getNom(),
+                'client' => $vente->getClient()?->getNom(),
+                'remise' => $totaux->remiseTotale(),
+                'taux' => self::pourcentage($totaux->tauxRemiseMaximal),
+                'plafond' => $this->parametres->pour($pharmacie)->getPlafondRemise(),
+                'autorise_par' => $autorisePar?->getNom(),
+            ]);
+        }
+        if ([] !== $controle->sansOrdonnance) {
+            $this->audit->journaliser(AuditLogger::VENTE_SANS_ORDONNANCE, $pharmacie, $vente, null, [
+                'vente' => $numero,
+                'vendeur' => $vendeur->getNom(),
+                'produits' => $controle->sansOrdonnance,
+                'autorise_par' => $autorisePar?->getNom(),
+            ]);
+        }
+    }
+
+    /**
+     * @throws VenteException
+     */
+    private function exigerSessionDe(SessionCaisse $session, Utilisateur $utilisateur): void
+    {
+        if (!$session->estOuverte() || $session->getUtilisateur()->getId() !== $utilisateur->getId()) {
+            throw new VenteException('Ouvrez votre session de caisse avant d\'encaisser.');
+        }
+    }
 
     /**
      * @param array<array-key, mixed> $saisie

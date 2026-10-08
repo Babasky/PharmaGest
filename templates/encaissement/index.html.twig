@@ -1,0 +1,45 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Encaissement{% endblock %}
+
+{% block page_actions %}
+    <span class="align-self-center small text-body-secondary">
+        <i class="bi bi-safe"></i> Session {{ session.numero }} · {{ app.user.nom }} · ouverte à {{ session.ouverteLe|date('H:i') }}
+    </span>
+    <a class="btn btn-outline-secondary" href="{{ path('app_encaissement_index') }}"><i class="bi bi-arrow-clockwise"></i> Actualiser</a>
+    <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer ma caisse</a>
+{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" id="file-encaissement">
+        <div class="card-header bg-body fw-semibold"><i class="bi bi-hourglass-split"></i> Ventes à encaisser{% if ventes is not empty %} · {{ ventes|length }}{% endif %}</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small">
+                    <tr>
+                        <th class="ps-3">N°</th>
+                        <th>Envoyée à</th>
+                        <th>Client</th>
+                        <th class="d-none d-md-table-cell">Vendeur</th>
+                        <th class="text-end">À payer</th>
+                        <th class="pe-3"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vente in ventes %}
+                        <tr>
+                            <td class="ps-3 fw-semibold font-monospace">{{ vente.numero }}</td>
+                            <td class="small text-nowrap">{{ vente.valideeLe|date('H:i') }}{{ vente.valideeLe|date('Y-m-d') != 'now'|date('Y-m-d') ? ' (' ~ vente.valideeLe|date('d/m') ~ ')' }}</td>
+                            <td>{{ vente.client ? vente.client.nom : 'Client de passage' }}{% if vente.type.value == 'amo' %} <span class="badge text-bg-info">AMO</span>{% endif %}</td>
+                            <td class="d-none d-md-table-cell small">{{ vente.vendeur.nom }}</td>
+                            <td class="montant fw-semibold">{{ vente.montantEncaisse|fcfa }}</td>
+                            <td class="pe-3 text-end"><a class="btn btn-sm btn-success" href="{{ path('app_encaissement_voir', {id: vente.id}) }}"><i class="bi bi-cash-coin"></i> Encaisser {{ vente.numero }}</a></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucune vente à encaisser. Les ventes que les vendeurs envoient à la caisse apparaissent ici.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

@@ -12,7 +12,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Gestion de l'équipe d'une pharmacie par son propriétaire (PH-03) : adjoints et vendeurs,
+ * Gestion de l'équipe d'une pharmacie par son propriétaire (PH-03) : adjoints, vendeurs et caissiers,
  * dans la limite d'utilisateurs de l'offre.
  */
 class GestionEquipe
@@ -21,6 +21,7 @@ class GestionEquipe
     public const ROLES_ATTRIBUABLES = [
         'Pharmacien adjoint' => Utilisateur::ROLE_ADJOINT,
         'Vendeur' => Utilisateur::ROLE_VENDEUR,
+        'Caissier' => Utilisateur::ROLE_CAISSIER,
     ];
 
     public function __construct(

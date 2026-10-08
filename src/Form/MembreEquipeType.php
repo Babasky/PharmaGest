@@ -23,8 +23,20 @@ final class MembreEquipeType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom', TextType::class, ['label' => 'Nom complet'])
-            ->add('email', EmailType::class, ['label' => 'Email', 'help' => 'Sert d\'identifiant de connexion.'])
+            ->add('nom', TextType::class, [
+                'label' => 'Prénom et nom',
+                'attr' => [
+                    'placeholder' => 'Entrez le prénom et le nom du membre',
+                ],
+            ]
+            )
+            ->add('email', EmailType::class, [
+                'label' => 'Email',
+                'help' => "Sert d'identifiant de connexion.",
+                'attr' => [
+                    'placeholder' => "Entrez l'adresse email du membre",
+                ],
+            ])
             ->add('role', ChoiceType::class, [
                 'label' => 'Rôle',
                 'choices' => GestionEquipe::ROLES_ATTRIBUABLES,
@@ -40,7 +52,10 @@ final class MembreEquipeType extends AbstractType
                 'help' => 'Laissez vide pour envoyer un lien d\'activation par email. Sinon, communiquez ce mot de passe à la personne.',
                 'mapped' => false,
                 'required' => false,
-                'attr' => ['autocomplete' => 'new-password'],
+                'attr' => [
+                    'autocomplete' => 'new-password',
+                    'placeholder' => 'Entrez le mot de passe',
+                ],
                 'constraints' => [new Assert\Length(min: NouveauMotDePasseType::LONGUEUR_MIN, minMessage: 'Le mot de passe doit contenir au moins {{ limit }} caractères.')],
             ]);
         }

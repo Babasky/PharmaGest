@@ -3,12 +3,14 @@ security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
-    # Propriétaire ⊃ adjoint ⊃ vendeur (matrice des droits § 2).
+    # Propriétaire ⊃ adjoint ⊃ vendeur ⊃ caissier (matrice des droits § 2) : le vendeur garde le droit
+    # d'encaisser ; le caissier ne fait qu'encaisser les ventes que les vendeurs lui envoient.
     # Le super admin est volontairement isolé : il n'hérite d'aucun rôle d'officine.
     role_hierarchy:
         ROLE_PROPRIETAIRE: [ROLE_ADJOINT]
         ROLE_ADJOINT: [ROLE_VENDEUR]
-        ROLE_VENDEUR: [ROLE_USER]
+        ROLE_VENDEUR: [ROLE_CAISSIER]
+        ROLE_CAISSIER: [ROLE_USER]
         ROLE_SUPER_ADMIN: [ROLE_USER]
 
     providers:

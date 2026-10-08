@@ -76,6 +76,7 @@ final class AppStory extends Story
             ['f.keita@fleuve.ml', 'Fatoumata Keïta', Utilisateur::ROLE_ADJOINT],
             ['m.coulibaly@fleuve.ml', 'Moussa Coulibaly', Utilisateur::ROLE_VENDEUR],
             ['s.diarra@fleuve.ml', 'Seydou Diarra', Utilisateur::ROLE_VENDEUR],
+            ['k.sangare@fleuve.ml', 'Kadiatou Sangaré', Utilisateur::ROLE_CAISSIER],
         ]);
         $this->abonnements->enregistrerPaiement($fleuve, $fleuve->getOffre(), 180000, MoyenPaiement::OrangeMoney, 'OM-2026-55871', new \DateTimeImmutable('today'), null);
         // Les actions de la démo sont faites au nom de la titulaire : le journal d'audit les lui attribue.
@@ -184,13 +185,15 @@ final class AppStory extends Story
             ['Insuline Actrapid', 'Insuline humaine', '100 UI/ml', 'Solution injectable', 'Flacon de 10 ml', '3400930000097', 'Gastro-entérologie', 'F1', $laborex, 7800, 9500, true, true],
             ['Crème solaire SPF 50', null, '50 ml', 'Crème', 'Tube', '3400930000103', 'Parapharmacie', 'R1', $laborex, 4200, 5500, false, false],
         ];
+        // Prix de vente fixés par l'AMO, différents du prix de la pharmacie : le taux AMO s'applique sur ces prix.
+        $prixAmo = ['Doliprane' => 1350, 'Amoxicilline' => 2100, 'Coartem' => 3500];
         $catalogue = [];
         foreach ($produits as [$nom, $dci, $dosage, $nomForme, $conditionnement, $codeBarres, $categorie, $etagere, $fournisseur, $achat, $vente, $ordonnance, $amo]) {
             $catalogue[$nom] = ProduitFactory::createOne([
                 'pharmacie' => $pharmacie, 'nomCommercial' => $nom, 'dci' => $dci, 'dosage' => $dosage, 'forme' => $forme($nomForme),
                 'conditionnement' => $conditionnement, 'codeBarres' => $codeBarres, 'categorie' => $categories[$categorie], 'etagere' => $etageres[$etagere],
                 'fournisseurHabituel' => $fournisseur, 'prixAchat' => $achat, 'prixVente' => $vente, 'seuilAlerte' => 10, 'stockMax' => 60,
-                'ordonnanceObligatoire' => $ordonnance, 'remboursableAmo' => $amo, 'tauxTva' => 'Parapharmacie' === $categorie ? 18 : 0,
+                'ordonnanceObligatoire' => $ordonnance, 'remboursableAmo' => $amo, 'prixVenteAmo' => $prixAmo[$nom] ?? null, 'tauxTva' => 'Parapharmacie' === $categorie ? 18 : 0,
             ]);
         }
 
@@ -213,6 +216,12 @@ final class AppStory extends Story
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Mariam Diallo', 'telephone' => '+22376554433', 'privilegie' => true, 'organismeAmo' => $inps, 'numeroAssure' => 'INPS-0045871']);
         $cmss = \Zenstruck\Foundry\Persistence\repository(\App\Entity\OrganismeAmo::class)->findOneBy(['code' => 'CMSS']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Oumar Sidibé', 'telephone' => '+22365443322', 'organismeAmo' => $cmss, 'numeroAssure' => 'CMSS-1187-22']);
+        // Autre assurance : une ONG inscrit ses employés auprès d'une mutuelle qui prend en charge 80 % du prix de la pharmacie.
+        $mutuelle = (new \App\Entity\OrganismeAmo())->setNom('Mutuelle Santé Sahel (démo)')->setCode('MSS')->setType(\App\Enum\TypeOrganisme::Assurance);
+        $this->em->persist($mutuelle);
+        $this->em->persist((new \App\Entity\TauxAmo())->setOrganisme($mutuelle)->setTaux(80)->setDateEffet(new \DateTimeImmutable('first day of january this year'))->setPharmacie($pharmacie));
+        $this->em->flush();
+        ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Fatoumata Keïta', 'telephone' => '+22370334455', 'organismeAmo' => $mutuelle, 'numeroAssure' => 'MSS-2041', 'entreprise' => 'ONG Santé pour tous']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Sékou Traoré', 'telephone' => '+22366112233']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Aïssata Cissé', 'telephone' => '+22379887766', 'privilegie' => true]);
 
@@ -229,7 +238,7 @@ final class AppStory extends Story
     private function caisse(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
     {
         $equipe = [];
-        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590'] as $email => $pin) {
+        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590', 'k.sangare@fleuve.ml' => '4826'] as $email => $pin) {
             $utilisateur = \Zenstruck\Foundry\Persistence\repository(Utilisateur::class)->findOneBy(['email' => $email]);
             \assert($utilisateur instanceof Utilisateur);
             $this->codePin->definir($utilisateur, $pin);
@@ -281,6 +290,13 @@ final class AppStory extends Story
             }
         }
         $this->caisse->cloturer($session, $comptage, null);
+
+        // Rôle caissier : Seydou a validé une vente et l'a envoyée à la caisse, Kadiatou l'encaissera.
+        $seydou = $equipe['s.diarra@fleuve.ml'];
+        $vente = $this->ventes->panierOuNouveau($seydou);
+        $this->ventes->ajouter($vente, $catalogue['Doliprane']);
+        $this->ventes->ajouter($vente, $catalogue['Efferalgan']);
+        $this->ventes->envoyerEnCaisse($vente, $seydou, null);
 
         $inps = $mariam->getOrganismeAmo();
         \assert($inps instanceof \App\Entity\OrganismeAmo);

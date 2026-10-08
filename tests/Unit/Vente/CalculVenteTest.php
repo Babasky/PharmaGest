@@ -7,6 +7,7 @@ use App\Entity\OrganismeAmo;
 use App\Entity\Produit;
 use App\Entity\Utilisateur;
 use App\Entity\Vente;
+use App\Enum\TypeOrganisme;
 use App\Enum\TypeRemise;
 use App\Enum\TypeVente;
 use PHPUnit\Framework\TestCase;
@@ -119,6 +120,60 @@ final class CalculVenteTest extends TestCase
 
         self::assertSame(0, $ligne->calculerRemise());
         self::assertSame(0, $vente->calculer()->remiseLignes);
+    }
+
+    public function testLeTauxAmoSAppliqueAuPrixDeVenteAmo(): void
+    {
+        $vente = $this->vente();
+        $vente->ajouterLigne($this->produit(2400, remboursable: true)->setPrixVenteAmo(2100), 1);
+        $vente->ajouterLigne($this->produit(2000, remboursable: false)->setPrixVenteAmo(1800), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
+
+        $totaux = $vente->calculer();
+
+        self::assertSame(2100, $totaux->baseAmo, 'Base AMO au prix AMO, lignes remboursables seulement.');
+        self::assertSame(1470, $totaux->partAmo, '2 100 × 70 %.');
+        self::assertSame(2930, $totaux->aEncaisser(), 'L\'assuré paie le prix de la pharmacie moins la part AMO.');
+        self::assertSame(2100, $vente->getBaseAmo());
+    }
+
+    public function testUneAutreAssuranceAppliqueSonTauxAuPrixDeLaPharmacie(): void
+    {
+        $vente = $this->vente();
+        $vente->ajouterLigne($this->produit(2400, remboursable: true)->setPrixVenteAmo(2100), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('MSS')->setType(TypeOrganisme::Assurance), 'MSS-1', 80);
+
+        $totaux = $vente->calculer();
+
+        self::assertSame(2400, $totaux->baseAmo, 'Le prix AMO ne concerne que les organismes AMO.');
+        self::assertSame(1920, $totaux->partAmo);
+        self::assertSame(480, $totaux->aEncaisser());
+    }
+
+    public function testSansPrixAmoLePrixDeLaPharmacieSertDeBase(): void
+    {
+        $vente = $this->vente();
+        $vente->ajouterLigne($this->produit(1000, remboursable: true), 3);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
+
+        self::assertSame(2100, $vente->calculer()->partAmo);
+    }
+
+    public function testLaPartDeLOrganismeNeDepassePasLePrixFacture(): void
+    {
+        $vente = $this->vente();
+        $vente->ajouterLigne($this->produit(1000, remboursable: true)->setPrixVenteAmo(1500), 1);
+        $vente->ajouterLigne($this->produit(500, remboursable: false), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 100);
+
+        $totaux = $vente->calculer();
+
+        self::assertSame(1000, $totaux->partAmo, 'Plafonnée au prix facturé des lignes remboursables.');
+        self::assertSame(500, $totaux->aEncaisser());
     }
 
     private function vente(): Vente

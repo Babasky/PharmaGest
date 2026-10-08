@@ -1,0 +1,77 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Encaisser la vente {{ vente.numero }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_encaissement_index') }}"><i class="bi bi-arrow-left"></i> Ventes à encaisser</a>
+{% endblock %}
+
+{% block content %}
+    {% set amo = vente.type.value == 'amo' %}
+    {% set token = csrf_token('caisse') %}
+    <div class="row g-3" {{ stimulus_controller('caisse') }}>
+        <div class="col-12 col-xl-7">
+            <div class="d-flex flex-wrap gap-3 align-items-center mb-3 small text-body-secondary">
+                <span>{{ vente.type.libelle }}</span>
+                <span>Client : {{ vente.client ? vente.client.nom : 'client de passage' }}</span>
+                <span>Vendeur : {{ vente.vendeur.nom }}, {{ vente.valideeLe|date('H:i') }}</span>
+            </div>
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0" id="lignes">
+                        <thead class="table-light small">
+                            <tr><th class="ps-3">Produit</th><th class="text-end">Qté</th><th class="text-end">Prix</th><th class="text-end pe-3">Montant</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for ligne in vente.lignes %}
+                                <tr>
+                                    <td class="ps-3">{{ ligne.produit.nomCommercial }}</td>
+                                    <td class="text-end">{{ ligne.quantite }}</td>
+                                    <td class="montant">{{ ligne.prixUnitaire|fcfa }}</td>
+                                    <td class="montant pe-3">{{ (ligne.montantBrut - ligne.remise)|fcfa }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if ecriture_autorisee() %}
+                <form method="post" action="{{ path('app_encaissement_annuler', {id: vente.id}) }}" class="card shadow-sm border-danger mt-3" id="annulation">
+                    <input type="hidden" name="_token" value="{{ token }}">
+                    <div class="card-body">
+                        <label class="form-label small" for="motif">Le client ne paie pas ? Motif de l'annulation</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" id="motif" name="motif" maxlength="255" required>
+                            <button class="btn btn-outline-danger" type="submit" data-turbo-confirm="Annuler la vente {{ vente.numero }} ? Les produits reviendront en stock.">Annuler la vente</button>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-xl-5">
+            <div class="card shadow-sm border-success" id="encaissement">
+                <div class="card-body">
+                    <dl class="row mb-2" id="totaux">
+                        <dt class="col-7 fw-normal">Total</dt><dd class="col-5 montant mb-1">{{ vente.totalBrut|fcfa }}</dd>
+                        {% if amo %}
+                            <dt class="col-7 fw-normal">Part AMO ({{ vente.organismeAmo.code }}, {{ vente.tauxAmo }} %)</dt><dd class="col-5 montant mb-1">− {{ vente.partAmo|fcfa }}</dd>
+                        {% endif %}
+                        {% if vente.remise > 0 %}
+                            <dt class="col-7 fw-normal text-success">Remise</dt><dd class="col-5 montant text-success mb-1">− {{ vente.remise|fcfa }}</dd>
+                        {% endif %}
+                        <dt class="col-7 fs-5">À payer</dt><dd class="col-5 montant fs-4 fw-bold mb-0" data-caisse-target="du" data-montant="{{ vente.montantEncaisse }}">{{ vente.montantEncaisse|fcfa }}</dd>
+                    </dl>
+                    {% if ecriture_autorisee() %}
+                        <form method="post" action="{{ path('app_encaissement_encaisser', {id: vente.id}) }}">
+                            <input type="hidden" name="_token" value="{{ token }}">
+                            {% include 'caisse/_paiements.html.twig' with {du: vente.montantEncaisse} %}
+                            <button class="btn btn-success btn-lg w-100" type="submit"><i class="bi bi-cash-coin"></i> Encaisser</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -21,7 +21,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * Chacun voit et clôture sa session ; le propriétaire et l'adjoint voient et peuvent clôturer toutes les sessions.
  */
 #[Route('/caisse/sessions')]
-#[IsGranted(Utilisateur::ROLE_VENDEUR)]
+#[IsGranted(Utilisateur::ROLE_CAISSIER)]
 final class SessionCaisseController extends AbstractAppController
 {
     public function __construct(private readonly GestionCaisse $caisse)
@@ -47,7 +47,7 @@ final class SessionCaisseController extends AbstractAppController
         if (null === $session) {
             $this->addFlash('info', 'Votre caisse n\'est pas ouverte.');
 
-            return $this->redirectToRoute('app_caisse');
+            return $this->redirectToRoute($this->isGranted(Utilisateur::ROLE_VENDEUR) ? 'app_caisse' : 'app_encaissement_index');
         }
 
         return $this->redirectToRoute('app_session_caisse_voir', ['id' => $session->getId()]);

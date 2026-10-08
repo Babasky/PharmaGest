@@ -18,8 +18,20 @@ final class EtagereType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('code', TextType::class, ['label' => 'Code', 'attr' => ['placeholder' => 'E1-R3']])
-            ->add('libelle', TextType::class, ['label' => 'Libellé', 'attr' => ['placeholder' => 'Antalgiques, rangée 3']])
+            ->add('code', TextType::class, [
+                'label' => 'Code',
+                'attr' => [
+                    'placeholder' => "Entrez le code de l'étagère(E1-R1)",
+                ],
+            ]
+            )
+            ->add('libelle', TextType::class, [
+                'label' => 'Libellé',
+                'attr' => [
+                    'placeholder' => 'Antalgiques, Antibiotique...',
+                ],
+            ]
+            )
             ->add('zone', EnumType::class, [
                 'label' => 'Zone',
                 'class' => ZoneEtagere::class,

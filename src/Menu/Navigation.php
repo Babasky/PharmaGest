@@ -28,8 +28,9 @@ final class Navigation
             'icone' => 'shop',
             'elements' => [
                 ['libelle' => 'Caisse', 'icone' => 'cart-plus', 'route' => 'app_caisse', 'role' => 'ROLE_VENDEUR'],
-                ['libelle' => 'Ventes', 'icone' => 'receipt', 'route' => 'app_vente_index', 'role' => 'ROLE_VENDEUR'],
-                ['libelle' => 'Sessions de caisse', 'icone' => 'safe', 'route' => 'app_session_caisse_index', 'role' => 'ROLE_VENDEUR'],
+                ['libelle' => 'Encaissement', 'icone' => 'cash-stack', 'route' => 'app_encaissement_index', 'role' => 'ROLE_CAISSIER'],
+                ['libelle' => 'Ventes', 'icone' => 'receipt', 'route' => 'app_vente_index', 'role' => 'ROLE_CAISSIER'],
+                ['libelle' => 'Sessions de caisse', 'icone' => 'safe', 'route' => 'app_session_caisse_index', 'role' => 'ROLE_CAISSIER'],
                 ['libelle' => 'Clients', 'icone' => 'people', 'route' => 'app_client_index', 'role' => 'ROLE_VENDEUR'],
             ],
         ],
@@ -50,7 +51,7 @@ final class Navigation
             'titre' => 'Gestion',
             'icone' => 'briefcase',
             'elements' => [
-                ['libelle' => 'AMO', 'icone' => 'shield-plus', 'route' => 'app_amo_index', 'role' => 'ROLE_ADJOINT'],
+                ['libelle' => 'AMO et assurances', 'icone' => 'shield-plus', 'route' => 'app_amo_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Dépenses', 'icone' => 'wallet2', 'route' => 'app_depense_index', 'role' => 'ROLE_PROPRIETAIRE'],
                 ['libelle' => 'Recettes', 'icone' => 'piggy-bank', 'route' => 'app_recette_index', 'role' => 'ROLE_PROPRIETAIRE'],
                 ['libelle' => 'Rapports', 'icone' => 'bar-chart-line', 'route' => 'app_rapport_index', 'role' => 'ROLE_ADJOINT'],
