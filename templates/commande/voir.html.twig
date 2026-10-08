@@ -6,6 +6,9 @@
     <a class="btn btn-outline-secondary" href="{{ path('app_commande_index') }}"><i class="bi bi-arrow-left"></i> Commandes</a>
     {% if is_granted('ROLE_ADJOINT') %}
         <a class="btn btn-outline-success" href="{{ path('app_commande_excel', {id: commande.id}) }}"><i class="bi bi-file-earmark-excel"></i> Bon de commande Excel</a>
+        {% if not commande.estBrouillon %}
+            <a class="btn btn-outline-success" href="{{ path('app_commande_pdf', {id: commande.id}) }}" target="_blank" id="bon-commande-pdf"><i class="bi bi-file-earmark-pdf"></i> Bon de commande PDF</a>
+        {% endif %}
         {% if commande.estReceptionnable and ecriture_autorisee() %}
             <a class="btn btn-success" href="{{ path('app_commande_reception', {id: commande.id}) }}"><i class="bi bi-box-arrow-in-down"></i> Réceptionner</a>
         {% endif %}
@@ -40,7 +43,7 @@
         <div class="card shadow-sm mb-3">
             <div class="card-body">
                 <form method="get" class="d-flex gap-2" id="recherche-produit">
-                    <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Ajouter un produit : nom, DCI ou code-barres" aria-label="Rechercher un produit" autofocus>
+                    <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Ajouter un produit : nom ou DCI" aria-label="Rechercher un produit" autofocus>
                     <button class="btn btn-outline-success" type="submit"><i class="bi bi-search"></i></button>
                 </form>
                 {% if q %}
@@ -190,7 +193,7 @@
                                     <td class="ps-3 small">{% if loop.first %}{{ reception.date|date('d/m/Y') }}{{ reception.numeroBonLivraison ? ' · BL ' ~ reception.numeroBonLivraison }}{% if reception.creePar %}<div class="text-body-secondary">{{ reception.creePar.nom }}</div>{% endif %}{% endif %}</td>
                                     <td>{{ l.ligneCommande.produit.nomCommercial }}</td>
                                     <td class="font-monospace small">{{ l.lot.numero }}</td>
-                                    <td class="small">{{ l.lot.datePeremption|date('d/m/Y') }}</td>
+                                    <td class="small">{{ l.lot.datePeremption ? l.lot.datePeremption|date('d/m/Y') : '—' }}</td>
                                     <td class="text-end">{{ l.quantite }}</td>
                                     {% if responsable %}<td class="montant pe-3">{{ l.prixAchat|fcfa }}</td>{% endif %}
                                 </tr>

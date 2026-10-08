@@ -31,7 +31,7 @@
                                 <td class="ps-3 small">{{ lot.produit.etagere ? lot.produit.etagere.code : '—' }}</td>
                                 <td>{{ lot.produit.nomCommercial }}<div class="small text-body-secondary">{{ lot.produit.dosage }}</div></td>
                                 <td class="font-monospace small">{{ lot.numero }}</td>
-                                <td class="small text-nowrap {{ lot.estPerimeLe(aujourdhui) ? 'text-danger' }}">{{ lot.datePeremption|date('d/m/Y') }}</td>
+                                <td class="small text-nowrap {{ lot.estPerimeLe(aujourdhui) ? 'text-danger' }}">{{ lot.datePeremption ? lot.datePeremption|date('d/m/Y') : 'Non renseignée' }}</td>
                                 <td class="text-end">{{ ligne.quantiteTheorique }}</td>
                                 <td class="text-end">
                                     {% if modifiable %}

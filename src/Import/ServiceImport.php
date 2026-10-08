@@ -184,7 +184,7 @@ class ServiceImport
         return match (true) {
             null === $valeur => '',
             \is_bool($valeur) => $valeur ? 'oui' : 'non',
-            // Un code-barres saisi comme nombre ne doit pas devenir « 3.4E+12 ».
+            // Un nombre entier saisi dans une cellule ne doit pas devenir « 3.4E+12 ».
             \is_float($valeur) && floor($valeur) === $valeur => number_format($valeur, 0, '', ''),
             default => trim((string) $valeur),
         };

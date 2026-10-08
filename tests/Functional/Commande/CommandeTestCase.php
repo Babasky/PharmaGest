@@ -38,7 +38,7 @@ abstract class CommandeTestCase extends AppWebTestCase
         $this->ppm = FournisseurFactory::createOne(['pharmacie' => $p, 'nom' => 'PPM', 'contact' => 'Service commandes', 'email' => 'commandes@ppm.example']);
         $this->laborex = FournisseurFactory::createOne(['pharmacie' => $p, 'nom' => 'Laborex Mali', 'email' => null]);
 
-        $this->doliprane = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Doliprane', 'dci' => 'Paracétamol', 'dosage' => '500 mg', 'codeBarres' => '3400930000011', 'conditionnement' => 'Boîte de 16', 'prixAchat' => 1150, 'seuilAlerte' => 10, 'stockMax' => 60, 'fournisseurHabituel' => $this->ppm]);
+        $this->doliprane = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Doliprane', 'dci' => 'Paracétamol', 'dosage' => '500 mg', 'conditionnement' => 'Boîte de 16', 'prixAchat' => 1150, 'seuilAlerte' => 10, 'stockMax' => 60, 'fournisseurHabituel' => $this->ppm]);
         $this->coartem = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Coartem', 'prixAchat' => 2900, 'seuilAlerte' => 5, 'stockMax' => null, 'fournisseurHabituel' => $this->ppm]);
         $this->ibuprofene = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Ibuprofène', 'prixAchat' => 1400, 'seuilAlerte' => 10, 'stockMax' => 60, 'fournisseurHabituel' => $this->ppm]);
         $this->smecta = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Smecta', 'prixAchat' => 2300, 'seuilAlerte' => 10, 'stockMax' => 30, 'fournisseurHabituel' => $this->laborex]);

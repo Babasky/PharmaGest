@@ -73,7 +73,7 @@ class ExportCommandeExcel
         // Lignes de la commande.
         $ligne += 2;
         $debutTableau = $ligne;
-        foreach (['N°', 'Désignation', 'Code-barres', 'Conditionnement', 'Quantité', 'Prix unitaire (FCFA)', 'Montant (FCFA)'] as $i => $entete) {
+        foreach (['N°', 'Désignation', 'DCI', 'Conditionnement', 'Quantité', 'Prix unitaire (FCFA)', 'Montant (FCFA)'] as $i => $entete) {
             $feuille->setCellValue([$i + 1, $ligne], $entete);
         }
         $entetes = "A{$ligne}:G{$ligne}";
@@ -86,8 +86,7 @@ class ExportCommandeExcel
             $produit = $ligneCommande->getProduit();
             $feuille->setCellValue([1, $ligne], $n + 1);
             $feuille->setCellValueExplicit([2, $ligne], $produit->getDesignation(), DataType::TYPE_STRING);
-            // Code-barres en texte : pas de notation scientifique ni de zéro initial perdu.
-            $feuille->setCellValueExplicit([3, $ligne], (string) $produit->getCodeBarres(), DataType::TYPE_STRING);
+            $feuille->setCellValueExplicit([3, $ligne], (string) $produit->getDci(), DataType::TYPE_STRING);
             $feuille->setCellValueExplicit([4, $ligne], (string) $produit->getConditionnement(), DataType::TYPE_STRING);
             $feuille->setCellValue([5, $ligne], $ligneCommande->getQuantite());
             $feuille->setCellValue([6, $ligne], $ligneCommande->getPrixEstime());

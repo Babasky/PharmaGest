@@ -13,6 +13,7 @@ use App\Entity\LigneCommande;
 use App\Entity\Produit;
 use App\Entity\Utilisateur;
 use App\Enum\StatutCommande;
+use App\Pdf\CommandePdf;
 use App\Repository\CommandeRepository;
 use App\Repository\FournisseurRepository;
 use App\Repository\LotRepository;
@@ -308,6 +309,19 @@ final class CommandeController extends AbstractAppController
         $this->exigerMemePharmacie($commande);
 
         return $export->reponse($commande);
+    }
+
+    /** Bon de commande PDF, dès que la commande est passée (un brouillon n'a pas de numéro). */
+    #[Route('/{id}/pdf', name: 'app_commande_pdf', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[IsGranted(Utilisateur::ROLE_ADJOINT)]
+    public function pdf(Commande $commande, CommandePdf $pdf): Response
+    {
+        $this->exigerMemePharmacie($commande);
+        if ($commande->estBrouillon()) {
+            throw $this->createNotFoundException('Passez la commande pour obtenir son bon de commande PDF.');
+        }
+
+        return $pdf->reponse($commande);
     }
 
     #[Route('/{id}/reception', name: 'app_commande_reception', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]

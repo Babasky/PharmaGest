@@ -8,6 +8,7 @@ use App\Entity\Client;
 use App\Entity\CreanceAmo;
 use App\Entity\LigneVente;
 use App\Entity\Ordonnance;
+use App\Entity\OrganismeAmo;
 use App\Entity\Pharmacie;
 use App\Entity\Produit;
 use App\Entity\SessionCaisse;
@@ -132,13 +133,18 @@ class VenteService
 
     /**
      * Type de vente, client et ordonnance avec sa copie éventuelle (VE-02, AM-01, AM-02).
+     * Le client est facultatif, même pour une vente AMO : l'organisme et le n° d'assuré se saisissent
+     * alors sur la vente. Un client assuré impose son organisme et son n° d'assuré.
      *
      * @param array{numero?: ?string, date?: ?\DateTimeImmutable, prescripteur?: ?string, structure?: ?string} $ordonnance
      *
      * @throws VenteException
      */
-    public function definirVente(Vente $vente, TypeVente $type, ?Client $client, array $ordonnance = [], ?UploadedFile $copie = null): void
+    public function definirVente(Vente $vente, TypeVente $type, ?Client $client, array $ordonnance = [], ?UploadedFile $copie = null, ?OrganismeAmo $organisme = null, ?string $numeroAssure = null): void
     {
+        if (null !== $organisme && !$organisme->isActif()) {
+            throw new VenteException(\sprintf('L\'organisme %s n\'est plus actif.', $organisme->getNom()));
+        }
         $this->exigerModifiable($vente);
         if (null !== $client && !$client->isActif()) {
             throw new VenteException(\sprintf('Le client %s est archivé.', $client->getNom()));
@@ -169,7 +175,7 @@ class VenteService
             }
             $vente->setOrdonnance($fiche);
         }
-        $this->actualiserAmo($vente);
+        $this->actualiserAmo($vente, $organisme, $numeroAssure);
         $this->em->flush();
     }
 
@@ -272,10 +278,10 @@ class VenteService
             $controle->blocages[] = 'Le panier est vide.';
         }
         if ($vente->getType()->avecOrdonnance() && !($vente->getOrdonnance()?->estComplete() ?? false)) {
-            $controle->blocages[] = 'Renseignez la date et le prescripteur de l\'ordonnance.';
+            $controle->blocages[] = 'Renseignez la date de l\'ordonnance.';
         }
-        if (TypeVente::Amo === $vente->getType() && !($vente->getClient()?->isAssureAmo() ?? false)) {
-            $controle->blocages[] = 'Vente AMO / assurance : choisissez un client assuré, avec son n° d\'assuré et son organisme (AM-02).';
+        if (TypeVente::Amo === $vente->getType() && null === $vente->getOrganismeAmo()) {
+            $controle->blocages[] = 'Vente AMO / assurance : choisissez l\'organisme, ou un client assuré (AM-02).';
         }
 
         if (TypeVente::SansOrdonnance === $vente->getType()) {
@@ -469,7 +475,7 @@ class VenteService
      */
     private function autoriser(Vente $vente, Utilisateur $vendeur, Pharmacie $pharmacie, ?string $codePin): array
     {
-        $this->actualiserAmo($vente);
+        $this->actualiserAmo($vente, $vente->getOrganismeAmo(), $vente->getNumeroAssure());
         $controle = $this->controler($vente, $vendeur, $pharmacie);
         if ($controle->estBloquee()) {
             throw new VenteException($controle->blocages[0]);
@@ -624,12 +630,18 @@ class VenteService
     }
 
     /** Organisme, n° d'assuré et taux AMO du jour, repris du client (AM-02, H1). */
-    private function actualiserAmo(Vente $vente): void
+    private function actualiserAmo(Vente $vente, ?OrganismeAmo $organisme, ?string $numeroAssure): void
     {
         $client = $vente->getClient();
-        if (TypeVente::Amo === $vente->getType() && null !== $client && $client->isAssureAmo()) {
+        if (TypeVente::Amo !== $vente->getType()) {
+            $vente->definirAmo(null, null, null);
+        } elseif (null !== $client && $client->isAssureAmo()) {
             $organisme = $client->getOrganismeAmo() ?? throw new \LogicException('Assuré sans organisme.');
             $vente->definirAmo($organisme, $client->getNumeroAssure(), $this->parametres->tauxAmo($organisme));
+        } elseif (null !== $organisme) {
+            // Sans client assuré : organisme et n° d'assuré (facultatif) saisis sur la vente.
+            $numeroAssure = null === $numeroAssure || '' === trim($numeroAssure) ? null : mb_substr(trim($numeroAssure), 0, 40);
+            $vente->definirAmo($organisme, $numeroAssure, $this->parametres->tauxAmo($organisme));
         } else {
             $vente->definirAmo(null, null, null);
         }

@@ -64,7 +64,7 @@
                     <td>{{ loop.index }}</td>
                     <td class="nowrap">{{ creance.dateVente|date('d/m/Y') }}</td>
                     <td class="nowrap">{{ vente.numero }}</td>
-                    <td>{{ vente.client ? vente.client.nom }}<br><span class="petit">n° {{ vente.numeroAssure }}</span></td>
+                    <td>{{ vente.client ? vente.client.nom }}<br><span class="petit">{{ vente.numeroAssure ? 'n° ' ~ vente.numeroAssure }}</span></td>
                     <td>{% if ord %}{{ ord.numero ? 'n° ' ~ ord.numero ~ ', ' }}{{ ord.date ? ord.date|date('d/m/Y') }}<br><span class="petit">{{ ord.prescripteur }}{{ ord.structure ? ' · ' ~ ord.structure }}</span>{% endif %}</td>
                     <td class="droite nowrap">{{ vente.totalBrut|fcfa(false) }}</td>
                     <td class="droite nowrap">{{ vente.baseAmo|fcfa(false) }}<br><span class="petit">{{ vente.tauxAmo }} %</span></td>
@@ -93,7 +93,7 @@
 
     {% for annexe in annexes %}
         <div class="annexe">
-            <p style="text-align: left;"><strong>Annexe {{ annexe.numero }}</strong> · vente {{ annexe.creance.vente.numero }} du {{ annexe.creance.dateVente|date('d/m/Y') }} · {{ annexe.creance.vente.client ? annexe.creance.vente.client.nom }} (n° {{ annexe.creance.vente.numeroAssure }})</p>
+            <p style="text-align: left;"><strong>Annexe {{ annexe.numero }}</strong> · vente {{ annexe.creance.vente.numero }} du {{ annexe.creance.dateVente|date('d/m/Y') }} · {{ annexe.creance.vente.client ? annexe.creance.vente.client.nom }}{{ annexe.creance.vente.numeroAssure ? ' (n° ' ~ annexe.creance.vente.numeroAssure ~ ')' }}</p>
             <img src="{{ annexe.image }}" alt="Ordonnance">
         </div>
     {% endfor %}

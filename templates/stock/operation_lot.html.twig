@@ -7,7 +7,7 @@
         <div class="card-body">
             <dl class="row small mb-3">
                 <dt class="col-5 fw-normal text-body-secondary">Produit</dt><dd class="col-7">{{ lot.produit.nomCommercial }}</dd>
-                <dt class="col-5 fw-normal text-body-secondary">Péremption</dt><dd class="col-7 {{ perime ? 'text-danger fw-semibold' }}">{{ lot.datePeremption|date('d/m/Y') }}{{ perime ? ' (périmé)' }}</dd>
+                <dt class="col-5 fw-normal text-body-secondary">Péremption</dt><dd class="col-7 {{ perime ? 'text-danger fw-semibold' }}">{{ lot.datePeremption ? lot.datePeremption|date('d/m/Y') : 'Non renseignée' }}{{ perime ? ' (périmé)' }}</dd>
                 <dt class="col-5 fw-normal text-body-secondary">Quantité enregistrée</dt><dd class="col-7">{{ lot.quantiteRestante }}</dd>
             </dl>
             <p class="small text-body-secondary">

@@ -104,10 +104,10 @@ class Ordonnance implements TenantAwareInterface
         return $this;
     }
 
-    /** Date et prescripteur sont obligatoires ; numéro et structure facultatifs. */
+    /** Seule la date est obligatoire ; prescripteur, numéro et structure sont facultatifs. */
     public function estComplete(): bool
     {
-        return null !== $this->date && null !== $this->prescripteur;
+        return null !== $this->date;
     }
 
     private static function nettoyer(?string $valeur, int $longueur): ?string

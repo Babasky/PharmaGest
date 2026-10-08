@@ -34,7 +34,7 @@
     {% if vente.statut.value == 'annulee' %}<div class="gras">*** VENTE ANNULÉE ***</div>{% endif %}
     {% if vente.ordonnance %}
         <div class="petit">
-            Ordonnance{{ vente.ordonnance.numero ? ' n° ' ~ vente.ordonnance.numero }} du {{ vente.ordonnance.date|date('d/m/Y') }}, {{ vente.ordonnance.prescripteur }}
+            Ordonnance{{ vente.ordonnance.numero ? ' n° ' ~ vente.ordonnance.numero }} du {{ vente.ordonnance.date|date('d/m/Y') }}{{ vente.ordonnance.prescripteur ? ', ' ~ vente.ordonnance.prescripteur }}
         </div>
     {% endif %}
     {% if vente.type.value == 'amo' %}

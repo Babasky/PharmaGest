@@ -7,7 +7,6 @@ use App\Repository\ProduitRepository;
 use App\Tenant\TenantAwareInterface;
 use App\Tenant\TenantAwareTrait;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -15,10 +14,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Le stock n'est pas stocké ici : il se calcule à partir des lots (Lot 3, RG-03).
  */
 #[ORM\Entity(repositoryClass: ProduitRepository::class)]
-#[ORM\UniqueConstraint(name: 'uniq_produit_code_barres', columns: ['pharmacie_id', 'code_barres'])]
 #[ORM\Index(name: 'idx_produit_nom', columns: ['pharmacie_id', 'nom_commercial'])]
 #[ORM\Index(name: 'idx_produit_dci', columns: ['pharmacie_id', 'dci'])]
-#[UniqueEntity(fields: ['codeBarres'], message: 'Un produit porte déjà ce code-barres.')]
 class Produit implements TenantAwareInterface
 {
     use ArchivableTrait;
@@ -54,11 +51,6 @@ class Produit implements TenantAwareInterface
     #[ORM\Column(length: 100, nullable: true)]
     #[Assert\Length(max: 100)]
     private ?string $conditionnement = null;
-
-    #[ORM\Column(length: 50, nullable: true)]
-    #[Assert\Length(max: 50)]
-    #[Assert\Regex('/^[0-9A-Za-z\-]+$/', message: 'Le code-barres ne contient que des chiffres, des lettres et des tirets.')]
-    private ?string $codeBarres = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -175,18 +167,6 @@ class Produit implements TenantAwareInterface
     public function setConditionnement(?string $conditionnement): static
     {
         $this->conditionnement = self::nettoyer($conditionnement);
-
-        return $this;
-    }
-
-    public function getCodeBarres(): ?string
-    {
-        return $this->codeBarres;
-    }
-
-    public function setCodeBarres(?string $codeBarres): static
-    {
-        $this->codeBarres = null === $codeBarres ? null : self::nettoyer(str_replace(' ', '', $codeBarres));
 
         return $this;
     }

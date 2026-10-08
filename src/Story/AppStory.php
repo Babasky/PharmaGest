@@ -174,24 +174,24 @@ final class AppStory extends Story
         $laborex = FournisseurFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Laborex Mali', 'telephone' => '+22344901010', 'email' => 'bamako@laborex.example', 'delaiLivraison' => 1, 'conditionsPaiement' => '30 jours fin de mois']);
 
         $produits = [
-            ['Doliprane', 'Paracétamol', '500 mg', 'Comprimé', 'Boîte de 16', '3400930000011', 'Antalgiques', 'E1-R1', $ppm, 1150, 1500, false, true],
-            ['Efferalgan', 'Paracétamol', '1 g', 'Comprimé effervescent', 'Boîte de 8', '3400930000028', 'Antalgiques', 'E1-R1', $laborex, 1600, 2100, false, true],
-            ['Ibuprofène Biogaran', 'Ibuprofène', '400 mg', 'Comprimé', 'Boîte de 30', '3400930000035', 'Antalgiques', 'E1-R1', $laborex, 1400, 1850, false, true],
-            ['Amoxicilline', 'Amoxicilline', '500 mg', 'Gélule', 'Boîte de 12', '3400930000042', 'Antibiotiques', 'E1-R2', $ppm, 1800, 2400, true, true],
-            ['Augmentin', 'Amoxicilline + acide clavulanique', '1 g', 'Comprimé', 'Boîte de 8', '3400930000059', 'Antibiotiques', 'E1-R2', $laborex, 5200, 6800, true, true],
-            ['Coartem', 'Artéméther + luméfantrine', '20/120 mg', 'Comprimé', 'Boîte de 24', '3400930000066', 'Antipaludiques', 'E2-R1', $ppm, 2900, 3800, true, true],
-            ['Smecta', 'Diosmectite', '3 g', 'Sachet', 'Boîte de 30', '3400930000073', 'Gastro-entérologie', 'R1', $laborex, 2300, 3000, false, false],
-            ['Oméprazole', 'Oméprazole', '20 mg', 'Gélule', 'Boîte de 14', '3400930000080', 'Gastro-entérologie', 'R1', $ppm, 1700, 2250, true, true],
-            ['Insuline Actrapid', 'Insuline humaine', '100 UI/ml', 'Solution injectable', 'Flacon de 10 ml', '3400930000097', 'Gastro-entérologie', 'F1', $laborex, 7800, 9500, true, true],
-            ['Crème solaire SPF 50', null, '50 ml', 'Crème', 'Tube', '3400930000103', 'Parapharmacie', 'R1', $laborex, 4200, 5500, false, false],
+            ['Doliprane', 'Paracétamol', '500 mg', 'Comprimé', 'Boîte de 16', 'Antalgiques', 'E1-R1', $ppm, 1150, 1500, false, true],
+            ['Efferalgan', 'Paracétamol', '1 g', 'Comprimé effervescent', 'Boîte de 8', 'Antalgiques', 'E1-R1', $laborex, 1600, 2100, false, true],
+            ['Ibuprofène Biogaran', 'Ibuprofène', '400 mg', 'Comprimé', 'Boîte de 30', 'Antalgiques', 'E1-R1', $laborex, 1400, 1850, false, true],
+            ['Amoxicilline', 'Amoxicilline', '500 mg', 'Gélule', 'Boîte de 12', 'Antibiotiques', 'E1-R2', $ppm, 1800, 2400, true, true],
+            ['Augmentin', 'Amoxicilline + acide clavulanique', '1 g', 'Comprimé', 'Boîte de 8', 'Antibiotiques', 'E1-R2', $laborex, 5200, 6800, true, true],
+            ['Coartem', 'Artéméther + luméfantrine', '20/120 mg', 'Comprimé', 'Boîte de 24', 'Antipaludiques', 'E2-R1', $ppm, 2900, 3800, true, true],
+            ['Smecta', 'Diosmectite', '3 g', 'Sachet', 'Boîte de 30', 'Gastro-entérologie', 'R1', $laborex, 2300, 3000, false, false],
+            ['Oméprazole', 'Oméprazole', '20 mg', 'Gélule', 'Boîte de 14', 'Gastro-entérologie', 'R1', $ppm, 1700, 2250, true, true],
+            ['Insuline Actrapid', 'Insuline humaine', '100 UI/ml', 'Solution injectable', 'Flacon de 10 ml', 'Gastro-entérologie', 'F1', $laborex, 7800, 9500, true, true],
+            ['Crème solaire SPF 50', null, '50 ml', 'Crème', 'Tube', 'Parapharmacie', 'R1', $laborex, 4200, 5500, false, false],
         ];
         // Prix de vente fixés par l'AMO, différents du prix de la pharmacie : le taux AMO s'applique sur ces prix.
         $prixAmo = ['Doliprane' => 1350, 'Amoxicilline' => 2100, 'Coartem' => 3500];
         $catalogue = [];
-        foreach ($produits as [$nom, $dci, $dosage, $nomForme, $conditionnement, $codeBarres, $categorie, $etagere, $fournisseur, $achat, $vente, $ordonnance, $amo]) {
+        foreach ($produits as [$nom, $dci, $dosage, $nomForme, $conditionnement, $categorie, $etagere, $fournisseur, $achat, $vente, $ordonnance, $amo]) {
             $catalogue[$nom] = ProduitFactory::createOne([
                 'pharmacie' => $pharmacie, 'nomCommercial' => $nom, 'dci' => $dci, 'dosage' => $dosage, 'forme' => $forme($nomForme),
-                'conditionnement' => $conditionnement, 'codeBarres' => $codeBarres, 'categorie' => $categories[$categorie], 'etagere' => $etageres[$etagere],
+                'conditionnement' => $conditionnement, 'categorie' => $categories[$categorie], 'etagere' => $etageres[$etagere],
                 'fournisseurHabituel' => $fournisseur, 'prixAchat' => $achat, 'prixVente' => $vente, 'seuilAlerte' => 10, 'stockMax' => 60,
                 'ordonnanceObligatoire' => $ordonnance, 'remboursableAmo' => $amo, 'prixVenteAmo' => $prixAmo[$nom] ?? null, 'tauxTva' => 'Parapharmacie' === $categorie ? 18 : 0,
             ]);
