@@ -193,14 +193,13 @@ final class ExemplesImport
     public static function produits(): array
     {
         $lignes = [];
-        foreach (self::PRODUITS as $i => [$nom, $dci, $forme, $dosage, $conditionnement, $categorie, $fournisseur, $achat, $vente, $ordonnance, $remboursable, $prixAmo]) {
+        foreach (self::PRODUITS as [$nom, $dci, $forme, $dosage, $conditionnement, $categorie, $fournisseur, $achat, $vente, $ordonnance, $remboursable, $prixAmo]) {
             $lignes[] = [
                 'nom_commercial' => $nom,
                 'dci' => $dci ?? '',
                 'forme' => $forme,
                 'dosage' => $dosage,
                 'conditionnement' => $conditionnement,
-                'code_barres' => \sprintf('6190000%06d', $i + 1),
                 'categorie' => $categorie,
                 'etagere' => self::ETAGERES[$categorie],
                 'fournisseur' => self::FOURNISSEURS[$fournisseur],

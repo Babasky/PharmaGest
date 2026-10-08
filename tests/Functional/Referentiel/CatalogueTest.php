@@ -12,7 +12,6 @@ use App\Service\ParametresPharmacie;
 use App\Tenant\TenantContext;
 use App\Tests\Factory\CategorieFactory;
 use App\Tests\Factory\EtagereFactory;
-use App\Tests\Factory\ProduitFactory;
 use App\Tests\Support\AppWebTestCase;
 use App\Tests\Support\Officine;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,7 +42,6 @@ final class CatalogueTest extends AppWebTestCase
             'produit[dci]' => 'Paracétamol',
             'produit[dosage]' => '500 mg',
             'produit[forme]' => (string) $comprime?->getId(),
-            'produit[codeBarres]' => '3400 9300 0001',
             'produit[categorie]' => (string) $categorie->getId(),
             'produit[etagere]' => (string) $etagere->getId(),
             'produit[prixAchat]' => '1150',
@@ -56,10 +54,9 @@ final class CatalogueTest extends AppWebTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('h1', 'Doliprane');
         self::assertSelectorTextContains('main', "1\u{00A0}500\u{00A0}FCFA");
-        self::assertSelectorTextContains('main', '340093000001');
         self::assertSelectorTextContains('main', "350\u{00A0}FCFA", 'Marge brute de référence.');
 
-        foreach (['Doli', 'parac', '340093000001'] as $recherche) {
+        foreach (['Doli', 'parac'] as $recherche) {
             $this->client->request('GET', '/produits?q='.$recherche);
             self::assertSelectorTextContains('tbody', 'Doliprane', $recherche);
         }
@@ -73,19 +70,11 @@ final class CatalogueTest extends AppWebTestCase
         self::assertSelectorTextContains('tbody a', 'Doliprane');
     }
 
-    public function testCodeBarresUniqueDansLaPharmacie(): void
+    public function testLeFormulaireProduitNaPlusDeCodeBarres(): void
     {
-        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'codeBarres' => '111222']);
-        // Le même code-barres dans une autre pharmacie ne gêne pas.
-        ProduitFactory::createOne(['codeBarres' => '999888']);
-
-        $this->connecter($this->officine->adjoint)->request('GET', '/produits/nouveau');
-        $this->client->submitForm('Enregistrer', ['produit[nomCommercial]' => 'Doublon', 'produit[prixVente]' => '100', 'produit[codeBarres]' => '111222']);
-        self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('main', 'Un produit porte déjà ce code-barres');
-
-        $this->client->submitForm('Enregistrer', ['produit[codeBarres]' => '999888']);
-        self::assertResponseRedirects();
+        $crawler = $this->connecter($this->officine->adjoint)->request('GET', '/produits/nouveau');
+        self::assertCount(0, $crawler->filter('[name="produit[codeBarres]"]'));
+        self::assertSelectorTextNotContains('main', 'Code-barres');
     }
 
     public function testValidationDesPrixEtDuStock(): void

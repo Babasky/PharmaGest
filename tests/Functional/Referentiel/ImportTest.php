@@ -32,14 +32,14 @@ final class ImportTest extends AppWebTestCase
     public function testImportDeProduitsAvecErreursSignaleesLigneParLigne(): void
     {
         $fichier = $this->xlsx([
-            ['Nom commercial *', 'DCI', 'Forme', 'Dosage', 'Code-barres', 'Catégorie', 'Étagère', 'Fournisseur', "Prix d'achat", 'Prix de vente *', 'TVA', 'Remboursable AMO'],
-            ['Doliprane', 'Paracétamol', 'Comprimé', '500 mg', 3400930000011, 'Médicaments > Antalgiques', 'E1-R3', 'PPM', 1150, '1 500', 0, 'oui'],
-            ['Amoxil', 'Amoxicilline', 'Gélule', '500 mg', '3400930000028', 'Médicaments > Antibiotiques', 'E1-R4', 'PPM', 2000, 2600, 0, 'oui'],
-            ['', 'Sans nom', '', '', '', '', '', '', '', 100, '', ''],
-            ['Mauvais prix', '', 'Comprimé', '', '', '', '', '', '', 'gratuit', '', ''],
-            ['Forme inconnue', '', 'Pastille magique', '', '', '', '', '', '', 300, '', ''],
-            ['Doublon', '', '', '', 3400930000011, '', '', '', '', 300, '', ''],
-            ['Crème solaire', '', 'Crème', '50 ml', '', 'Parapharmacie', 'P1', 'Laborex', 3500, 5000, 18, 'non'],
+            ['Nom commercial *', 'DCI', 'Forme', 'Dosage', 'Catégorie', 'Étagère', 'Fournisseur', "Prix d'achat", 'Prix de vente *', 'TVA', 'Remboursable AMO'],
+            ['Doliprane', 'Paracétamol', 'Comprimé', '500 mg', 'Médicaments > Antalgiques', 'E1-R3', 'PPM', 1150, '1 500', 0, 'oui'],
+            ['Amoxil', 'Amoxicilline', 'Gélule', '500 mg', 'Médicaments > Antibiotiques', 'E1-R4', 'PPM', 2000, 2600, 0, 'oui'],
+            ['', 'Sans nom', '', '', '', '', '', '', 100, '', ''],
+            ['Mauvais prix', '', 'Comprimé', '', '', '', '', '', 'gratuit', '', ''],
+            ['Forme inconnue', '', 'Pastille magique', '', '', '', '', '', 300, '', ''],
+            ['Doliprane', '', '', '500 mg', '', '', '', '', 300, '', ''],
+            ['Crème solaire', '', 'Crème', '50 ml', 'Parapharmacie', 'P1', 'Laborex', 3500, 5000, 18, 'non'],
         ]);
 
         $crawler = $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
@@ -71,7 +71,7 @@ final class ImportTest extends AppWebTestCase
         self::assertSame(4, $this->compter(Categorie::class), 'Médicaments, Antalgiques, Antibiotiques, Parapharmacie.');
         self::assertSame(2, $this->compter(Fournisseur::class), 'PPM créé une seule fois, plus Laborex.');
 
-        $doliprane = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['codeBarres' => '3400930000011']));
+        $doliprane = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['nomCommercial' => 'Doliprane']));
         self::assertInstanceOf(Produit::class, $doliprane);
         self::assertSame(1500, $doliprane->getPrixVente(), '« 1 500 » est lu comme 1500 FCFA.');
         self::assertSame('Médicaments › Antalgiques', $doliprane->getCategorie()?->getNomComplet());
@@ -79,52 +79,59 @@ final class ImportTest extends AppWebTestCase
         self::assertSame($this->officine->pharmacie->getId(), $doliprane->getPharmacie()?->getId());
     }
 
-    public function testUnProduitExistantEstMisAJourParSonCodeBarres(): void
+    public function testUnProduitExistantEstMisAJourParSonNomEtSonDosage(): void
     {
-        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Ancien nom', 'codeBarres' => '555', 'prixVente' => 1000]);
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Doliprane', 'dosage' => '500 mg', 'dci' => null, 'prixVente' => 1000]);
 
         $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
-        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'code_barres', 'prix_vente'], ['Nouveau nom', '555', 1250]])]);
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'dosage', 'dci', 'prix_vente'], ['Doliprane', '500 mg', 'Paracétamol', 1250]])]);
         self::assertSelectorTextContains('main', 'Importer les 1 ligne valide');
 
         // L'analyse ne doit pas avoir modifié le produit.
-        $nom = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['codeBarres' => '555'])?->getNomCommercial());
-        self::assertSame('Ancien nom', $nom);
+        $dci = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['nomCommercial' => 'Doliprane'])?->getDci());
+        self::assertNull($dci);
 
         $this->client->submitForm('Importer les 1 ligne valide');
-        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['codeBarres' => '555']));
-        self::assertSame('Nouveau nom', $produit?->getNomCommercial());
+        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['nomCommercial' => 'Doliprane']));
+        self::assertSame('Paracétamol', $produit?->getDci());
         self::assertSame(1250, $produit->getPrixVente());
         self::assertSame(1, $this->compter(Produit::class));
     }
 
+    public function testLeModeleDImportNaPlusDeColonneCodeBarres(): void
+    {
+        $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextNotContains('main', 'Code-barres');
+    }
+
     public function testPrixDeVenteAmoImporteOuConserve(): void
     {
-        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Coartem', 'codeBarres' => '777', 'prixVente' => 3800, 'prixVenteAmo' => 3500]);
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Coartem', 'dosage' => null, 'prixVente' => 3800, 'prixVenteAmo' => 3500]);
 
         // Fichier sans la colonne : le prix AMO déjà saisi ne bouge pas.
         $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
-        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'code_barres', 'prix_vente'], ['Coartem', '777', 3900]])]);
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'prix_vente'], ['Coartem', 3900]])]);
         $this->client->submitForm('Importer les 1 ligne valide');
-        self::assertSame([3900, 3500], $this->prix('777'));
+        self::assertSame([3900, 3500], $this->prix('Coartem'));
 
         $this->client->request('GET', '/imports/produits');
         $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([
-            ['nom_commercial', 'code_barres', 'prix_vente', 'prix_vente_amo'],
-            ['Coartem', '777', 3900, '3 600'],
-            ['Doliprane', '888', 1500, ''],
+            ['nom_commercial', 'prix_vente', 'prix_vente_amo'],
+            ['Coartem', 3900, '3 600'],
+            ['Doliprane', 1500, ''],
         ])]);
         $this->client->submitForm('Importer les 2 lignes valides');
-        self::assertSame([3900, 3600], $this->prix('777'));
-        self::assertSame([1500, null], $this->prix('888'), 'Cellule vide : pas de prix AMO, le prix de la pharmacie sert de base.');
+        self::assertSame([3900, 3600], $this->prix('Coartem'));
+        self::assertSame([1500, null], $this->prix('Doliprane'), 'Cellule vide : pas de prix AMO, le prix de la pharmacie sert de base.');
     }
 
     /**
      * @return array{?int, ?int} prix de vente et prix de vente AMO
      */
-    private function prix(string $codeBarres): array
+    private function prix(string $nom): array
     {
-        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['codeBarres' => $codeBarres]));
+        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['nomCommercial' => $nom]));
         self::assertInstanceOf(Produit::class, $produit);
 
         return [$produit->getPrixVente(), $produit->getPrixVenteAmo()];
@@ -213,7 +220,7 @@ final class ImportTest extends AppWebTestCase
             $feuilles = $this->sansFiltre(static fn (EntityManagerInterface $em): int => (int) $em->createQuery('SELECT COUNT(DISTINCT c.id) FROM '.Produit::class.' p JOIN p.categorie c')->getSingleScalarResult());
             self::assertSame(10, $feuilles);
             self::assertSame(10, $this->compter(Fournisseur::class));
-            self::assertSame([1500, 1350], $this->prix('6190000000002'), 'Prix de vente AMO repris du modèle.');
+            self::assertSame([1500, 1350], $this->prix('Doliprane'), 'Prix de vente AMO repris du modèle.');
         }
     }
 

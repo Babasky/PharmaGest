@@ -53,7 +53,7 @@
                             <td class="ps-3"><a class="font-monospace text-decoration-none" href="{{ path('app_vente_voir', {id: vente.id}) }}">{{ vente.numero }}</a><div class="small text-body-secondary">{{ creance.dateVente|date('d/m/Y') }}</div></td>
                             <td>{{ vente.client ? vente.client.nom }}<div class="small text-body-secondary">{{ vente.numeroAssure }}</div></td>
                             <td class="small">
-                                {% if ord %}{{ ord.date ? ord.date|date('d/m/Y') }} · {{ ord.prescripteur }}{% endif %}
+                                {% if ord %}{{ ord.date ? ord.date|date('d/m/Y') }}{{ ord.prescripteur ? ' · ' ~ ord.prescripteur }}{% endif %}
                                 {% if ord and ord.copie %}<i class="bi bi-camera text-success" title="Copie jointe"></i>{% else %}<span class="badge text-bg-warning">sans copie</span>{% endif %}
                             </td>
                             <td class="montant">{{ creance.montant|fcfa }}</td>

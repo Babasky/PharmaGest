@@ -13,12 +13,16 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * Un lot est « disponible » si sa date de péremption est postérieure au jour donné (RG-05).
+ * Un lot est « disponible » si sa date de péremption est postérieure au jour donné (RG-05),
+ * ou s'il n'a pas de date de péremption (réception sans date : le lot sort en dernier).
  *
  * @extends ServiceEntityRepository<Lot>
  */
 class LotRepository extends ServiceEntityRepository
 {
+    /** Tri FEFO : les lots sans date de péremption passent après tous les autres. */
+    private const SANS_DATE = 'CASE WHEN l.datePeremption IS NULL THEN 1 ELSE 0 END AS HIDDEN sansDate';
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Lot::class);
@@ -36,7 +40,7 @@ class LotRepository extends ServiceEntityRepository
             ->leftJoin('l.fournisseur', 'f')->addSelect('f')
             ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
             ->andWhere('l.quantiteRestante > 0')
-            ->orderBy('l.datePeremption', 'ASC')->addOrderBy('l.id', 'ASC')
+            ->addSelect(self::SANS_DATE)->orderBy('sansDate', 'ASC')->addOrderBy('l.datePeremption', 'ASC')->addOrderBy('l.id', 'ASC')
             ->getQuery()->getResult();
     }
 
@@ -51,8 +55,8 @@ class LotRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('l')
             ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
             ->andWhere('l.quantiteRestante > 0')
-            ->andWhere('l.datePeremption > :jour')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
-            ->orderBy('l.datePeremption', 'ASC')->addOrderBy('l.id', 'ASC')
+            ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->addSelect(self::SANS_DATE)->orderBy('sansDate', 'ASC')->addOrderBy('l.datePeremption', 'ASC')->addOrderBy('l.id', 'ASC')
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getResult();
@@ -72,7 +76,7 @@ class LotRepository extends ServiceEntityRepository
         return (int) $this->createQueryBuilder('l')
             ->select('COALESCE(SUM(l.quantiteRestante), 0)')
             ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
-            ->andWhere('l.datePeremption > :jour')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
             ->getQuery()->getSingleScalarResult();
     }
 
@@ -88,7 +92,7 @@ class LotRepository extends ServiceEntityRepository
     public function peremptionProche(\DateTimeImmutable $jour, int $delaiJours): QueryBuilder
     {
         return $this->enStockAvecProduit()
-            ->andWhere('l.datePeremption > :jour')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
             ->andWhere('l.datePeremption <= :limite')->setParameter('limite', $jour->modify(\sprintf('+%d days', $delaiJours)), Types::DATE_IMMUTABLE)
             ->orderBy('l.datePeremption', 'ASC');
     }
@@ -103,7 +107,7 @@ class LotRepository extends ServiceEntityRepository
     {
         $qb = $this->enStockAvecProduit()
             ->leftJoin('p.etagere', 'e')
-            ->orderBy('e.code', 'ASC')->addOrderBy('p.nomCommercial', 'ASC')->addOrderBy('l.datePeremption', 'ASC');
+            ->orderBy('e.code', 'ASC')->addOrderBy('p.nomCommercial', 'ASC')->addSelect(self::SANS_DATE)->addOrderBy('sansDate', 'ASC')->addOrderBy('l.datePeremption', 'ASC');
         if (null !== $etagere) {
             $qb->andWhere('p.etagere = :etagere')->setParameter('etagere', $etagere);
         }
@@ -125,9 +129,9 @@ class LotRepository extends ServiceEntityRepository
     {
         $lignes = $this->createQueryBuilder('l')
             ->select('COALESCE(cp.nom, c.nom) AS categorie')
-            ->addSelect('SUM(CASE WHEN l.datePeremption > :jour THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS disponible')
+            ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS disponible')
             ->addSelect('SUM(CASE WHEN l.datePeremption <= :jour THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS perime')
-            ->addSelect('SUM(CASE WHEN l.datePeremption > :jour THEN l.quantiteRestante ELSE 0 END) AS quantite')
+            ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante ELSE 0 END) AS quantite')
             ->join('l.produit', 'p')
             ->leftJoin('p.categorie', 'c')
             ->leftJoin('c.parent', 'cp')
@@ -166,9 +170,9 @@ class LotRepository extends ServiceEntityRepository
 
         $lignes = $this->createQueryBuilder('l')
             ->select('IDENTITY(l.produit) AS produit')
-            ->addSelect('SUM(CASE WHEN l.datePeremption > :jour THEN l.quantiteRestante ELSE 0 END) AS stock')
+            ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante ELSE 0 END) AS stock')
             ->addSelect('SUM(CASE WHEN l.datePeremption <= :jour THEN l.quantiteRestante ELSE 0 END) AS perime')
-            ->addSelect('SUM(CASE WHEN l.datePeremption > :jour THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS valeur')
+            ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS valeur')
             ->andWhere('l.produit IN (:ids)')->setParameter('ids', $ids)
             ->andWhere('l.quantiteRestante > 0')
             ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)

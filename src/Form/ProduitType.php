@@ -69,14 +69,6 @@ final class ProduitType extends AbstractType
                 ],
             ]
             )
-            ->add('codeBarres', TextType::class, [
-                'label' => 'Code-barres(Facultatif)',
-                'required' => false,
-                'attr' => [
-                    'placeholder' => 'Code-barres(Facultatif)',
-                ],
-            ]
-            )
             ->add('categorie', EntityType::class, [
                 'label' => 'Catégorie',
                 'class' => Categorie::class,

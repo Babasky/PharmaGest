@@ -18,7 +18,7 @@
             {% endfor %}
         </select>
     {% endset %}
-    {% include 'referentiel/_filtres.html.twig' with {q: q, archives: archives, placeholder: 'Nom, DCI ou code-barres', extra: choix_categorie} %}
+    {% include 'referentiel/_filtres.html.twig' with {q: q, archives: archives, placeholder: 'Nom ou DCI', extra: choix_categorie} %}
 
     <div class="card shadow-sm">
         <div class="table-responsive">

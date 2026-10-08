@@ -25,17 +25,20 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class CaisseTest extends CaisseTestCase
 {
-    public function testR04VenteAuCodeBarresSortieFefoEtMonnaieARendre(): void
+    public function testR04VenteSortieFefoEtMonnaieARendre(): void
     {
-        $doliprane = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Doliprane', 'codeBarres' => '3400930000011', 'prixVente' => 1500]);
+        $doliprane = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Doliprane', 'prixVente' => 1500]);
         $lotA = LotFactory::createOne(['produit' => $doliprane, 'numero' => 'A', 'quantiteInitiale' => 10, 'prixAchat' => 1000, 'datePeremption' => new \DateTimeImmutable('first day of +14 months')]);
         $lotB = LotFactory::createOne(['produit' => $doliprane, 'numero' => 'B', 'quantiteInitiale' => 10, 'prixAchat' => 1100, 'datePeremption' => new \DateTimeImmutable('first day of +12 months')]);
 
         $this->ouvrirCaisse($this->officine->vendeur, 5000);
         self::assertSelectorTextContains('.alert-success', 'Caisse ouverte');
 
-        // Douchette : le code-barres exact ajoute le produit sans passer par la liste.
-        $this->client->submitForm('Chercher', ['q' => '3400930000011']);
+        // Recherche par nom, puis ajout depuis la liste des résultats.
+        $this->client->submitForm('Chercher', ['q' => 'Dolip'], 'GET');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#resultats', 'Doliprane');
+        $this->client->submitForm('Ajouter Doliprane');
         self::assertResponseRedirects('/caisse');
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('#panier', 'Doliprane');
@@ -192,8 +195,8 @@ final class CaisseTest extends CaisseTestCase
         $this->poster('/caisse/client', ['client' => $sansAssurance->getId()]);
         $this->poster('/caisse/vente', ['type' => 'amo']);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('#encaissement', 'choisissez un client assuré');
-        self::assertSelectorTextContains('#encaissement', 'date et le prescripteur');
+        self::assertSelectorTextContains('#encaissement', 'choisissez l\'organisme, ou un client assuré');
+        self::assertSelectorTextContains('#encaissement', 'Renseignez la date de l\'ordonnance');
 
         $this->poster('/caisse/client', ['client' => $assure->getId()]);
         $this->poster('/caisse/vente', [
@@ -211,6 +214,34 @@ final class CaisseTest extends CaisseTestCase
         self::assertSame([20000, 12600, 740, 6660, 19260, 70], [$vente->getTotalBrut(), $vente->getPartAmo(), $vente->getRemise(), $vente->getMontantEncaisse(), $vente->getTotalNet(), $vente->getTauxAmo()]);
         self::assertSame(['INPS', 'INPS-0045871', 'Dr Coulibaly'], [$vente->getOrganismeAmo()?->getCode(), $vente->getNumeroAssure(), $vente->getOrdonnance()?->getPrescripteur()]);
         self::assertSame(6660, $vente->montantPaye(ModePaiement::Especes), 'Seule la part assuré est encaissée (RG-10).');
+    }
+
+    public function testVenteAmoSansClientNiPrescripteur(): void
+    {
+        $p = $this->officine->pharmacie;
+        $rembourse = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Coartem', 'prixVente' => 4000, 'remboursableAmo' => true]);
+        LotFactory::createOne(['produit' => $rembourse]);
+        $inps = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(OrganismeAmo::class)->findOneBy(['code' => 'INPS']));
+        self::assertInstanceOf(OrganismeAmo::class, $inps);
+
+        $this->ouvrirCaisse($this->officine->vendeur);
+        $this->ajouter($rembourse);
+        // Ni client ni prescripteur : seuls l'organisme et la date de l'ordonnance sont demandés.
+        $this->poster('/caisse/vente', ['type' => 'amo', 'ordonnance_date' => (new \DateTimeImmutable('today'))->format('Y-m-d'), 'organisme' => $inps->getId(), 'numero_assure' => '']);
+        $this->client->followRedirect();
+        self::assertSelectorExists('#assurance-vente');
+        self::assertSelectorNotExists('#encaissement .alert-danger');
+        self::assertSelectorTextContains('#totaux', "2\u{00A0}800\u{00A0}FCFA");
+
+        $this->encaisser(['especes' => ['remis' => '1200']]);
+        $vente = $this->derniereVente();
+        self::assertResponseRedirects('/ventes/'.$vente->getId().'?caisse=1');
+        self::assertNull($vente->getClient());
+        self::assertNull($vente->getOrdonnance()?->getPrescripteur());
+        self::assertSame(['INPS', null, 2800, 1200], [$vente->getOrganismeAmo()?->getCode(), $vente->getNumeroAssure(), $vente->getPartAmo(), $vente->getMontantEncaisse()]);
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('main', 'client de passage');
     }
 
     public function testOrdonnanceObligatoireBloqueeOuConfirmeeParLeProprietaire(): void

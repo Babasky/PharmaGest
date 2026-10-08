@@ -54,15 +54,14 @@
     {% endif %}
     <div class="row g-3" {{ stimulus_controller('caisse') }}>
         <div class="col-12 col-xl-7">
-            {# --- Recherche produit (nom, DCI, code-barres) --- #}
-            <form method="post" action="{{ path('app_caisse_scanner') }}" class="mb-3" role="search">
-                <input type="hidden" name="_token" value="{{ token }}">
+            {# --- Recherche produit (nom, DCI) --- #}
+            <form method="get" action="{{ path('app_caisse') }}" class="mb-3" role="search">
                 <div class="input-group input-group-lg">
-                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Nom, DCI" aria-label="Rechercher un produit" autofocus autocomplete="off" data-caisse-target="recherche">
                     <button class="btn btn-success" type="submit">Chercher</button>
                 </div>
-                <div class="form-text">Raccourcis : <kbd>F2</kbd> recherche · <kbd>F9</kbd> encaissement. Un code-barres scanné ajoute directement le produit au panier.</div>
+                <div class="form-text">Raccourcis : <kbd>F2</kbd> recherche · <kbd>F9</kbd> encaissement.</div>
             </form>
 
             {% if q %}
@@ -180,7 +179,7 @@
                                     </td>
                                 </tr>
                             {% else %}
-                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Le panier est vide. Scannez un code-barres ou cherchez un produit.</td></tr>
+                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Le panier est vide. Cherchez un produit pour l'ajouter.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -292,7 +291,7 @@
                         <legend class="small text-body-secondary mb-0 col-12">Ordonnance (ordonnance classique ou AMO)</legend>
                         <div class="col-6"><input type="date" name="ordonnance_date" value="{{ ord and ord.date ? ord.date|date('Y-m-d') }}" class="form-control form-control-sm" aria-label="Date de l'ordonnance" max="{{ 'now'|date('Y-m-d') }}"></div>
                         <div class="col-6"><input type="text" name="ordonnance_numero" value="{{ ord ? ord.numero }}" class="form-control form-control-sm" placeholder="N° (facultatif)" aria-label="Numéro de l'ordonnance"></div>
-                        <div class="col-6"><input type="text" name="ordonnance_prescripteur" value="{{ ord ? ord.prescripteur }}" class="form-control form-control-sm" placeholder="Prescripteur" aria-label="Prescripteur"></div>
+                        <div class="col-6"><input type="text" name="ordonnance_prescripteur" value="{{ ord ? ord.prescripteur }}" class="form-control form-control-sm" placeholder="Prescripteur (facultatif)" aria-label="Prescripteur"></div>
                         <div class="col-6"><input type="text" name="ordonnance_structure" value="{{ ord ? ord.structure }}" class="form-control form-control-sm" placeholder="Structure (facultatif)" aria-label="Structure de santé"></div>
                         <div class="col-12">
                             <label class="form-label small text-body-secondary mb-0" for="ordonnance-copie">
@@ -306,6 +305,21 @@
                             <input type="file" name="ordonnance_copie" id="ordonnance-copie" accept="image/jpeg,image/png,image/webp,image/pdf" capture="environment" class="form-control form-control-sm">
                         </div>
                     </fieldset>
+                    {% if not (panier and panier.client and panier.client.assureAmo) %}
+                        {# Vente AMO sans client assuré : le client est facultatif, l'organisme se choisit ici. #}
+                        <fieldset class="row g-2 mt-1 {{ type_courant != 'amo' ? 'opacity-75' }}" id="assurance-vente">
+                            <legend class="small text-body-secondary mb-0 col-12">Assurance (vente AMO sans client assuré)</legend>
+                            <div class="col-6">
+                                <select name="organisme" class="form-select form-select-sm" aria-label="Organisme">
+                                    <option value="">Organisme</option>
+                                    {% for o in organismes %}
+                                        <option value="{{ o.id }}"{{ panier and panier.organismeAmo and panier.organismeAmo.id == o.id ? ' selected' }}>{{ o.code }} · {{ o.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6"><input type="text" name="numero_assure" maxlength="40" value="{{ panier ? panier.numeroAssure }}" class="form-control form-control-sm" placeholder="N° d'assuré (facultatif)" aria-label="N° d'assuré"></div>
+                        </fieldset>
+                    {% endif %}
                     {% if remise_possible %}
                         <div class="mt-2">
                             <label class="form-label small text-body-secondary mb-1" for="remise-globale">Remise sur {{ panier.type.value == 'amo' ? 'la part assuré' : 'le total' }} (plafond {{ parametres.plafondRemise }} %)</label>

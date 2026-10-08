@@ -47,7 +47,7 @@
             <td width="50%" class="petit" style="vertical-align: top;">
                 {% if vente.ordonnance %}
                     Ordonnance{{ vente.ordonnance.numero ? ' n° ' ~ vente.ordonnance.numero }} du {{ vente.ordonnance.date|date('d/m/Y') }}<br>
-                    Prescripteur : {{ vente.ordonnance.prescripteur }}{{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}
+                    {% if vente.ordonnance.prescripteur %}Prescripteur : {{ vente.ordonnance.prescripteur }}{% endif %}{{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}
                 {% endif %}
             </td>
             <td width="50%" class="cadre">

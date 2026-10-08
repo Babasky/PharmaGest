@@ -30,7 +30,7 @@ class ReceptionService
      * Les lignes sans quantité sont ignorées : la livraison peut être partielle. Un même produit peut arriver
      * en plusieurs lots (plusieurs lignes pour la même ligne de commande).
      *
-     * @param list<array<array-key, mixed>> $saisies ligne (id de ligne de commande), quantite, lot, peremption (AAAA-MM-JJ), prix
+     * @param list<array<array-key, mixed>> $saisies ligne (id de ligne de commande), quantite, lot, peremption (AAAA-MM-JJ, facultative), prix
      *
      * @return list<string> avertissements : quantités reçues au-delà de la commande (RG-16)
      *
@@ -70,11 +70,10 @@ class ReceptionService
             if ('' === $numeroLot || mb_strlen($numeroLot) > 50) {
                 throw new AchatException(\sprintf('%s : le numéro de lot est obligatoire (RG-16).', $nom));
             }
-            $peremption = \DateTimeImmutable::createFromFormat('!Y-m-d', \is_scalar($saisie['peremption'] ?? null) ? (string) $saisie['peremption'] : '') ?: null;
-            if (null === $peremption) {
-                throw new AchatException(\sprintf('%s : la date de péremption est obligatoire (RG-16).', $nom));
-            }
-            if ($peremption <= $aujourdhui) {
+            // Date de péremption facultative : un lot sans date sort en dernier (FEFO) et n'est jamais signalé périmé.
+            $peremptionSaisie = trim(\is_scalar($saisie['peremption'] ?? null) ? (string) $saisie['peremption'] : '');
+            $peremption = '' === $peremptionSaisie ? null : (\DateTimeImmutable::createFromFormat('!Y-m-d', $peremptionSaisie) ?: throw new AchatException(\sprintf('%s : la date de péremption est invalide.', $nom)));
+            if (null !== $peremption && $peremption <= $aujourdhui) {
                 throw new AchatException(\sprintf('%s : le lot %s est déjà périmé (%s), il ne peut pas entrer en stock.', $nom, $numeroLot, $peremption->format('d/m/Y')));
             }
             if (!$ligne->getProduit()->isActif()) {

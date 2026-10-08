@@ -35,7 +35,7 @@ abstract class CaisseTestCase extends AppWebTestCase
     {
         $crawler = $this->client->request('GET', '/caisse');
 
-        return (string) $crawler->filter('form[action="/caisse/scanner"] input[name="_token"]')->attr('value');
+        return (string) $crawler->filter('form#type-vente input[name="_token"]')->attr('value');
     }
 
     /**

@@ -22,7 +22,6 @@
                         <dt class="col-5 fw-normal text-body-secondary">Forme</dt><dd class="col-7">{{ produit.forme ?? '—' }}</dd>
                         <dt class="col-5 fw-normal text-body-secondary">Dosage</dt><dd class="col-7">{{ produit.dosage ?? '—' }}</dd>
                         <dt class="col-5 fw-normal text-body-secondary">Conditionnement</dt><dd class="col-7">{{ produit.conditionnement ?? '—' }}</dd>
-                        <dt class="col-5 fw-normal text-body-secondary">Code-barres</dt><dd class="col-7 font-monospace">{{ produit.codeBarres ?? '—' }}</dd>
                         <dt class="col-5 fw-normal text-body-secondary">Catégorie</dt><dd class="col-7">{{ produit.categorie ? produit.categorie.nomComplet : '—' }}</dd>
                         <dt class="col-5 fw-normal text-body-secondary">Étagère</dt><dd class="col-7">{{ produit.etagere ? produit.etagere.code ~ ' (' ~ produit.etagere.zone.libelle|lower ~ ')' : '—' }}</dd>
                         <dt class="col-5 fw-normal text-body-secondary">Fournisseur habituel</dt><dd class="col-7">{{ produit.fournisseurHabituel ?? '—' }}</dd>
@@ -82,7 +81,7 @@
                         {% set perime = lot.estPerimeLe(aujourdhui) %}
                         <tr class="{{ perime ? 'table-danger' }}">
                             <td class="ps-3 font-monospace">{{ lot.numero }}</td>
-                            <td class="text-nowrap">{{ lot.datePeremption|date('d/m/Y') }}{% if perime %} <span class="badge text-bg-danger">Périmé</span>{% endif %}</td>
+                            <td class="text-nowrap">{{ lot.datePeremption ? lot.datePeremption|date('d/m/Y') : 'Non renseignée' }}{% if perime %} <span class="badge text-bg-danger">Périmé</span>{% endif %}</td>
                             <td class="text-end fw-semibold">{{ lot.quantiteRestante|number_format }}</td>
                             {% if is_granted('ROLE_ADJOINT') %}
                                 <td class="montant">{{ lot.prixAchat|fcfa }}</td>

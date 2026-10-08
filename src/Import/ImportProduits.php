@@ -16,8 +16,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
- * Import du catalogue. Un produit existant est mis à jour s'il a le même code-barres
- * (ou, sans code-barres, le même nom commercial et le même dosage). Les catégories, étagères
+ * Import du catalogue. Un produit existant est mis à jour s'il a le même nom commercial
+ * et le même dosage. Les catégories, étagères
  * et fournisseurs inconnus sont créés.
  */
 final class ImportProduits extends AbstractDefinitionImport
@@ -58,7 +58,6 @@ final class ImportProduits extends AbstractDefinitionImport
             new Colonne('forme', 'Forme', false, 'Une forme galénique de la liste PharmaGest.', 'Comprimé'),
             new Colonne('dosage', 'Dosage', false, '', '500 mg'),
             new Colonne('conditionnement', 'Conditionnement', false, '', 'Boîte de 16'),
-            new Colonne('code_barres', 'Code-barres', false, 'Sert à reconnaître un produit déjà présent.', '3400930000000'),
             new Colonne('categorie', 'Catégorie', false, '« Principale » ou « Principale > Sous-catégorie ». Créée si elle n\'existe pas.', 'Médicaments > Antalgiques'),
             new Colonne('etagere', 'Étagère', false, 'Code de l\'étagère. Créée si elle n\'existe pas.', 'E1-R3'),
             new Colonne('fournisseur', 'Fournisseur', false, 'Nom du fournisseur habituel. Créé s\'il n\'existe pas.', 'PPM'),
@@ -91,24 +90,20 @@ final class ImportProduits extends AbstractDefinitionImport
         $remarques = [];
         $nom = Valeurs::texte($valeurs, 'nom_commercial');
         $dosage = Valeurs::texte($valeurs, 'dosage');
-        $codeBarres = Valeurs::texte($valeurs, 'code_barres');
-        $codeBarres = null === $codeBarres ? null : str_replace(' ', '', $codeBarres);
         $libelle = trim(($nom ?? '(sans nom)').' '.($dosage ?? ''));
 
         if (null === $nom) {
             $erreurs[] = 'Le nom commercial est obligatoire.';
         }
-        $this->dejaVu(null !== $codeBarres ? 'cb:'.$codeBarres : 'nom:'.$nom.'|'.$dosage, $numero, null !== $codeBarres ? 'Ce code-barres' : 'Ce produit', $erreurs);
+        $this->dejaVu('nom:'.$nom.'|'.$dosage, $numero, 'Ce produit', $erreurs);
 
-        $produit = (null !== $codeBarres ? $this->produits->parCodeBarres($codeBarres) : null)
-            ?? (null !== $nom ? $this->produits->findOneBy(['nomCommercial' => $nom, 'dosage' => $dosage]) : null)
+        $produit = (null !== $nom ? $this->produits->findOneBy(['nomCommercial' => $nom, 'dosage' => $dosage]) : null)
             ?? new Produit();
 
         $produit->setNomCommercial((string) $nom)
             ->setDci(Valeurs::texte($valeurs, 'dci'))
             ->setDosage($dosage)
             ->setConditionnement(Valeurs::texte($valeurs, 'conditionnement'))
-            ->setCodeBarres($codeBarres)
             ->setOrdonnanceObligatoire(Valeurs::booleen($valeurs, 'ordonnance_obligatoire', 'Ordonnance obligatoire', $erreurs))
             ->setRemboursableAmo(Valeurs::booleen($valeurs, 'remboursable_amo', 'Remboursable AMO', $erreurs));
 

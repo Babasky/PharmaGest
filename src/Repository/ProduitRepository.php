@@ -23,7 +23,7 @@ class ProduitRepository extends ServiceEntityRepository
     }
 
     /**
-     * Recherche par nom commercial, DCI ou code-barres exact (VE-01 : douchette).
+     * Recherche par nom commercial ou DCI (VE-01).
      *
      * @return Page<Produit>
      */
@@ -40,8 +40,7 @@ class ProduitRepository extends ServiceEntityRepository
 
         if (null !== $recherche && '' !== trim($recherche)) {
             $q = trim($recherche);
-            $qb->andWhere('p.codeBarres = :exact OR p.nomCommercial LIKE :debut OR p.dci LIKE :debut OR p.nomCommercial LIKE :mot OR p.dci LIKE :mot')
-                ->setParameter('exact', $q)
+            $qb->andWhere('p.nomCommercial LIKE :debut OR p.dci LIKE :debut OR p.nomCommercial LIKE :mot OR p.dci LIKE :mot')
                 ->setParameter('debut', addcslashes($q, '%_').'%')
                 ->setParameter('mot', '% '.addcslashes($q, '%_').'%');
         }
@@ -53,11 +52,6 @@ class ProduitRepository extends ServiceEntityRepository
         return Page::depuis($qb, $page);
     }
 
-    public function parCodeBarres(string $codeBarres): ?Produit
-    {
-        return $this->findOneBy(['codeBarres' => str_replace(' ', '', trim($codeBarres))]);
-    }
-
     /**
      * Produits actifs dont le stock disponible est au niveau du seuil d'alerte ou en dessous (ST-05).
      * Un stock à zéro est toujours signalé, même sans seuil.
@@ -66,7 +60,7 @@ class ProduitRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->andWhere('p.actif = true')
-            ->andWhere(\sprintf('(SELECT COALESCE(SUM(ls.quantiteRestante), 0) FROM %s ls WHERE ls.produit = p AND ls.datePeremption > :jour) <= p.seuilAlerte', Lot::class))
+            ->andWhere(\sprintf('(SELECT COALESCE(SUM(ls.quantiteRestante), 0) FROM %s ls WHERE ls.produit = p AND (ls.datePeremption IS NULL OR ls.datePeremption > :jour)) <= p.seuilAlerte', Lot::class))
             ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
             ->orderBy('p.nomCommercial', 'ASC');
     }

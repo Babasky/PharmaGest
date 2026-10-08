@@ -12,6 +12,7 @@ use App\Enum\TypeVente;
 use App\Repository\AffectationRepository;
 use App\Repository\ClientRepository;
 use App\Repository\LotRepository;
+use App\Repository\OrganismeAmoRepository;
 use App\Repository\ProduitRepository;
 use App\Repository\VenteRepository;
 use App\Security\CodePin;
@@ -32,9 +33,9 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Écran de caisse (VE-01) : recherche produit (nom, DCI, code-barres), panier, type de vente, client,
+ * Écran de caisse (VE-01) : recherche produit (nom, DCI), panier, type de vente, client,
  * remises, encaissement ou envoi à la caisse, et mise en attente. Chaque action est un formulaire classique suivi d'une
- * redirection : l'écran reste utilisable au clavier et à la douchette, même sans JavaScript.
+ * redirection : l'écran reste utilisable au clavier, même sans JavaScript.
  */
 #[Route('/caisse')]
 #[IsGranted(Utilisateur::ROLE_VENDEUR)]
@@ -55,6 +56,7 @@ final class CaisseController extends AbstractAppController
         LotRepository $lots,
         VenteRepository $ventesRepo,
         AffectationRepository $affectations,
+        OrganismeAmoRepository $organismes,
         ParametresPharmacie $parametres,
         StockService $stock,
         #[MapQueryParameter] ?string $q = null,
@@ -82,32 +84,12 @@ final class CaisseController extends AbstractAppController
             'en_attente' => $ventesRepo->enAttente(),
             'a_encaisser' => $ventesRepo->aEncaisser(),
             'types' => TypeVente::cases(),
+            'organismes' => $organismes->actifs(),
             'vendeurs' => array_filter(
                 array_map(static fn ($a) => $a->getUtilisateur(), $affectations->equipe($this->pharmacie())),
                 static fn (Utilisateur $u) => $u->aUnCodePin() && $u->isActif() && $u->getId() !== $utilisateur->getId(),
             ),
         ]);
-    }
-
-    /**
-     * Saisie de la zone de recherche : un code-barres exact (douchette) ajoute directement le produit,
-     * sinon on affiche les résultats.
-     */
-    #[Route('/scanner', name: 'app_caisse_scanner', methods: ['POST'])]
-    #[IsCsrfTokenValid(self::CSRF)]
-    public function scanner(Request $requete, ProduitRepository $produits): Response
-    {
-        $saisie = trim((string) $requete->getPayload()->get('q'));
-        if ('' === $saisie) {
-            return $this->redirectToRoute('app_caisse');
-        }
-        $produit = 1 === preg_match('/^[0-9A-Za-z\-]{4,}$/', $saisie) ? $produits->parCodeBarres($saisie) : null;
-        if (null === $produit || !$produit->isActif()) {
-            return $this->redirectToRoute('app_caisse', ['q' => $saisie]);
-        }
-        $this->ajouterAuPanier($produit, 1);
-
-        return $this->redirectToRoute('app_caisse');
     }
 
     #[Route('/ajouter/{id}', name: 'app_caisse_ajouter', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -145,23 +127,27 @@ final class CaisseController extends AbstractAppController
     }
 
     /**
-     * Type de vente, ordonnance (avec sa copie) et remise sur le total.
+     * Type de vente, ordonnance (avec sa copie), organisme d'une vente AMO sans client assuré et remise sur le total.
      */
     #[Route('/vente', name: 'app_caisse_vente', methods: ['POST'])]
     #[IsCsrfTokenValid(self::CSRF)]
-    public function vente(Request $requete): Response
+    public function vente(Request $requete, OrganismeAmoRepository $organismes): Response
     {
         $vente = $this->ventes->panierOuNouveau($this->utilisateur());
         $donnees = $requete->getPayload();
         try {
             $type = TypeVente::tryFrom((string) $donnees->get('type')) ?? TypeVente::SansOrdonnance;
             $date = trim((string) $donnees->get('ordonnance_date'));
+            $organisme = null;
+            if ($donnees->getInt('organisme') > 0) {
+                $organisme = $organismes->find($donnees->getInt('organisme')) ?? throw new VenteException('Organisme inconnu.');
+            }
             $this->ventes->definirVente($vente, $type, $vente->getClient(), [
                 'numero' => (string) $donnees->get('ordonnance_numero'),
                 'date' => '' === $date ? null : (\DateTimeImmutable::createFromFormat('!Y-m-d', $date) ?: throw new VenteException('Date d\'ordonnance invalide.')),
                 'prescripteur' => (string) $donnees->get('ordonnance_prescripteur'),
                 'structure' => (string) $donnees->get('ordonnance_structure'),
-            ], self::fichier($requete, 'ordonnance_copie'));
+            ], self::fichier($requete, 'ordonnance_copie'), $organisme, (string) $donnees->get('numero_assure'));
             if ($donnees->has('remise_valeur')) {
                 $this->ventes->remiseGlobale($vente, TypeRemise::tryFrom((string) $donnees->get('remise_type')), $this->montant($donnees->get('remise_valeur'), 'Remise') ?? 0);
             }
@@ -192,7 +178,7 @@ final class CaisseController extends AbstractAppController
                 'date' => $vente->getOrdonnance()?->getDate(),
                 'prescripteur' => $vente->getOrdonnance()?->getPrescripteur(),
                 'structure' => $vente->getOrdonnance()?->getStructure(),
-            ]);
+            ], null, $vente->getOrganismeAmo(), $vente->getNumeroAssure());
         } catch (VenteException $e) {
             $this->addFlash('error', $e->getMessage());
         }

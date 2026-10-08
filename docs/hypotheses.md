@@ -105,7 +105,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - **Rien n'est supprimé** (RG-15) : catégories, étagères, fournisseurs, produits et clients s'**archivent**. Archivés,
   ils disparaissent des listes de choix et de la liste principale (filtre « Archivés » pour les retrouver).
 - **Catégories** sur deux niveaux exactement : une sous-catégorie ne peut pas avoir de sous-catégorie.
-- **Code-barres** unique **dans une pharmacie** (deux pharmacies peuvent avoir le même produit).
+- ~~**Code-barres** unique **dans une pharmacie** (deux pharmacies peuvent avoir le même produit).~~ Code-barres supprimé le 08/10/2026 (voir « Corrections du 08/10/2026 »).
 - **TVA** : choix entre 0 % et 18 % (point ouvert § 11.2 : à confirmer avec un fiscaliste).
 - **Prix d'achat** sur la fiche produit = **prix de référence** (pour les commandes et la marge indicative) ; le prix
   réellement payé sera porté par chaque **lot** (Lot 3, ST-01). Il n'est pas affiché au vendeur.
@@ -198,7 +198,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - **Une ligne par produit** : scanner deux fois le même produit augmente la quantité. Le prix de vente est figé à
   l'ajout de la ligne (RG-06) ; les totaux, la remise, la part AMO et le coût d'achat des lots sont figés à
   l'encaissement.
-- Un code-barres scanné à l'identique ajoute directement le produit ; sinon la recherche affiche les résultats.
+- ~~Un code-barres scanné à l'identique ajoute directement le produit ; sinon la recherche affiche les résultats.~~ Code-barres supprimé le 08/10/2026 (voir « Corrections du 08/10/2026 »).
 - Le stock est vérifié à l'ajout et à l'encaissement (R-03) ; la sortie se fait en **FEFO** via
   `StockService::prelever()` (RG-04), lot par lot, dans la même transaction que la numérotation.
 - **Ventes en attente** : un panier mis en attente peut être repris par n'importe quel vendeur de la pharmacie (le
@@ -578,3 +578,37 @@ vente, et son taux s'applique sur ce prix.
 - Point ouvert : faut-il vendre au prix AMO (la pharmacie s'aligne) plutôt que facturer la différence à l'assuré ?
   Le choix inverse ne demande qu'une règle de calcul à changer.
 
+## Décisions — Corrections du 08/10/2026 (demande de Modibo)
+
+### Code-barres retiré du produit
+
+- Le champ code-barres est supprimé de la fiche produit, du formulaire, de l'import (colonne `code_barres` retirée du
+  modèle, une colonne de ce nom dans un ancien fichier est simplement ignorée) et des données de démonstration.
+  La migration supprime la colonne et son index d'unicité : les codes déjà saisis sont perdus.
+- L'import reconnaît désormais un produit existant par son **nom commercial et son dosage** uniquement.
+- La caisse cherche par nom ou DCI ; l'ajout « douchette » direct disparaît, on ajoute depuis la liste des résultats.
+- Le bon de commande (Excel et PDF) affiche la DCI à la place du code-barres.
+
+### Date de péremption facultative à la réception d'une commande
+
+- À la réception, la date de péremption d'une ligne peut rester vide (le n° de lot reste obligatoire). Une date
+  saisie doit toujours être postérieure à aujourd'hui.
+- Un lot sans date n'est **jamais périmé** : il compte dans le stock disponible, n'apparaît dans aucune alerte de
+  péremption, et sort **en dernier** en FEFO (après tous les lots datés). Les écrans affichent « Non renseignée ».
+- L'entrée manuelle de stock garde la date obligatoire (la demande ne portait que sur la réception).
+
+### Ordonnance AMO : client et prescripteur facultatifs
+
+- Une vente « Ordonnance AMO / assurance » peut se faire **sans client** : la caisse propose alors l'organisme et un
+  n° d'assuré facultatif, enregistrés sur la vente (créance et bordereau inchangés). Un client assuré choisi impose
+  toujours son organisme et son n° d'assuré.
+- Seule la **date de l'ordonnance** reste obligatoire ; le prescripteur devient facultatif, pour l'ordonnance AMO
+  comme pour l'ordonnance classique (même formulaire).
+- Bordereaux, factures et tickets s'affichent sans prescripteur ni n° d'assuré quand ils manquent.
+
+### Bon de commande PDF
+
+- Dès qu'une commande est passée (envoyée par email ou passée sans email), un bouton « Bon de commande PDF » apparaît
+  sur la commande, pour le propriétaire et l'adjoint, comme l'Excel. Un brouillon n'a pas de PDF (pas de numéro).
+- Le PDF reprend le contenu de l'Excel : pharmacie (avec logo), fournisseur, numéro, date, lignes, total, et la
+  mention « commande annulée » le cas échéant. L'email au fournisseur garde l'Excel en pièce jointe.

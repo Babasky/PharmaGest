@@ -6,10 +6,13 @@ use App\Entity\EnvoiCommande;
 use App\Entity\JournalAudit;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
+use App\Entity\Produit;
 use App\Enum\StatutCommande;
 use App\Enum\StatutEnvoi;
 use App\Enum\TypeMouvement;
+use App\Repository\LotRepository;
 use App\Tests\Factory\FournisseurFactory;
+use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\ProduitFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -61,7 +64,7 @@ final class CommandeTest extends CommandeTestCase
 
         $feuille = $this->feuille($pieces[0]->getBody());
         $texte = $this->texte($feuille);
-        foreach (['Pharmacie du Fleuve', 'PPM', 'Service commandes', "N° CMD-$annee-000001", 'BON DE COMMANDE', 'Doliprane — Paracétamol 500 mg', '3400930000011', 'Boîte de 16'] as $attendu) {
+        foreach (['Pharmacie du Fleuve', 'PPM', 'Service commandes', "N° CMD-$annee-000001", 'BON DE COMMANDE', 'Doliprane — Paracétamol 500 mg', 'DCI', 'Boîte de 16'] as $attendu) {
             self::assertStringContainsString($attendu, $texte);
         }
         self::assertStringNotContainsString('BROUILLON', $texte);
@@ -270,6 +273,60 @@ final class CommandeTest extends CommandeTestCase
         self::assertNull($this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Lot::class)->findOneBy(['numero' => 'DP1'])));
     }
 
+    public function testReceptionSansDateDePeremptionLeLotSortEnDernier(): void
+    {
+        $this->connecter($this->officine->adjoint);
+        $id = $this->creerBrouillon($this->ppm, [[$this->doliprane, 10]]);
+        $this->client->request('GET', '/commandes/'.$id);
+        $this->cliquer('Passer sans email');
+        $crawler = $this->client->clickLink('Réceptionner');
+        self::assertSelectorTextContains('main', 'péremption facultative');
+
+        $this->client->submit($crawler->filter('#reception')->form(['lignes[0][lot]' => 'DP-SD', 'lignes[0][peremption]' => '']));
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#statut', 'Reçue');
+        self::assertSelectorTextContains('#receptions', 'DP-SD');
+
+        // Lot daté reçu à la main : il sort avant le lot sans date (FEFO), et les deux comptent dans le stock.
+        LotFactory::createOne(['produit' => $this->doliprane, 'numero' => 'DP-DATE', 'quantiteInitiale' => 5, 'datePeremption' => new \DateTimeImmutable('today +3 years')]);
+        $produitId = $this->doliprane->getId();
+        $this->sansFiltre(static function (EntityManagerInterface $em) use ($produitId): void {
+            $produit = $em->find(Produit::class, $produitId);
+            self::assertInstanceOf(Produit::class, $produit);
+            $lots = $em->getRepository(Lot::class);
+            self::assertInstanceOf(LotRepository::class, $lots);
+            self::assertNull($lots->findOneBy(['numero' => 'DP-SD'])?->getDatePeremption());
+            $ordre = array_map(static fn (Lot $l) => $l->getNumero(), $lots->enStock($produit));
+            self::assertCount(3, $ordre);
+            self::assertSame('DP-SD', end($ordre), 'Sans date de péremption, le lot passe après tous les autres.');
+            self::assertSame(4 + 10 + 5, $lots->stockDisponible($produit, new \DateTimeImmutable('today')));
+        });
+
+        $this->client->request('GET', '/produits/'.$produitId);
+        self::assertSelectorTextContains('main', 'Non renseignée');
+    }
+
+    public function testBonDeCommandePdfDesQueLaCommandeEstPassee(): void
+    {
+        $this->connecter($this->officine->adjoint);
+        $id = $this->creerBrouillon($this->ppm, [[$this->doliprane, 12]]);
+        $this->client->request('GET', '/commandes/'.$id);
+        self::assertSelectorNotExists('#bon-commande-pdf', 'Un brouillon n\'a pas de bon de commande PDF.');
+        $this->client->request('GET', '/commandes/'.$id.'/pdf');
+        self::assertResponseStatusCodeSame(404);
+
+        $this->client->request('GET', '/commandes/'.$id);
+        $this->cliquer('Passer sans email');
+        self::assertSelectorExists('#bon-commande-pdf');
+        $this->client->request('GET', '/commandes/'.$id.'/pdf');
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('content-type', 'application/pdf');
+        $annee = date('Y');
+        self::assertStringContainsString("bon-de-commande-CMD-$annee-000001.pdf", (string) $this->client->getResponse()->headers->get('content-disposition'));
+        self::assertStringStartsWith('%PDF', (string) $this->client->getInternalResponse()->getContent());
+    }
+
     public function testLeVendeurPrepareUnBrouillonSansVoirLesPrix(): void
     {
         $this->connecter($this->officine->vendeur);
@@ -289,7 +346,7 @@ final class CommandeTest extends CommandeTestCase
         $this->client->request('POST', '/commandes/'.$id.'/lignes', ['_token' => $jeton, 'quantite' => [$ligne->getId() => '25'], 'prix' => [$ligne->getId() => '1']]);
         self::assertSame([25, 1150], [$this->commande($id)->getLignes()[0]->getQuantite(), $this->commande($id)->getLignes()[0]->getPrixEstime()]);
 
-        foreach (['/commandes/'.$id.'/excel', '/commandes/'.$id.'/reception'] as $url) {
+        foreach (['/commandes/'.$id.'/excel', '/commandes/'.$id.'/pdf', '/commandes/'.$id.'/reception'] as $url) {
             $this->client->request('GET', $url);
             self::assertResponseStatusCodeSame(403, $url);
         }
@@ -311,7 +368,7 @@ final class CommandeTest extends CommandeTestCase
 
         $this->connecter($this->officine->proprietaire)->request('GET', '/commandes/'.$id);
         self::assertResponseStatusCodeSame(404);
-        foreach (['/commandes/'.$id.'/excel', '/commandes/'.$id.'/reception'] as $url) {
+        foreach (['/commandes/'.$id.'/excel', '/commandes/'.$id.'/pdf', '/commandes/'.$id.'/reception'] as $url) {
             $this->client->request('GET', $url);
             self::assertResponseStatusCodeSame(404, $url);
         }

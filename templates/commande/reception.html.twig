@@ -9,7 +9,7 @@
 {% block content %}
     <p class="text-body-secondary small">
         {{ commande.fournisseur.nom }}, commande passée le {{ commande.envoyeeLe|date('d/m/Y') }}.
-        Saisissez ce qui est arrivé : chaque ligne crée un lot (n° et péremption obligatoires) et entre en stock.
+        Saisissez ce qui est arrivé : chaque ligne crée un lot (n° obligatoire, péremption facultative) et entre en stock.
         Laissez la quantité vide pour un produit non livré : la commande restera « reçue partiellement ».
         Un produit livré en plusieurs lots : « + lot ».
     </p>

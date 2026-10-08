@@ -47,7 +47,7 @@
                                         {{ ligne.produit.nomCommercial }}
                                         {% if amo %}<span class="badge {{ ligne.remboursable ? 'text-bg-info' : 'text-bg-light border' }}">{{ ligne.remboursable ? 'Remboursable' : 'Non remboursable' }}</span>{% endif %}
                                         <div class="small text-body-secondary">
-                                            {% for ll in ligne.lots %}Lot {{ ll.lot.numero }} ({{ ll.quantite }}, pér. {{ ll.lot.datePeremption|date('m/Y') }}){{ not loop.last ? ' · ' }}{% endfor %}
+                                            {% for ll in ligne.lots %}Lot {{ ll.lot.numero }} ({{ ll.quantite }}, {{ ll.lot.datePeremption ? 'pér. ' ~ ll.lot.datePeremption|date('m/Y') : 'sans péremption' }}){{ not loop.last ? ' · ' }}{% endfor %}
                                         </div>
                                     </td>
                                     <td class="text-end">{{ ligne.quantite }}</td>
@@ -86,7 +86,7 @@
                     <div><span class="text-body-secondary">Client :</span> {{ vente.client ? vente.client.nom : 'client de passage' }}</div>
                     {% if amo %}<div><span class="text-body-secondary">Assuré :</span> {{ vente.organismeAmo.code }} {{ vente.numeroAssure }}</div>{% endif %}
                     {% if vente.ordonnance %}
-                        <div><span class="text-body-secondary">Ordonnance :</span> {{ vente.ordonnance.numero ? 'n° ' ~ vente.ordonnance.numero ~ ', ' }}du {{ vente.ordonnance.date|date('d/m/Y') }}, {{ vente.ordonnance.prescripteur }}{{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}</div>
+                        <div><span class="text-body-secondary">Ordonnance :</span> {{ vente.ordonnance.numero ? 'n° ' ~ vente.ordonnance.numero ~ ', ' }}du {{ vente.ordonnance.date|date('d/m/Y') }}{{ vente.ordonnance.prescripteur ? ', ' ~ vente.ordonnance.prescripteur }}{{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}</div>
                     {% endif %}
                     {% if vente.autorisePar %}<div><span class="text-body-secondary">Autorisée par :</span> {{ vente.autorisePar.nom }}</div>{% endif %}
                     {% if creance %}

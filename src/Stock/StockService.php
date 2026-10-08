@@ -49,7 +49,7 @@ class StockService
     public function entrer(
         Produit $produit,
         string $numero,
-        \DateTimeImmutable $datePeremption,
+        ?\DateTimeImmutable $datePeremption,
         int $quantite,
         int $prixAchat,
         ?Fournisseur $fournisseur = null,
@@ -66,7 +66,7 @@ class StockService
         if ($prixAchat < 0) {
             throw new StockException('Le prix d\'achat ne peut pas être négatif.');
         }
-        if ($datePeremption <= $this->aujourdhui()) {
+        if (null !== $datePeremption && $datePeremption <= $this->aujourdhui()) {
             throw new StockException(\sprintf('Le lot %s est déjà périmé (%s) : il ne peut pas entrer en stock.', trim($numero), $datePeremption->format('d/m/Y')));
         }
         if (!$produit->isActif()) {
@@ -83,7 +83,7 @@ class StockService
                 $this->audit->journaliser(AuditLogger::STOCK_ENTREE, $produit->getPharmacie(), $lot, null, [
                     'produit' => $produit->getNomCommercial(),
                     'lot' => $lot->getNumero(),
-                    'peremption' => $datePeremption->format('Y-m-d'),
+                    'peremption' => $datePeremption?->format('Y-m-d'),
                     'quantite' => $quantite,
                     'prix_achat' => $prixAchat,
                     'motif' => $motif,
@@ -291,7 +291,7 @@ class StockService
             foreach ($this->lots->enStock($produit) as $lot) {
                 if ($lot->estPerimeLe($this->aujourdhui())) {
                     return \sprintf('Vente impossible : le seul stock de %s est périmé (lot %s, périmé le %s).',
-                        $produit->getNomCommercial(), $lot->getNumero(), $lot->getDatePeremption()->format('d/m/Y'));
+                        $produit->getNomCommercial(), $lot->getNumero(), $lot->getDatePeremption()?->format('d/m/Y'));
                 }
             }
 
