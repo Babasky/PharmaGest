@@ -20,61 +20,61 @@ final class FournisseurType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                    'label' => 'Entrez le nom du fournisseur', 
-                    'attr' => [
-                        'placeholder' => 'PPM, Laborex, Copharma…'
-                    ]
-                ]
+                'label' => 'Entrez le nom du fournisseur',
+                'attr' => [
+                    'placeholder' => 'PPM, Laborex, Copharma…',
+                ],
+            ]
             )
             ->add('contact', TextType::class, [
-                    'label' => 'Personne à contacter', 
-                    'required' => false,
-                    'attr' => [
-                        'placeholder' => 'La personne à contacter',
-                    ],
-                ]
+                'label' => 'Personne à contacter',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'La personne à contacter',
+                ],
+            ]
             )
             ->add('telephone', TelType::class, [
-                'label' => 'Téléphone', 
-                'required' => false, 
+                'label' => 'Téléphone',
+                'required' => false,
                 'attr' => [
-                    'placeholder' => '+223 XX XX XX XX'
-                    ]
-                ]
+                    'placeholder' => '+223 XX XX XX XX',
+                ],
+            ]
             )
             ->add('email', EmailType::class, [
-                    'label' => 'Email', 
-                    'required' => false,
-                    'attr' => [
-                        'placeholder' => "Entrez l'email du fournisseur",
-                    ], 
-                    'help' => 'Les bons de commande y seront envoyés (Lot 6).'
-                ]
+                'label' => 'Email',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => "Entrez l'email du fournisseur",
+                ],
+                'help' => 'Les bons de commande y seront envoyés (Lot 6).',
+            ]
             )
             ->add('adresse', TextType::class, [
-                    'label' => 'Adresse', 
-                    'required' => false,
-                    'attr' => [
-                        'placeholder' => 'Adresse du fournisseur',
-                    ],
-                ]
+                'label' => 'Adresse',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Adresse du fournisseur',
+                ],
+            ]
             )
             ->add('delaiLivraison', IntegerType::class, [
-                    'label' => 'Délai de livraison habituel (jours)', 
-                    'required' => false, 
-                    'attr' => [
-                        'min' => 0,
-                        'placeholder' => 'Délai de livraison',
-                    ]
-                ]
+                'label' => 'Délai de livraison habituel (jours)',
+                'required' => false,
+                'attr' => [
+                    'min' => 0,
+                    'placeholder' => 'Délai de livraison',
+                ],
+            ]
             )
             ->add('conditionsPaiement', TextType::class, [
-                    'label' => 'Conditions de paiement', 
-                    'required' => false, 
-                    'attr' => [
-                        'placeholder' => 'Ex. : 15 jours'
-                    ]
-                ]
+                'label' => 'Conditions de paiement',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Ex. : 15 jours',
+                ],
+            ]
             );
     }
 
