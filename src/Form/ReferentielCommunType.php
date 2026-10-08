@@ -20,7 +20,13 @@ final class ReferentielCommunType extends AbstractType
     {
         $builder->add('nom', TextType::class, ['label' => 'Nom']);
         if ($options['data'] instanceof OrganismeAmo) {
-            $builder->add('code', TextType::class, ['label' => 'Code', 'attr' => ['placeholder' => 'INPS']]);
+            $builder->add('code', TextType::class, [
+                    'label' => 'Code', 
+                    'attr' => [
+                        'placeholder' => 'INPS'
+                    ]
+                ]
+            );
         }
     }
 

@@ -13,8 +13,14 @@
             <form method="get" class="d-flex flex-wrap gap-2 mb-3">
                 {% for nom, valeur in periode.parametres %}<input type="hidden" name="{{ nom }}" value="{{ valeur }}">{% endfor %}
                 <select name="origine" class="form-select" style="max-width: 16rem" aria-label="Origine">
-                    <option value="">Toutes les origines</option>
-                    {% for o in origines %}<option value="{{ o.value }}"{{ origine == o.value ? ' selected' }}>{{ o.libelle }}</option>{% endfor %}
+                    <option value="">
+                        Toutes les origines
+                    </option>
+                    {% for o in origines %}
+                        <option value="{{ o.value }}"{{ origine == o.value ? ' selected' }}>
+                            {{ o.libelle }}
+                        </option>
+                    {% endfor %}
                 </select>
                 <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
             </form>
@@ -22,19 +28,44 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0" id="recettes">
                         <thead class="table-light">
-                            <tr><th class="ps-3">Date</th><th>Origine</th><th>Libellé</th><th>Mode</th><th class="text-end">Montant</th><th class="pe-3"></th></tr>
+                            <tr>
+                                <th class="ps-3">Date</th>
+                                <th>Origine</th>
+                                <th>Libellé</th>
+                                <th>Mode</th>
+                                <th class="text-end">Montant</th>
+                                <th class="pe-3"></th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for recette in recettes %}
                                 <tr>
-                                    <td class="ps-3 small text-nowrap">{{ recette.date|date('d/m/Y') }}</td>
-                                    <td><span class="badge text-bg-{{ recette.origine.couleur }}">{{ recette.origine.libelle }}</span></td>
-                                    <td>
-                                        {% if recette.vente %}<a class="text-decoration-none" href="{{ path('app_vente_voir', {id: recette.vente.id}) }}">{{ recette.libelle }}</a>{% else %}{{ recette.libelle }}{% endif %}
-                                        {% if recette.estAnnulee %} <span class="badge text-bg-secondary">Annulée</span>{% endif %}
+                                    <td class="ps-3 small text-nowrap">
+                                        {{ recette.date|date('d/m/Y') }}
                                     </td>
-                                    <td class="small">{{ recette.mode.libelle }}</td>
-                                    <td class="montant{{ recette.montant < 0 ? ' text-danger' }}">{{ recette.montant|fcfa }}</td>
+                                    <td>
+                                        <span class="badge text-bg-{{ recette.origine.couleur }}">
+                                            {{ recette.origine.libelle }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if recette.vente %}
+                                            <a class="text-decoration-none" href="{{ path('app_vente_voir', {id: recette.vente.id}) }}">
+                                                {{ recette.libelle }}
+                                            </a>
+                                        {% else %}
+                                            {{ recette.libelle }}
+                                        {% endif %}
+                                        {% if recette.estAnnulee %} 
+                                            <span class="badge text-bg-secondary">Annulée</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small">
+                                        {{ recette.mode.libelle }}
+                                    </td>
+                                    <td class="montant{{ recette.montant < 0 ? ' text-danger' }}">
+                                        {{ recette.montant|fcfa }}
+                                    </td>
                                     <td class="pe-3 text-end">
                                         {% if recette.origine.value == 'manuelle' and not recette.estAnnulee and ecriture_autorisee() %}
                                             <form method="post" action="{{ path('app_recette_annuler', {id: recette.id}) }}" class="d-flex gap-1 justify-content-end annulation-recette">
@@ -46,11 +77,17 @@
                                     </td>
                                 </tr>
                             {% else %}
-                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucune recette sur la période.</td></tr>
+                                <tr>
+                                    <td colspan="6" class="text-center text-body-secondary py-4">Aucune recette sur la période.</td>
+                                </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot class="table-light fw-semibold">
-                            <tr><td class="ps-3" colspan="4">Total de la période (contre-passations déduites)</td><td class="montant" id="total-recettes">{{ total|fcfa }}</td><td></td></tr>
+                            <tr>
+                                <td class="ps-3" colspan="4">Total de la période (contre-passations déduites)</td>
+                                <td class="montant" id="total-recettes">{{ total|fcfa }}</td>
+                                <td></td>
+                            </tr>
                         </tfoot>
                     </table>
                 </div>
@@ -86,7 +123,7 @@
                             <div class="row g-2 mb-2">
                                 <div class="col-6">
                                     <label class="form-label" for="recette-montant">Montant (FCFA)</label>
-                                    <input class="form-control" id="recette-montant" name="montant" inputmode="numeric" required>
+                                    <input class="form-control" id="recette-montant" placeholder="Montant" name="montant" inputmode="numeric" required>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label" for="recette-mode">Mode</label>

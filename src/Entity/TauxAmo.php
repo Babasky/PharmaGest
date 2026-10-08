@@ -29,7 +29,7 @@ class TauxAmo implements TenantAwareInterface
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    #[Assert\NotNull(message: 'Choisissez l\'organisme.')]
+    #[Assert\NotNull(message: "Choisissez l'organisme.")]
     private ?OrganismeAmo $organisme = null;
 
     /** Part prise en charge par l'organisme, en pourcentage entier. */

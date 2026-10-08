@@ -23,8 +23,23 @@ final class ClientType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom', TextType::class, ['label' => 'Nom et prénom'])
-            ->add('telephone', TelType::class, ['label' => 'Téléphone', 'required' => false, 'attr' => ['placeholder' => '+223 XX XX XX XX']])
+            ->add('nom', TextType::class, [
+                    'label' => 'Prénom et nom',
+                    'attr' =>[
+                        'placeholder' => "Entrez le prénom et le nom du client"
+                    ]
+
+                ],
+                
+            )
+            ->add('telephone', TelType::class, [
+                'label' => 'Téléphone', 
+                'required' => false, 
+                'attr' => [
+                    'placeholder' => 'N° de télephone du client'
+                    ]
+                ]
+            )
             ->add('organismeAmo', EntityType::class, [
                 'label' => 'Assurance (AMO ou autre)', 'class' => OrganismeAmo::class, 'required' => false, 'placeholder' => '— Non assuré —',
                 'query_builder' => static fn (OrganismeAmoRepository $r) => $r->createQueryBuilder('o')->andWhere('o.actif = true')->orderBy('o.nom'),
