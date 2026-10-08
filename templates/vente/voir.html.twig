@@ -67,7 +67,7 @@
                     <dl class="row mb-0" id="totaux">
                         <dt class="col-7 fw-normal">Total</dt><dd class="col-5 montant">{{ vente.totalBrut|fcfa }}</dd>
                         {% if amo %}
-                            <dt class="col-7 fw-normal">Part AMO ({{ vente.organismeAmo.code }}, {{ vente.tauxAmo }} %)</dt><dd class="col-5 montant">{{ vente.partAmo|fcfa }}</dd>
+                            <dt class="col-7 fw-normal">Part {{ vente.organismeAmo.code }} ({{ vente.tauxAmo }} % de {{ vente.baseAmo|fcfa }})</dt><dd class="col-5 montant">{{ vente.partAmo|fcfa }}</dd>
                         {% endif %}
                         {% if vente.remise > 0 %}<dt class="col-7 fw-normal text-success">Remise</dt><dd class="col-5 montant text-success">− {{ vente.remise|fcfa }}</dd>{% endif %}
                         <dt class="col-7">{{ vente.statut.value == 'a_encaisser' ? 'À encaisser' : 'Encaissé' }}</dt><dd class="col-5 montant fw-bold" id="encaisse">{{ vente.montantEncaisse|fcfa }}</dd>
@@ -125,7 +125,7 @@
                     <input type="hidden" name="_token" value="{{ csrf_token('annuler-vente-' ~ vente.id) }}">
                     <div class="card-body">
                         <label class="form-label small" for="motif">Motif de l'annulation</label>
-                        <input type="text" class="form-control form-control-sm mb-2" id="motif" name="motif" maxlength="255" required>
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Entrez le motif de l'annulation" id="motif" name="motif" maxlength="255" required>
                         <button class="btn btn-sm btn-outline-danger" type="submit" data-turbo-confirm="Annuler la vente {{ vente.numero }} ? Les produits reviendront en stock.">Annuler la vente</button>
                         <div class="form-text">Possible le jour même, avant la clôture de la caisse ; ensuite il faut un avoir.</div>
                     </div>

@@ -3,6 +3,8 @@
 namespace App\Tests\Functional\Admin;
 
 use App\Entity\FormeGalenique;
+use App\Entity\OrganismeAmo;
+use App\Enum\TypeOrganisme;
 use App\Tests\Support\AppWebTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -59,6 +61,28 @@ final class ReferentielAdminTest extends AppWebTestCase
         $this->client->followRedirect();
 
         self::assertSelectorTextContains('#main', 'MUT');
+        $type = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(OrganismeAmo::class)->findOneBy(['code' => 'MUT'])?->getType());
+        self::assertSame(TypeOrganisme::Amo, $type, 'Par défaut, un organisme est un gestionnaire AMO.');
+    }
+
+    public function testUneAutreAssuranceQueLAmo(): void
+    {
+        $officine = $this->creerOfficine();
+        $this->connecter($this->creerSuperAdmin());
+        $this->creer('/admin/referentiels/organismes-amo', ['OrganismeAmo[nom]' => 'Assurance des ONG', 'OrganismeAmo[code]' => 'aong', 'OrganismeAmo[type]' => 'assurance']);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+
+        self::assertSelectorTextContains('#main', 'Autre assurance');
+        $type = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(OrganismeAmo::class)->findOneBy(['code' => 'AONG'])?->getType());
+        self::assertSame(TypeOrganisme::Assurance, $type);
+
+        // Proposée aux pharmacies pour leurs clients et pour le taux, à côté des organismes AMO.
+        $crawler = $this->connecter($officine->proprietaire)->request('GET', '/clients/nouveau');
+        self::assertCount(1, $crawler->filter('#client_organismeAmo optgroup[label="Autre assurance"] option:contains("Assurance des ONG")'));
+        $crawler = $this->client->request('GET', '/parametres?onglet=amo');
+        self::assertCount(1, $crawler->filter('#taux_amo_organisme optgroup[label="Autre assurance"] option:contains("Assurance des ONG")'));
+        self::assertCount(1, $crawler->filter('#taux_amo_organisme optgroup[label="AMO"] option:contains("INPS")'));
     }
 
     public function testPasDeSuppression(): void

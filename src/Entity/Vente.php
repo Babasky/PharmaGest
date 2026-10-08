@@ -77,6 +77,10 @@ class Vente implements TenantAwareInterface
     #[ORM\Column(nullable: true)]
     private ?int $tauxAmo = null;
 
+    /** Le taux porte sur le prix de vente AMO des médicaments (organisme AMO) plutôt que sur le prix de la pharmacie. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $tarifAmo = false;
+
     // Montants figés à la validation.
     #[ORM\Column]
     private int $totalBrut = 0;
@@ -306,6 +310,7 @@ class Vente implements TenantAwareInterface
         $this->organismeAmo = $organisme;
         $this->numeroAssure = $numeroAssure;
         $this->tauxAmo = $taux;
+        $this->tarifAmo = $organisme?->appliqueTarifAmo() ?? false;
     }
 
     /**
@@ -329,7 +334,7 @@ class Vente implements TenantAwareInterface
 
     public function ajouterLigne(Produit $produit, int $quantite): LigneVente
     {
-        $ligne = new LigneVente($this, $produit, $quantite, (int) $produit->getPrixVente(), $produit->isRemboursableAmo());
+        $ligne = new LigneVente($this, $produit, $quantite, (int) $produit->getPrixVente(), $produit->isRemboursableAmo(), $produit->getPrixVenteAmo());
         $this->lignes->add($ligne);
 
         return $ligne;
@@ -356,11 +361,15 @@ class Vente implements TenantAwareInterface
         $remiseLignes = 0;
         $tauxMax = 0.0;
 
+        $tarifAmo = $this->tarifAmo();
+        $brutRemboursable = 0;
+
         foreach ($this->lignes as $ligne) {
             $brut = $ligne->getMontantBrut();
             $totalBrut += $brut;
             if ($amo && $ligne->isRemboursable()) {
-                $baseAmo += $brut;
+                $baseAmo += $ligne->basePriseEnCharge($tarifAmo);
+                $brutRemboursable += $brut;
             }
             if (!$amo) {
                 $remise = $ligne->calculerRemise();
@@ -369,7 +378,8 @@ class Vente implements TenantAwareInterface
             }
         }
 
-        $partAmo = $amo ? Fcfa::arrondir($baseAmo * ($this->tauxAmo ?? 0) / 100) : 0;
+        // La part de l'organisme ne dépasse jamais ce que la pharmacie facture pour les lignes remboursables.
+        $partAmo = $amo ? min($brutRemboursable, Fcfa::arrondir($baseAmo * ($this->tauxAmo ?? 0) / 100)) : 0;
         $baseRemise = $totalBrut - $partAmo;
         $baseRemiseGlobale = $baseRemise - $remiseLignes;
         $remiseGlobale = $this->remiseType?->montantSur($baseRemiseGlobale, $this->remiseValeur) ?? 0;
@@ -491,17 +501,28 @@ class Vente implements TenantAwareInterface
         return $this->partAmo;
     }
 
-    /** Base AMO : total des lignes remboursables, au prix plein (RG-07). */
+    /**
+     * Base de prise en charge : total des lignes remboursables, au prix de vente AMO pour un organisme AMO,
+     * au prix plein de la pharmacie pour une autre assurance (RG-07).
+     */
     public function getBaseAmo(): int
     {
+        if (TypeVente::Amo !== $this->type) {
+            return 0;
+        }
+        $tarifAmo = $this->tarifAmo();
         $base = 0;
         foreach ($this->lignes as $ligne) {
-            if ($ligne->isRemboursable()) {
-                $base += $ligne->getMontantBrut();
-            }
+            $base += $ligne->basePriseEnCharge($tarifAmo);
         }
 
-        return TypeVente::Amo === $this->type ? $base : 0;
+        return $base;
+    }
+
+    /** Le taux s'applique au prix de vente AMO des médicaments (organisme AMO), ou au prix de la pharmacie. */
+    public function tarifAmo(): bool
+    {
+        return $this->tarifAmo;
     }
 
     public function getMontantEncaisse(): int

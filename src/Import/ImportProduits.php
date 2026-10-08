@@ -69,6 +69,7 @@ final class ImportProduits extends AbstractDefinitionImport
             new Colonne('stock_max', 'Stock maximum', false, 'En unités.', '60'),
             new Colonne('ordonnance_obligatoire', 'Ordonnance obligatoire', false, 'oui ou non.', 'non'),
             new Colonne('remboursable_amo', 'Remboursable AMO', false, 'oui ou non.', 'oui'),
+            new Colonne('prix_vente_amo', 'Prix de vente AMO', false, 'Prix fixé par l\'AMO, en FCFA. Vide : prix de la pharmacie.', '1400'),
         ];
     }
 
@@ -114,6 +115,10 @@ final class ImportProduits extends AbstractDefinitionImport
             $produit->setSeuilAlerte($seuil);
         }
         $produit->setStockMax(Valeurs::entier($valeurs, 'stock_max', 'Stock maximum', $erreurs));
+        if (\array_key_exists('prix_vente_amo', $valeurs)) {
+            // Colonne absente du fichier : le prix AMO déjà saisi est conservé.
+            $produit->setPrixVenteAmo(Valeurs::entier($valeurs, 'prix_vente_amo', 'Prix de vente AMO', $erreurs));
+        }
 
         $tva = Valeurs::entier($valeurs, 'tva', 'TVA', $erreurs) ?? 0;
         if (!\in_array($tva, Produit::TAUX_TVA, true)) {

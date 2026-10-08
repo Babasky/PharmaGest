@@ -36,6 +36,9 @@
                 <div class="card-body">
                     <dl class="row mb-3">
                         <dt class="col-6 fw-normal text-body-secondary">Prix de vente</dt><dd class="col-6 montant fs-5 fw-semibold">{{ produit.prixVente|fcfa }}</dd>
+                        {% if produit.prixVenteAmo is not null %}
+                            <dt class="col-6 fw-normal text-body-secondary">Prix de vente AMO</dt><dd class="col-6 montant" id="prix-vente-amo">{{ produit.prixVenteAmo|fcfa }}</dd>
+                        {% endif %}
                         {% if is_granted('ROLE_ADJOINT') %}
                             <dt class="col-6 fw-normal text-body-secondary">Prix d'achat de référence</dt><dd class="col-6 montant">{{ produit.prixAchat|fcfa }}</dd>
                             <dt class="col-6 fw-normal text-body-secondary">Marge brute</dt><dd class="col-6 montant">{{ produit.margeReference|fcfa }}</dd>

@@ -34,7 +34,7 @@ final class NouvelInventaireType extends AbstractType
                 'query_builder' => static fn (EtagereRepository $r) => $r->choixActifs(),
                 'choice_label' => static fn (Etagere $e) => $e->getCode().' — '.$e->getLibelle(),
                 'required' => false,
-                'placeholder' => '—',
+                'placeholder' => "Choisir l'étagère",
             ])
             ->add('categorie', EntityType::class, [
                 'label' => 'Catégorie (inventaire tournant)',
@@ -42,7 +42,7 @@ final class NouvelInventaireType extends AbstractType
                 'query_builder' => static fn (CategorieRepository $r) => $r->choixActifs(),
                 'choice_label' => static fn (Categorie $c) => $c->getNomComplet(),
                 'required' => false,
-                'placeholder' => '—',
+                'placeholder' => 'Choisir la catégorie',
             ]);
     }
 }

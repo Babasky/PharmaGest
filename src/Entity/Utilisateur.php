@@ -38,13 +38,13 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180, unique: true)]
-    #[Assert\NotBlank]
-    #[Assert\Email]
+    #[Assert\NotBlank(message:"Ce champ ne doit pas être vide")]
+    #[Assert\Email(message: "Email invalide")]
     #[Assert\Length(max: 180)]
     private string $email = '';
 
     #[ORM\Column(length: 120)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: "Ce champ ne doit pas être vide")]
     #[Assert\Length(max: 120)]
     private string $nom = '';
 

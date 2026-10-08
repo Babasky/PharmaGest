@@ -98,7 +98,7 @@ final class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToRoute('Abonnements', 'fa fa-calendar-check', 'admin_abonnement_index');
         yield MenuItem::linkTo(OffreCrudController::class, 'Offres', 'fa fa-tags');
         yield MenuItem::section('Référentiels communs');
-        yield MenuItem::linkTo(OrganismeAmoCrudController::class, 'Organismes AMO', 'fa fa-shield-heart');
+        yield MenuItem::linkTo(OrganismeAmoCrudController::class, 'Assurances (AMO et autres)', 'fa fa-shield-heart');
         yield MenuItem::linkTo(FormeGaleniqueCrudController::class, 'Formes galéniques', 'fa fa-capsules');
         yield MenuItem::linkTo(CategorieDepenseCrudController::class, 'Catégories de dépenses', 'fa fa-wallet');
         yield MenuItem::section();

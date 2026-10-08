@@ -4,7 +4,7 @@
 
 {% block content %}
     <ul class="nav nav-tabs mb-3" role="tablist">
-        {% for cle, libelle in {fiche: 'Fiche de la pharmacie', regles: 'Règles de gestion', amo: 'Taux AMO'} %}
+        {% for cle, libelle in {fiche: 'Fiche de la pharmacie', regles: 'Règles de gestion', amo: 'Taux AMO et assurances'} %}
             <li class="nav-item" role="presentation">
                 <a class="nav-link{{ onglet == cle ? ' active' }}" href="{{ path('app_parametres', {onglet: cle}) }}"{% if onglet == cle %} aria-current="page"{% endif %}>{{ libelle }}</a>
             </li>
@@ -45,11 +45,11 @@
                     <ul class="list-group list-group-flush">
                         {% for ligne in taux_en_vigueur %}
                             <li class="list-group-item d-flex justify-content-between">
-                                <span class="min-w-0">{{ ligne.organisme.nom }}</span>
+                                <span class="min-w-0">{{ ligne.organisme.nom }} <span class="badge text-bg-light border">{{ ligne.organisme.type.libelle }}</span></span>
                                 <strong class="text-nowrap ms-2">{{ ligne.taux }}&nbsp;%</strong>
                             </li>
                         {% else %}
-                            <li class="list-group-item text-body-secondary">Aucun organisme AMO n'est encore configuré par l'éditeur.</li>
+                            <li class="list-group-item text-body-secondary">Aucun organisme d'assurance n'est encore configuré par l'éditeur.</li>
                         {% endfor %}
                     </ul>
                     <div class="card-body small text-body-secondary">Sans taux saisi, PharmaGest applique 70 %. Un nouveau taux ne modifie jamais les ventes déjà enregistrées.</div>
