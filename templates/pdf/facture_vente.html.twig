@@ -66,7 +66,7 @@
         <tbody>
             {% for ligne in vente.lignes %}
                 <tr>
-                    <td>{{ ligne.produit.designation }}{% if vente.type.value == 'amo' %}<br><span class="petit">{{ ligne.remboursable ? 'Remboursable AMO' : 'Non remboursable : à la charge de l\'assuré' }}</span>{% endif %}</td>
+                    <td>{{ ligne.produit.designation }}{% if vente.type.value == 'amo' %}<br><span class="petit">{{ ligne.remboursable ? 'Remboursable' ~ (vente.tarifAmo and ligne.prixUnitaireAmo is not null ? ', prix AMO ' ~ ligne.prixUnitaireAmo|fcfa) : 'Non remboursable : à la charge de l\'assuré' }}</span>{% endif %}</td>
                     <td class="droite">{{ ligne.quantite }}</td>
                     <td class="droite">{{ ligne.prixUnitaire|fcfa }}</td>
                     <td class="droite">{{ ligne.remise > 0 ? ligne.remise|fcfa : '—' }}</td>
@@ -79,7 +79,7 @@
     <table class="totaux">
         <tr><td>Total</td><td class="droite">{{ vente.totalBrut|fcfa }}</td></tr>
         {% if vente.type.value == 'amo' %}
-            <tr><td>Part AMO ({{ vente.organismeAmo.code }}, {{ vente.tauxAmo }} %)</td><td class="droite">{{ vente.partAmo|fcfa }}</td></tr>
+            <tr><td>Part {{ vente.organismeAmo.code }} ({{ vente.tauxAmo }} % de {{ vente.baseAmo|fcfa }})</td><td class="droite">{{ vente.partAmo|fcfa }}</td></tr>
             <tr><td>Part assuré</td><td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td></tr>
         {% endif %}
         {% if vente.remise > 0 %}<tr><td>Remise</td><td class="droite">− {{ vente.remise|fcfa }}</td></tr>{% endif %}

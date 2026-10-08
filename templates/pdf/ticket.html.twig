@@ -69,14 +69,8 @@
             <td class="droite">{{ vente.totalBrut|fcfa }}</td>
         </tr>
         {% if vente.type.value == 'amo' %}
-            <tr>
-                <td>Part AMO ({{ vente.tauxAmo }} %)</td>
-                <td class="droite">{{ vente.partAmo|fcfa }}</td>
-            </tr>
-            <tr>
-                <td>Part assuré</td>
-                <td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td>
-            </tr>
+            <tr><td>Part {{ vente.organismeAmo.code }} ({{ vente.tauxAmo }} %)</td><td class="droite">{{ vente.partAmo|fcfa }}</td></tr>
+            <tr><td>Part assuré</td><td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td></tr>
         {% endif %}
         {% if vente.remise > 0 %}
             <tr>

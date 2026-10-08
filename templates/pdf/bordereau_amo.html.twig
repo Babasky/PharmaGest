@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Bordereau AMO {{ bordereau.libelle }}</title>
+    <title>Bordereau {{ bordereau.organisme.appliqueTarifAmo ? 'AMO' : 'assurance' }} {{ bordereau.libelle }}</title>
     <style>
         @page { margin: 14mm 12mm; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 8.5pt; color: #1f2a24; }
@@ -34,7 +34,7 @@
                 </div>
             </td>
             <td width="45%" class="droite">
-                <div style="font-size: 13pt; font-weight: bold;">BORDEREAU AMO</div>
+                <div style="font-size: 13pt; font-weight: bold;">BORDEREAU {{ bordereau.organisme.appliqueTarifAmo ? 'AMO' : 'ASSURANCE' }}</div>
                 {% if bordereau.numero %}
                     <div>N° <strong>{{ bordereau.numero }}</strong></div>
                     <div>Transmis le {{ bordereau.transmisLe|date('d/m/Y') }}</div>
@@ -52,7 +52,7 @@
         <thead>
             <tr>
                 <th>N°</th><th>Date</th><th>Vente</th><th>Assuré</th><th>Ordonnance</th>
-                <th class="droite">Total</th><th class="droite">Base remb.</th><th class="droite">Part AMO</th>
+                <th class="droite">Total</th><th class="droite">Base remb.{% if bordereau.organisme.appliqueTarifAmo %}<br>(prix AMO){% endif %}</th><th class="droite">Part {{ bordereau.organisme.code }}</th>
                 {% if transmis %}<th class="droite">Réglé</th>{% endif %}
             </tr>
         </thead>

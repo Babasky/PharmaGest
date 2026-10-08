@@ -92,55 +92,20 @@ final class ProduitType extends AbstractType
                 'query_builder' => static fn (EtagereRepository $r) => $r->choixActifs(),
             ])
             ->add('fournisseurHabituel', EntityType::class, [
-                    'label' => 'Fournisseurs habituels', 
-                    'class' => Fournisseur::class, 
-                    'required' => false, 
-                    'placeholder' => "Choisir fournisseur",
-                    'query_builder' => static fn (FournisseurRepository $r) => $r->choixActifs(),
-                ]
-            )
-            ->add('prixAchat', IntegerType::class, [
-                    'label' => "Prix d'achat (FCFA)", 
-                    ...$montant
-                ]
-            )
-            ->add('prixVente', IntegerType::class, [
-                    'label' => 'Prix de vente (FCFA)',
-                    ...$montant
-                ]
-            )
-            ->add('tauxTva', ChoiceType::class, [
-                    'label' => 'TVA', 
-                    'choices' => Produit::TAUX_TVA
-                ]
-            )
-            ->add('seuilAlerte', IntegerType::class, [
-                    'label' => "Seuil d'alerte (unités)", 
-                    'help' => 'En dessous, le produit est signalé en rupture.', 
-                    'attr' => [
-                        'min' => 0
-                    ]
-                ]
-            )
-            ->add('stockMax', IntegerType::class, [
-                    'label' => 'Stock maximum (unités)', 
-                    'required' => false, 
-                    'help' => 'Sert à proposer les quantités à commander.', 
-                    'attr' => [
-                        'min' => 0
-                    ]
-                ]
-            )
-            ->add('ordonnanceObligatoire', CheckboxType::class, [
-                    'label' => "Ordonnance obligatoire", 
-                    'required' => false
-                ]
-            )
-            ->add('remboursableAmo', CheckboxType::class, [
-                    'label' => 'Remboursable AMO', 
-                    'required' => false
-                ]
-            );
+                'label' => 'Fournisseur habituel', 'class' => Fournisseur::class, 'required' => false, 'placeholder' => '—',
+                'query_builder' => static fn (FournisseurRepository $r) => $r->choixActifs(),
+            ])
+            ->add('prixAchat', IntegerType::class, ['label' => 'Prix d\'achat (FCFA)', ...$montant])
+            ->add('prixVente', IntegerType::class, ['label' => 'Prix de vente (FCFA)', ...$montant])
+            ->add('tauxTva', ChoiceType::class, ['label' => 'TVA', 'choices' => Produit::TAUX_TVA])
+            ->add('seuilAlerte', IntegerType::class, ['label' => 'Seuil d\'alerte (unités)', 'help' => 'En dessous, le produit est signalé en rupture.', 'attr' => ['min' => 0]])
+            ->add('stockMax', IntegerType::class, ['label' => 'Stock maximum (unités)', 'required' => false, 'help' => 'Sert à proposer les quantités à commander.', 'attr' => ['min' => 0]])
+            ->add('ordonnanceObligatoire', CheckboxType::class, ['label' => 'Ordonnance obligatoire', 'required' => false])
+            ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable (AMO et assurances)', 'required' => false])
+            ->add('prixVenteAmo', IntegerType::class, [
+                'label' => 'Prix de vente AMO (FCFA)', 'required' => false, ...$montant,
+                'help' => 'Prix fixé par l\'AMO : le taux AMO s\'applique sur ce prix. Vide : prix de vente de la pharmacie.',
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

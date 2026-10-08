@@ -15,6 +15,7 @@ PharmaGest est un logiciel en ligne, vendu par abonnement annuel, qui permet à 
 - Une officine s'approvisionne auprès de plusieurs fournisseurs : la PPM et des grossistes répartiteurs privés.
 - Les produits sont classés par catégorie et rangés par étagère. Retrouver vite un produit au comptoir est un besoin quotidien.
 - On vend avec ou sans ordonnance. Il existe deux types d'ordonnances : classiques et AMO. Pour l'AMO, l'assuré paie 30 % et l'organisme rembourse 70 % à la pharmacie, avec un délai.
+- L'AMO n'est pas la seule assurance : une ONG ou une entreprise privée peut inscrire ses employés auprès d'une autre assurance, avec un taux de prise en charge différent. L'AMO fixe aussi, pour chaque médicament, son propre prix de vente, qui peut différer de celui de la pharmacie : le taux AMO s'applique sur ce prix AMO.
 - La créance AMO pèse sur la trésorerie : sans suivi, les bordereaux impayés ou rejetés passent inaperçus.
 - Les officines accordent des remises à leurs clients fidèles, souvent sans trace écrite.
 
@@ -138,7 +139,7 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | SA-04 | Paramétrer les offres (limites, fonctions incluses) | V1 |
 | SA-05 | Tableau de bord : pharmacies actives, en essai, expirant sous 30 jours, expirées ; revenus d'abonnement par mois | MVP |
 | SA-06 | Générer la facture d'abonnement PDF | MVP |
-| SA-07 | Gérer les référentiels communs : organismes AMO, formes galéniques, catégories de dépenses par défaut | MVP |
+| SA-07 | Gérer les référentiels communs : organismes d'assurance (AMO et autres assurances), formes galéniques, catégories de dépenses par défaut | MVP |
 | SA-08 | Catalogue national de produits partagé (nom, DCI, forme, dosage) que les pharmacies peuvent importer dans leur catalogue | V1 |
 | SA-09 | Diffuser une annonce (maintenance, nouveauté) affichée à toutes les pharmacies | V1 |
 | SA-10 | Connexion « en tant que » avec autorisation du propriétaire, tracée | V1 |
@@ -148,7 +149,7 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | ID | Exigence | Priorité |
 |---|---|---|
 | PH-01 | Fiche pharmacie : nom, logo, adresse, téléphone, email, n° d'autorisation, mentions du ticket | MVP |
-| PH-02 | Paramètres : taux AMO par organisme (défaut 70 %), plafond de remise (%), délai d'alerte péremption (jours), politique de vente sans ordonnance | MVP |
+| PH-02 | Paramètres : taux de prise en charge par organisme, AMO ou autre assurance (défaut 70 %), plafond de remise (%), délai d'alerte péremption (jours), politique de vente sans ordonnance | MVP |
 | PH-03 | Créer, modifier, désactiver des utilisateurs (adjoints, vendeurs) dans la limite de l'offre | MVP |
 | PH-04 | Réinitialisation du mot de passe par email ; code PIN à 4 chiffres pour changer rapidement de vendeur à la caisse | MVP |
 | PH-05 | Droits fins de l'adjoint (cases à cocher par fonction) | V1 |
@@ -163,7 +164,7 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | RF-03 | Produits : nom commercial, DCI, forme, dosage, conditionnement, code-barres, catégorie, étagère, fournisseur habituel, prix d'achat, prix de vente, seuil d'alerte, stock maximum, ordonnance obligatoire, remboursable AMO, taux de TVA, actif/inactif | MVP |
 | RF-04 | Produits équivalents : regroupement par DCI + dosage + forme pour proposer un générique à la caisse | V1 |
 | RF-05 | Fournisseurs : nom, contact, téléphone, email, adresse, délai de livraison habituel, conditions de paiement | MVP |
-| RF-06 | Clients : nom, téléphone, privilégié (oui/non), n° d'assuré AMO, organisme AMO, entreprise rattachée (clients conventionnés) | MVP |
+| RF-06 | Clients : nom, téléphone, privilégié (oui/non), n° d'assuré, organisme (AMO ou autre assurance), entreprise rattachée (clients conventionnés) | MVP |
 | RF-07 | Prescripteurs : nom, spécialité, structure de santé (saisie libre réutilisable) | V1 |
 | RF-08 | Import Excel/CSV des produits, fournisseurs et clients, avec rapport d'erreurs ligne par ligne | MVP |
 | RF-09 | Modification de prix en masse (par catégorie ou fournisseur, en % ou en montant) avec historique | V1 |
@@ -212,6 +213,8 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | AM-02 | Vente AMO : client assuré obligatoire (n° d'assuré, organisme) | MVP |
 | AM-03 | Calcul automatique de la part AMO et de la part assuré, affiché à la caisse et sur le ticket | MVP |
 | AM-04 | Produits non remboursables payés à 100 % par l'assuré, distingués sur le ticket | MVP |
+| AM-12 | Autres assurances que l'AMO (assurance privée, ONG, mutuelle d'entreprise) : même parcours que l'AMO (vente, créance, bordereau, règlement), avec leur propre taux | MVP |
+| AM-13 | Prix de vente AMO par médicament, distinct du prix de la pharmacie : la part d'un organisme AMO se calcule sur ce prix | MVP |
 | AM-05 | Chaque vente AMO crée une créance « en attente » sur l'organisme | MVP |
 | AM-06 | Bordereau : regroupement des créances par organisme et par période, statuts brouillon, transmis, payé partiellement, payé, rejeté | MVP |
 | AM-07 | Export du bordereau en Excel et en PDF, avec copies des ordonnances en annexe (PDF unique) | MVP |
@@ -305,9 +308,9 @@ Ces règles s'appliquent partout dans l'application ; chaque règle de calcul fa
 | RG-04 | À la vente, les lots sortent dans l'ordre de leur date de péremption (FEFO). Une ligne peut consommer plusieurs lots. |
 | RG-05 | Un lot dont la date de péremption est atteinte ne peut plus être vendu. Il ne peut sortir que par destruction ou retour fournisseur. |
 | RG-06 | Prix, taux AMO et taux de remise sont figés sur la vente au moment où elle est validée. Un changement ultérieur de paramètre ne modifie pas les ventes passées. |
-| RG-07 | Vente AMO : base AMO = total des lignes remboursables ; part AMO = arrondi(base AMO × taux de l'organisme) ; part assuré = total − part AMO. |
+| RG-07 | Vente AMO ou assurance : base = total des lignes remboursables, au prix de vente AMO du médicament pour un organisme AMO (prix de la pharmacie si le médicament n'a pas de prix AMO), au prix de la pharmacie pour une autre assurance ; part de l'organisme = arrondi(base × taux de l'organisme), sans dépasser le prix facturé des lignes remboursables ; part assuré = total − part de l'organisme. |
 | RG-08 | Remise : possible seulement si un client privilégié est sélectionné. Au-delà du plafond, le code PIN du propriétaire est exigé. |
-| RG-09 | Sur une vente AMO, la remise ne s'applique qu'à la part assuré. La part AMO est toujours calculée sur le prix plein. |
+| RG-09 | Sur une vente AMO, la remise ne s'applique qu'à la part assuré. La part AMO est toujours calculée sans remise (sur le prix AMO ou le prix plein, selon RG-07). |
 | RG-10 | Recette automatique = montant réellement encaissé (après remise, part assuré seulement pour l'AMO). La part AMO devient une créance, puis une recette à son règlement. |
 | RG-11 | Une créance AMO n'appartient qu'à un seul bordereau à la fois. Un bordereau transmis n'est plus modifiable. |
 | RG-12 | Annulation : possible le jour même, avant la clôture de la session de caisse. Ensuite, seul un avoir est possible. Les deux remettent les produits dans leurs lots d'origine et contre-passent la recette. |
@@ -330,6 +333,8 @@ Ordonnance AMO de 20 000 FCFA, dont 18 000 remboursables et 2 000 non remboursab
 | Créance sur l'organisme (recette au règlement) | | 12 600 |
 
 Seule la part assuré entre en recette le jour de la vente ; la part AMO reste une créance jusqu'au règlement, ou au rejet.
+
+Avec un prix de vente AMO : boîte vendue 2 400 FCFA par la pharmacie, prix AMO 2 100 FCFA, taux 70 %. Part AMO = 2 100 × 70 % = 1 470 ; l'assuré paie 2 400 − 1 470 = 930 (la différence de prix reste à sa charge). Pour une autre assurance à 80 %, sans prix propre : part assurance = 2 400 × 80 % = 1 920, l'assuré paie 480.
 
 ## 6. Exigences non fonctionnelles
 
@@ -412,7 +417,7 @@ Le modèle compte une trentaine d'entités. Toutes celles marquées « oui » da
 | Abonnement | date début, date fin, montant, moyen, référence, statut, enregistré par | Pharmacie, Offre | non |
 | Utilisateur | nom, email, mot de passe, PIN, rôles, actif, dernière connexion | Pharmacie(s) | oui |
 | ParametrePharmacie | plafond remise, délai péremption, politique sans ordonnance, mentions ticket | Pharmacie | oui |
-| OrganismeAmo | nom, code | TauxAmo | non |
+| OrganismeAmo | nom, code, nature (AMO ou autre assurance) | TauxAmo | non |
 | TauxAmo | taux, date d'effet | Pharmacie, OrganismeAmo | oui |
 | Categorie | nom, parent | Produit | oui |
 | Etagere | code, libellé, zone | Produit | oui |
@@ -506,6 +511,7 @@ Le MVP est accepté quand les 12 scénarios ci-dessous passent en recette, sans 
 ### 11.1 Hypothèses retenues
 
 - Le taux AMO est paramétrable par organisme (70 % par défaut), et historisé par date d'effet.
+- Une autre assurance (privée, ONG, mutuelle) suit le même parcours que l'AMO, avec son taux ; seul l'AMO applique son prix de vente par médicament.
 - Sur une vente AMO, la remise ne porte que sur la part assuré.
 - La part AMO est une créance ; elle devient une recette au règlement du bordereau.
 - L'abonnement est payé hors plateforme et activé manuellement.
@@ -533,6 +539,8 @@ Le MVP est accepté quand les 12 scénarios ci-dessous passent en recette, sans 
 | APDP | Autorité de protection des données à caractère personnel du Mali |
 | Bordereau | Relevé des ordonnances AMO envoyé à un organisme pour remboursement |
 | Créance AMO | Part AMO d'une vente, due par l'organisme à la pharmacie |
+| Prix de vente AMO | Prix d'un médicament fixé par l'AMO ; le taux AMO s'applique sur ce prix |
+| Tiers payant | Organisme (AMO ou autre assurance) qui paie une partie de la vente à la place du client |
 | DCI | Dénomination commune internationale (nom de la molécule) |
 | FEFO | Premier périmé, premier sorti |
 | Lot | Ensemble d'unités d'un produit fabriquées ensemble, avec un numéro et une date de péremption |

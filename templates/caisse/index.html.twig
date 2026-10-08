@@ -131,7 +131,7 @@
                                         {% if panier.type.value == 'amo' %}<span class="badge {{ ligne.remboursable ? 'text-bg-info' : 'text-bg-light border' }} ms-1">{{ ligne.remboursable ? 'Remboursable' : 'Non remboursable' }}</span>{% endif %}
                                         <div class="small text-body-secondary">{{ produit.etagere ? 'Étagère ' ~ produit.etagere.code ~ ' · ' }}{{ stocks[produit.id].stock ?? 0 }} en stock</div>
                                     </td>
-                                    <td class="montant small">{{ ligne.prixUnitaire|fcfa }}</td>
+                                    <td class="montant small">{{ ligne.prixUnitaire|fcfa }}{% if panier.tarifAmo and ligne.remboursable and ligne.prixUnitaireAmo is not null and ligne.prixUnitaireAmo != ligne.prixUnitaire %}<div class="text-body-secondary" title="Prix de vente AMO">AMO {{ ligne.prixUnitaireAmo|fcfa }}</div>{% endif %}</td>
                                     <td>
                                         <form method="post" action="{{ path('app_caisse_ligne', {id: ligne.id}) }}" id="{{ form_id }}">
                                             <input type="hidden" name="_token" value="{{ token }}">
@@ -292,7 +292,7 @@
                         <dl class="row mb-2" id="totaux">
                             <dt class="col-7 fw-normal">Total</dt><dd class="col-5 montant mb-1">{{ totaux.totalBrut|fcfa }}</dd>
                             {% if panier.type.value == 'amo' %}
-                                <dt class="col-7 fw-normal">Part AMO ({{ panier.organismeAmo ? panier.organismeAmo.code ~ ', ' }}{{ panier.tauxAmo ?? 0 }} % de {{ totaux.baseAmo|fcfa }})</dt><dd class="col-5 montant mb-1">− {{ totaux.partAmo|fcfa }}</dd>
+                                <dt class="col-7 fw-normal" id="part-organisme">Part {{ panier.organismeAmo ? panier.organismeAmo.code : 'assurance' }} ({{ panier.tauxAmo ?? 0 }} % de {{ totaux.baseAmo|fcfa }}{{ panier.tarifAmo ? ', prix AMO' }})</dt><dd class="col-5 montant mb-1">− {{ totaux.partAmo|fcfa }}</dd>
                                 <dt class="col-7 fw-normal">Part assuré</dt><dd class="col-5 montant mb-1">{{ totaux.partAssureAvantRemise|fcfa }}</dd>
                             {% endif %}
                             {% if totaux.remiseTotale > 0 %}

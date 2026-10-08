@@ -503,3 +503,41 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   `public/` servi), Supervisor pour le worker, script de déploiement par version, sauvegarde nocturne chiffrée (GPG)
   copiée hors du serveur avec rétention de 30 jours, procédure de restauration à tester chaque mois.
 
+## Décisions — Autres assurances et prix de vente AMO (demande de Modibo, 08/10/2026)
+
+Contexte donné par Modibo : l'AMO n'est pas la seule assurance (une ONG ou une entreprise privée peut inscrire ses
+employés auprès d'une autre assurance, avec un taux différent) ; l'AMO a, pour chaque médicament, son propre prix de
+vente, et son taux s'applique sur ce prix.
+
+### Organismes d'assurance (AM-12)
+
+- L'organisme AMO existant est généralisé : chaque organisme a une **nature**, « AMO » (INPS, CMSS…) ou « Autre
+  assurance » (assurance privée, ONG, mutuelle d'entreprise). Les organismes déjà créés restent « AMO ».
+- La liste reste un référentiel commun géré par l'éditeur dans l'espace plateforme (« Assurances (AMO et autres) ») :
+  une assurance ajoutée une fois sert à toutes les pharmacies. Chaque pharmacie saisit ensuite son taux (Paramètres →
+  « Taux AMO et assurances »), avec le même historique par date d'effet ; sans taux saisi, 70 % s'applique.
+- Une autre assurance suit exactement le parcours de l'AMO : client assuré (organisme + n° d'assuré), type de vente
+  « Ordonnance AMO / assurance », créance, bordereau par organisme, règlement, suivi et recettes. Les noms techniques
+  (`OrganismeAmo`, `CreanceAmo`…) sont conservés pour ne pas tout renommer ; seuls les libellés changent.
+- Les produits « remboursables » le sont pour toutes les assurances (un seul indicateur par produit).
+- Le taux est par organisme et par pharmacie, pas par client : deux employés d'entreprises différentes chez la même
+  assurance ont le même taux. À revoir si une assurance applique des taux différents selon le contrat.
+
+### Prix de vente AMO (AM-13, RG-07)
+
+- Nouveau champ facultatif « Prix de vente AMO » sur la fiche produit (et colonne `prix_vente_amo` de l'import
+  produits ; une colonne absente du fichier ne modifie pas le prix AMO déjà saisi). Sa modification est tracée au
+  journal comme les autres prix.
+- Pour un organisme de nature AMO, la base de prise en charge d'une ligne remboursable = prix de vente AMO × quantité
+  (prix de la pharmacie si le médicament n'a pas de prix AMO). Pour une autre assurance, le prix de la pharmacie sert
+  de base.
+- Le client paie toujours le prix de la pharmacie moins la part de l'organisme : si la pharmacie vend plus cher que
+  le prix AMO, la différence reste à la charge de l'assuré. Si le prix AMO est plus élevé, la part de l'organisme est
+  plafonnée au prix facturé des lignes remboursables (l'assuré ne paie jamais un montant négatif).
+- Le prix AMO est figé sur la ligne de vente au moment où le produit entre dans le panier, comme le prix de la
+  pharmacie (RG-06) ; la nature de l'organisme est figée sur la vente.
+- La caisse affiche le prix AMO sous le prix de la ligne quand il diffère, et « Part INPS (70 % de … , prix AMO) » ;
+  la facture indique le prix AMO de chaque ligne remboursable, le bordereau reprend la base AMO calculée sur ces prix.
+- Point ouvert : faut-il vendre au prix AMO (la pharmacie s'aligne) plutôt que facturer la différence à l'assuré ?
+  Le choix inverse ne demande qu'une règle de calcul à changer.
+

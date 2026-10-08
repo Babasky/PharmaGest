@@ -101,6 +101,15 @@ class Produit implements TenantAwareInterface
     #[ORM\Column]
     private bool $remboursableAmo = false;
 
+    /**
+     * Prix de vente fixé par l'AMO pour ce médicament, sur lequel s'applique le taux de prise en charge d'un
+     * organisme AMO. Vide : le prix de vente de la pharmacie sert de base.
+     */
+    #[ORM\Column(nullable: true)]
+    #[Assert\Positive(message: 'Le prix de vente AMO doit être positif.')]
+    #[Assert\LessThanOrEqual(100_000_000)]
+    private ?int $prixVenteAmo = null;
+
     #[ORM\Column]
     #[Assert\Choice(choices: self::TAUX_TVA)]
     private int $tauxTva = 0;
@@ -286,6 +295,18 @@ class Produit implements TenantAwareInterface
     public function setRemboursableAmo(bool $remboursableAmo): static
     {
         $this->remboursableAmo = $remboursableAmo;
+
+        return $this;
+    }
+
+    public function getPrixVenteAmo(): ?int
+    {
+        return $this->prixVenteAmo;
+    }
+
+    public function setPrixVenteAmo(?int $prixVenteAmo): static
+    {
+        $this->prixVenteAmo = $prixVenteAmo;
 
         return $this;
     }

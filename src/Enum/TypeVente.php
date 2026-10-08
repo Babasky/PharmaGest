@@ -3,7 +3,7 @@
 namespace App\Enum;
 
 /**
- * Les trois types de vente (VE-02).
+ * Les trois types de vente (VE-02). « Amo » couvre toute vente en tiers payant : AMO ou autre assurance.
  */
 enum TypeVente: string
 {
@@ -16,7 +16,7 @@ enum TypeVente: string
         return match ($this) {
             self::SansOrdonnance => 'Sans ordonnance',
             self::Ordonnance => 'Ordonnance classique',
-            self::Amo => 'Ordonnance AMO',
+            self::Amo => 'Ordonnance AMO / assurance',
         };
     }
 

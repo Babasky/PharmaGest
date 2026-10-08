@@ -11,7 +11,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 
 /**
- * Référentiels communs à toutes les pharmacies (SA-07) : organismes AMO, formes galéniques, catégories de dépenses
+ * Référentiels communs à toutes les pharmacies (SA-07) : organismes d'assurance, formes galéniques, catégories de dépenses
  * proposées par défaut. Rien n'est supprimé : une valeur se désactive et n'est plus proposée (RG-15).
  *
  * @template TEntity of ReferentielCommun

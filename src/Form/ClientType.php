@@ -41,29 +41,12 @@ final class ClientType extends AbstractType
                 ]
             )
             ->add('organismeAmo', EntityType::class, [
-                'label' => "Organisme d'assurance", 
-                'class' => OrganismeAmo::class, 
-                'required' => false, 
-                'placeholder' => 'Non assuré',
+                'label' => 'Assurance (AMO ou autre)', 'class' => OrganismeAmo::class, 'required' => false, 'placeholder' => '— Non assuré —',
                 'query_builder' => static fn (OrganismeAmoRepository $r) => $r->createQueryBuilder('o')->andWhere('o.actif = true')->orderBy('o.nom'),
+                'group_by' => static fn (OrganismeAmo $o) => $o->getType()->libelle(),
             ])
-            ->add('numeroAssure', TextType::class, [
-                    'label' => "N° d'assuré", 
-                    'required' => false,
-                    'attr' =>[
-                        'placeholder' => "N° de l'assuré"
-                    ]
-                
-                ]
-            )
-            ->add('entreprise', TextType::class, [
-                    'label' => 'Entreprise ou mutuelle', 
-                    'required' => false,
-                    'attr' =>[
-                            'placeholder' => "Entreprise ou mutuelle"
-                    ]
-                ]
-            );
+            ->add('numeroAssure', TextType::class, ['label' => 'N° d\'assuré', 'required' => false])
+            ->add('entreprise', TextType::class, ['label' => 'Entreprise ou mutuelle', 'required' => false]);
 
         if ($options['peut_privilegier']) {
             $builder->add('privilegie', CheckboxType::class, [

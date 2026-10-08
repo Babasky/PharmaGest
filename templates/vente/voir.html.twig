@@ -59,7 +59,7 @@
                     <dl class="row mb-0" id="totaux">
                         <dt class="col-7 fw-normal">Total</dt><dd class="col-5 montant">{{ vente.totalBrut|fcfa }}</dd>
                         {% if amo %}
-                            <dt class="col-7 fw-normal">Part AMO ({{ vente.organismeAmo.code }}, {{ vente.tauxAmo }} %)</dt><dd class="col-5 montant">{{ vente.partAmo|fcfa }}</dd>
+                            <dt class="col-7 fw-normal">Part {{ vente.organismeAmo.code }} ({{ vente.tauxAmo }} % de {{ vente.baseAmo|fcfa }})</dt><dd class="col-5 montant">{{ vente.partAmo|fcfa }}</dd>
                         {% endif %}
                         {% if vente.remise > 0 %}<dt class="col-7 fw-normal text-success">Remise</dt><dd class="col-5 montant text-success">− {{ vente.remise|fcfa }}</dd>{% endif %}
                         <dt class="col-7">Encaissé</dt><dd class="col-5 montant fw-bold" id="encaisse">{{ vente.montantEncaisse|fcfa }}</dd>
