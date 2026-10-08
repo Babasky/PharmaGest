@@ -129,6 +129,11 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   « 1500,00 » ; « oui/non », « o/n », « 1/0 », « x » ; CSV à virgule ou point-virgule, en UTF-8 ou Windows-1252 (export
   Excel français). Limites : 2 Mo et 5 000 lignes par fichier.
 - Réservé au **propriétaire et à l'adjoint** (y compris l'import de clients, qui est une opération de masse).
+- **Fichiers modèles** (demande de Modibo du 2026-10-08) : ils contiennent des exemples réalistes qui s'importent
+  tels quels, **100 produits** (répartis dans **10 catégories** et chez **10 fournisseurs**, avec prix de vente AMO
+  pour les médicaments remboursables), **10 fournisseurs** et **30 clients** (dont des assurés INPS / CMSS). Il n'y a
+  pas d'import séparé des catégories : elles sont créées par l'import des produits. Noms de fournisseurs, emails
+  (domaine `.example`) et téléphones sont fictifs ; la pharmacie remplace ou supprime ces lignes avant l'import.
 
 ## Décisions — Lot 3 (stock)
 

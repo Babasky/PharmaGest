@@ -13,6 +13,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
@@ -170,15 +171,61 @@ final class ImportTest extends AppWebTestCase
 
     public function testLeModeleExcelContientLesColonnesEtUneAide(): void
     {
-        $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits/modele');
+        $classeur = $this->modele('produits');
 
+        self::assertSame('Nom commercial *', $classeur->getSheet(0)->getCell('A1')->getValue());
+        self::assertContains('Prix de vente AMO', $classeur->getSheet(0)->rangeToArray('A1:Q1')[0]);
+        self::assertSame('Aide', $classeur->getSheet(1)->getTitle());
+    }
+
+    /**
+     * Les modèles sont fournis avec des exemples réalistes (100 produits, 10 catégories, 10 fournisseurs, 30 clients)
+     * qui s'importent tels quels, sans aucune erreur.
+     *
+     * @return iterable<string, array{string, int, class-string, int}>
+     */
+    public static function modeles(): iterable
+    {
+        yield 'fournisseurs' => ['fournisseurs', 10, Fournisseur::class, 10];
+        yield 'produits' => ['produits', 100, Produit::class, 100];
+        yield 'clients' => ['clients', 30, Client::class, 30];
+    }
+
+    /**
+     * @param class-string $classe
+     */
+    #[DataProvider('modeles')]
+    public function testLesExemplesDuModeleSImportentSansErreur(string $type, int $lignes, string $classe, int $attendus): void
+    {
+        $classeur = $this->modele($type);
+        self::assertSame($lignes + 1, $classeur->getSheet(0)->getHighestDataRow(), 'En-tête + lignes d\'exemple.');
+        $chemin = sys_get_temp_dir().'/modele-'.uniqid().'.xlsx';
+        (new Xlsx($classeur))->save($chemin);
+
+        $this->client->request('GET', '/imports/'.$type);
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => new UploadedFile($chemin, 'modele.xlsx', test: true)]);
+        self::assertSelectorNotExists('table tbody tr', 'Aucune ligne en erreur.');
+        $this->client->submitForm(\sprintf('Importer les %d lignes valides', $lignes));
+
+        self::assertSame($attendus, $this->compter($classe));
+        if ('produits' === $type) {
+            // 9 sous-catégories de « Médicaments » + « Parapharmacie » : 10 catégories de rangement, et les 10 fournisseurs.
+            $feuilles = $this->sansFiltre(static fn (EntityManagerInterface $em): int => (int) $em->createQuery('SELECT COUNT(DISTINCT c.id) FROM '.Produit::class.' p JOIN p.categorie c')->getSingleScalarResult());
+            self::assertSame(10, $feuilles);
+            self::assertSame(10, $this->compter(Fournisseur::class));
+            self::assertSame([1500, 1350], $this->prix('6190000000002'), 'Prix de vente AMO repris du modèle.');
+        }
+    }
+
+    private function modele(string $type): Spreadsheet
+    {
+        $this->connecter($this->officine->adjoint)->request('GET', '/imports/'.$type.'/modele');
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         $chemin = sys_get_temp_dir().'/modele-'.uniqid().'.xlsx';
         file_put_contents($chemin, $this->client->getInternalResponse()->getContent());
-        $classeur = IOFactory::load($chemin);
-        self::assertSame('Nom commercial *', $classeur->getSheet(0)->getCell('A1')->getValue());
-        self::assertSame('Aide', $classeur->getSheet(1)->getTitle());
+
+        return IOFactory::load($chemin);
     }
 
     public function testLeFichierDeposeNeSertQuALaPharmacieQuiLADepose(): void

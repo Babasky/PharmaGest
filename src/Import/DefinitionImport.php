@@ -21,6 +21,13 @@ interface DefinitionImport
     public function colonnes(): array;
 
     /**
+     * Lignes d'exemple du fichier modèle, par clé de colonne.
+     *
+     * @return list<array<string, string>>
+     */
+    public function exemples(): array;
+
+    /**
      * Prépare l'entité correspondant à une ligne, sans l'enregistrer.
      * Renvoie la ligne de rapport et l'entité (null si erreur).
      *

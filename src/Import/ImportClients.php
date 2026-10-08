@@ -46,6 +46,11 @@ final class ImportClients extends AbstractDefinitionImport
         ];
     }
 
+    public function exemples(): array
+    {
+        return ExemplesImport::clients();
+    }
+
     public function preparer(int $numero, array $valeurs, bool $simulation): array
     {
         $erreurs = [];
