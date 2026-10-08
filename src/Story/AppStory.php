@@ -76,7 +76,7 @@ final class AppStory extends Story
             ['f.keita@fleuve.ml', 'Fatoumata Keïta', Utilisateur::ROLE_ADJOINT],
             ['m.coulibaly@fleuve.ml', 'Moussa Coulibaly', Utilisateur::ROLE_VENDEUR],
             ['s.diarra@fleuve.ml', 'Seydou Diarra', Utilisateur::ROLE_VENDEUR],
-            ['k.sangare@fleuve.ml', 'Kadiatou Sangaré', Utilisateur::ROLE_CAISSIER],
+            ['a.konate@fleuve.ml', 'Awa Konaté', Utilisateur::ROLE_CAISSIER],
         ]);
         $this->abonnements->enregistrerPaiement($fleuve, $fleuve->getOffre(), 180000, MoyenPaiement::OrangeMoney, 'OM-2026-55871', new \DateTimeImmutable('today'), null);
         // Les actions de la démo sont faites au nom de la titulaire : le journal d'audit les lui attribue.
@@ -230,7 +230,8 @@ final class AppStory extends Story
 
     /**
      * Caisse (Lot 4) : codes PIN de l'équipe et une session clôturée de Moussa avec cinq ventes,
-     * dont trois ventes AMO et une vente annulée.
+     * dont trois ventes AMO et une vente annulée. Rôle caissier : la session ouverte d'Awa avec les ventes
+     * que Seydou lui a envoyées.
      * AMO (Lot 5) : un bordereau INPS transmis et réglé en partie ; la créance CMSS reste en attente.
      *
      * @param array<string, \App\Entity\Produit> $catalogue
@@ -238,7 +239,7 @@ final class AppStory extends Story
     private function caisse(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
     {
         $equipe = [];
-        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590', 'k.sangare@fleuve.ml' => '4826'] as $email => $pin) {
+        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590', 'a.konate@fleuve.ml' => '4826'] as $email => $pin) {
             $utilisateur = \Zenstruck\Foundry\Persistence\repository(Utilisateur::class)->findOneBy(['email' => $email]);
             \assert($utilisateur instanceof Utilisateur);
             $this->codePin->definir($utilisateur, $pin);
@@ -291,12 +292,37 @@ final class AppStory extends Story
         }
         $this->caisse->cloturer($session, $comptage, null);
 
-        // Rôle caissier : Seydou a validé une vente et l'a envoyée à la caisse, Kadiatou l'encaissera.
+        // Rôle caissier : Seydou valide ses ventes et les envoie à la caisse ; Awa, la caissière, les encaisse
+        // dans sa session (encore ouverte). Une vente attend toujours, une autre a été annulée (client parti).
         $seydou = $equipe['s.diarra@fleuve.ml'];
-        $vente = $this->ventes->panierOuNouveau($seydou);
-        $this->ventes->ajouter($vente, $catalogue['Doliprane']);
-        $this->ventes->ajouter($vente, $catalogue['Efferalgan']);
-        $this->ventes->envoyerEnCaisse($vente, $seydou, null);
+        $awa = $equipe['a.konate@fleuve.ml'];
+        $sessionAwa = $this->caisse->ouvrir($pharmacie, $awa, 15000);
+        $envoyer = function (array $produits, ?\App\Entity\Client $client = null, array $ordonnance = []) use ($seydou, $catalogue): \App\Entity\Vente {
+            $vente = $this->ventes->panierOuNouveau($seydou);
+            foreach ($produits as $nom => $quantite) {
+                $this->ventes->ajouter($vente, $catalogue[$nom], $quantite);
+            }
+            if (null !== $client) {
+                $this->ventes->definirVente($vente, TypeVente::Amo, $client, $ordonnance);
+            }
+            $this->ventes->envoyerEnCaisse($vente, $seydou, null);
+
+            return $vente;
+        };
+
+        $vente = $envoyer(['Doliprane' => 2, 'Smecta' => 1]);
+        $this->ventes->encaisserEnCaisse($vente, $awa, $sessionAwa, ['especes' => ['remis' => '10000']]);
+
+        // Assurance autre que l'AMO : la mutuelle de l'ONG prend 80 % en charge.
+        $assuree = \Zenstruck\Foundry\Persistence\repository(\App\Entity\Client::class)->findOneBy(['nom' => 'Fatoumata Keïta', 'pharmacie' => $pharmacie]);
+        \assert($assuree instanceof \App\Entity\Client);
+        $vente = $envoyer(['Coartem' => 1, 'Oméprazole' => 1], $assuree, ['date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Coulibaly', 'structure' => 'Clinique Pasteur']);
+        $this->ventes->encaisserEnCaisse($vente, $awa, $sessionAwa, ['orange_money' => ['montant' => (string) $vente->getMontantEncaisse(), 'reference' => 'OM-DEMO-2']]);
+
+        $vente = $envoyer(['Ibuprofène Biogaran' => 1]);
+        $this->ventes->annuler($vente, 'Client reparti sans payer');
+
+        $envoyer(['Doliprane' => 1, 'Efferalgan' => 1]);
 
         $inps = $mariam->getOrganismeAmo();
         \assert($inps instanceof \App\Entity\OrganismeAmo);

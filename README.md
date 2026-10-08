@@ -9,7 +9,7 @@ SaaS multi-tenant de gestion d'officines, adapté au contexte malien (FCFA, `Afr
 
 ```bash
 ddev start                      # dépendances, assets (importmap), migrations
-ddev composer demo              # (facultatif) données de démonstration
+ddev composer demo              # (facultatif) données de démonstration (efface la base)
 ddev launch                     # https://pharmagest.ddev.site
 ddev launch -m                  # Mailpit : emails d'activation, de mot de passe, de rappel
 ```
@@ -24,16 +24,30 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 |---|---|---|
 | `admin@pharmagest.ml` | Super admin | Espace plateforme |
 | `a.traore@fleuve.ml` | Propriétaire | Pharmacie du Fleuve, abonnement actif, équipe complète, catalogue de 10 produits avec stock (une alerte de chaque type) |
-| `f.keita@fleuve.ml` / `m.coulibaly@fleuve.ml` | Adjoint / vendeur | Pharmacie du Fleuve |
+| `f.keita@fleuve.ml` | Adjoint | Pharmacie du Fleuve |
+| `m.coulibaly@fleuve.ml` / `s.diarra@fleuve.ml` | Vendeur | Pharmacie du Fleuve : arrive sur l'écran de vente (**Caisse**) |
+| `a.konate@fleuve.ml` | Caissier | Pharmacie du Fleuve : arrive sur l'**Encaissement**, caisse déjà ouverte, une vente à encaisser |
 | `o.guindo@kanaga.ml` | Propriétaire | Échéance dans 12 jours (bandeau d'alerte) |
 | `k.sangare@djoliba.ml` | Propriétaire | Période d'essai |
 | `i.ouattara@paix.ml` | Propriétaire | Abonnement expiré : lecture seule |
 | `m.dembele@groupe-dembele.ml` | Propriétaire Premium | Deux pharmacies (sélecteur en haut de page) |
 
 Codes PIN de la Pharmacie du Fleuve (remise hors plafond, vente sans ordonnance, changement de vendeur) :
-Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**.
-Moussa a une session de caisse clôturée avec cinq ventes (dont trois AMO et une annulée) ; ouvrez une caisse depuis
-le menu **Caisse** pour vendre. Le menu **AMO** (propriétaire et adjoint) montre l'encours, un bordereau INPS transmis
+Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**,
+Awa Konaté **4826** (caissière).
+Moussa a une session de caisse clôturée avec cinq ventes (dont trois AMO et une annulée).
+
+**Vente et encaissement.** Chacun arrive sur son écran à la connexion : le vendeur sur la **Caisse** (écran de vente),
+le caissier sur l'**Encaissement**, le propriétaire et l'adjoint sur le tableau de bord. Le vendeur prépare la vente
+sans avoir à ouvrir de caisse, puis choisit :
+- **Encaisser** lui-même (il ouvre alors sa caisse avec son fond de caisse) ;
+- ou **Envoyer à la caisse** : la vente est validée, numérotée et ses produits sortent du stock ; elle attend dans la
+  file du caissier, qui l'encaisse dans sa propre session (espèces, Orange Money, Moov Money, carte, paiement mixte)
+  ou l'annule si le client repart sans payer (les produits reviennent en stock).
+
+Dans la démo, Seydou a envoyé quatre ventes à Awa : deux encaissées (dont une prise en charge à 80 % par la mutuelle
+d'une ONG), une annulée et une qui attend. Le caissier n'a accès qu'à l'Encaissement, aux Ventes (réimpression des
+tickets) et à ses sessions de caisse. Le propriétaire ajoute un caissier depuis **Équipe**. Le menu **AMO** (propriétaire et adjoint) montre l'encours, un bordereau INPS transmis
 et réglé en partie, et une créance CMSS encore en attente. Le menu **Commandes** montre une commande Laborex reçue
 en partie (l'Augmentin est encore attendu), un brouillon PPM à envoyer et les suggestions du jour. En local, les emails
 aux fournisseurs arrivent dans Mailpit (`ddev launch -m`).
