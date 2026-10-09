@@ -25,10 +25,10 @@ final class DepenseType extends AbstractType
     {
         $builder
             ->add('date', DateType::class, [
-                    'label' => 'Date', 
-                    'widget' => 'single_text', 
-                    'input' => 'datetime_immutable'
-                ]
+                'label' => 'Date',
+                'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+            ]
             )
             ->add('categorie', EntityType::class, [
                 'label' => 'Catégorie',
@@ -37,20 +37,20 @@ final class DepenseType extends AbstractType
                 'placeholder' => 'Choisir…',
             ])
             ->add('libelle', TextType::class, [
-                    'label' => 'Libellé', 
-                    'attr' => [
-                        'placeholder' => "Ex. : loyer d'octobre"
-                    ]
-                ]
+                'label' => 'Libellé',
+                'attr' => [
+                    'placeholder' => "Ex. : loyer d'octobre",
+                ],
+            ]
             )
             ->add('montant', IntegerType::class, [
-                'label' => 'Montant (FCFA)', 
+                'label' => 'Montant (FCFA)',
                 'attr' => [
-                        'min' => 1, 
-                        'inputmode' => 'numeric',
-                        'placeholder' => "Montant de la dépense"
-                    ]
-                ]
+                    'min' => 1,
+                    'inputmode' => 'numeric',
+                    'placeholder' => 'Montant de la dépense',
+                ],
+            ]
             )
             ->add('mode', EnumType::class, [
                 'label' => 'Mode de paiement',
@@ -58,12 +58,12 @@ final class DepenseType extends AbstractType
                 'choice_label' => static fn (ModeReglement $m) => $m->libelle(),
             ])
             ->add('beneficiaire', TextType::class, [
-                    'label' => 'Bénéficiaire', 
-                    'required' => false,
-                    'attr' => [
-                        'placeholder' => "Entrez le nom du bénéficiaire"
-                    ]
-                ]
+                'label' => 'Bénéficiaire',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Entrez le nom du bénéficiaire',
+                ],
+            ]
             )
             ->add('justificatif', FileType::class, [
                 'label' => 'Justificatif',
