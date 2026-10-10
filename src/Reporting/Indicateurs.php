@@ -127,7 +127,10 @@ class Indicateurs
             $resultats[$mode->value] = ['nombre' => (int) $l['nombre'], 'montant' => (int) $l['montant']];
         }
 
-        return array_map(static fn (ModePaiement $m) => ['mode' => $m, ...($resultats[$m->value] ?? ['nombre' => 0, 'montant' => 0])], ModePaiement::cases());
+        // Un ancien mode (carte) n'apparaît que s'il a encore servi sur la période.
+        $modes = array_filter(ModePaiement::cases(), static fn (ModePaiement $m) => \in_array($m, ModePaiement::proposes(), true) || isset($resultats[$m->value]));
+
+        return array_values(array_map(static fn (ModePaiement $m) => ['mode' => $m, ...($resultats[$m->value] ?? ['nombre' => 0, 'montant' => 0])], $modes));
     }
 
     /**

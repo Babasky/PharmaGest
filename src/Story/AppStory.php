@@ -321,7 +321,7 @@ final class AppStory extends Story
         $assuree = \Zenstruck\Foundry\Persistence\repository(\App\Entity\Client::class)->findOneBy(['nom' => 'Fatoumata Keïta', 'pharmacie' => $pharmacie]);
         \assert($assuree instanceof \App\Entity\Client);
         $vente = $envoyer(['Coartem' => 1, 'Oméprazole' => 1], $assuree, ['date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Coulibaly', 'structure' => 'Clinique Pasteur']);
-        $this->ventes->encaisserEnCaisse($vente, $awa, $sessionAwa, ['orange_money' => ['montant' => (string) $vente->getMontantEncaisse(), 'reference' => 'OM-DEMO-2']]);
+        $this->ventes->encaisserEnCaisse($vente, $awa, $sessionAwa, ['wave' => ['montant' => (string) $vente->getMontantEncaisse(), 'reference' => 'WV-DEMO-2']]);
 
         $vente = $envoyer(['Ibuprofène Biogaran' => 1]);
         $this->ventes->annuler($vente, 'Client reparti sans payer');

@@ -583,7 +583,7 @@ class VenteService
     {
         $paiements = [];
         $autres = 0;
-        foreach ([ModePaiement::OrangeMoney, ModePaiement::MoovMoney, ModePaiement::Carte] as $mode) {
+        foreach (ModePaiement::mobiles() as $mode) {
             $champs = \is_array($saisie[$mode->value] ?? null) ? $saisie[$mode->value] : [];
             $montant = self::montant($champs['montant'] ?? null, $mode->libelle());
             if (null === $montant || 0 === $montant) {

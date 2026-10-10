@@ -125,6 +125,77 @@ final class CaisseTest extends CaisseTestCase
         }
     }
 
+    public function testPaiementsProposesEspecesOrangeMoovEtWaveSansCarte(): void
+    {
+        $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1500]);
+        LotFactory::createOne(['produit' => $produit]);
+
+        $this->ouvrirCaisse($this->officine->vendeur);
+        $this->ajouter($produit, 2);
+        $crawler = $this->client->request('GET', '/caisse');
+        $libelles = $crawler->filter('#encaissement label.form-label')->each(static fn ($l) => $l->text());
+        self::assertSame(['Espèces remises', 'Orange Money', 'Moov Money', 'Wave'], $libelles);
+        self::assertSelectorNotExists('#encaissement [name^="paiement[carte]"]');
+
+        // Un montant « carte » envoyé malgré tout n'est pas retenu : le reste est payé en espèces.
+        $this->encaisser([
+            'carte' => ['montant' => '1000'],
+            'wave' => ['montant' => '2000', 'reference' => 'WV-42'],
+            'especes' => ['remis' => '1000'],
+        ]);
+        $vente = $this->derniereVente();
+        self::assertSame(StatutVente::Validee, $vente->getStatut());
+        self::assertSame([2000, 1000, 0], [$vente->montantPaye(ModePaiement::Wave), $vente->montantPaye(ModePaiement::Especes), $vente->montantPaye(ModePaiement::Carte)]);
+        $this->client->request('GET', '/ventes/'.$vente->getId());
+        self::assertSelectorTextContains('#totaux', 'Wave (WV-42)');
+    }
+
+    public function testNouveauClientCreeDansLaFenetreDeLaCaisseSansPerdreLeTypeDeVente(): void
+    {
+        $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie]);
+        LotFactory::createOne(['produit' => $produit]);
+
+        $this->ouvrirCaisse($this->officine->vendeur);
+        $this->ajouter($produit);
+        // Comme le navigateur : la liste des organismes envoie une valeur vide quand aucun n'est choisi.
+        $this->poster('/caisse/vente', ['type' => TypeVente::Ordonnance->value, 'ordonnance_numero' => 'ORD-77', 'ordonnance_prescripteur' => 'Dr Sangaré', 'organisme' => '', 'numero_assure' => '']);
+        self::assertResponseRedirects('/caisse');
+
+        // Le bouton est toujours là ; après une recherche sans résultat, la fenêtre reprend la saisie.
+        $this->client->request('GET', '/caisse');
+        self::assertSelectorExists('#bouton-nouveau-client[data-bs-target="#nouveau-client"]');
+        $crawler = $this->client->request('GET', '/caisse?client=Fanta%20Camara');
+        self::assertSelectorTextContains('#clients-trouves', 'Aucun client trouvé');
+        self::assertSame('Fanta Camara', $crawler->filter('#nouveau-client input[name="client[nom]"]')->attr('value'));
+
+        // Saisie invalide : seul le formulaire revient, avec l'erreur, pour rester dans la fenêtre.
+        $this->client->submitForm('Enregistrer et choisir', ['client[nom]' => '']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists('#formulaire-nouveau-client .is-invalid');
+        self::assertSelectorNotExists('#type-vente');
+
+        $this->client->request('GET', '/caisse');
+        $this->client->submitForm('Enregistrer et choisir', ['client[nom]' => 'Fanta Camara', 'client[telephone]' => '76 12 34 56']);
+        self::assertResponseRedirects('/caisse');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', 'Client Fanta Camara créé et choisi pour la vente.');
+        self::assertSelectorTextContains('#client .fw-semibold', 'Fanta Camara');
+        self::assertSame(TypeVente::Ordonnance->value, $this->client->getCrawler()->filter('#type-vente input[name="type"]:checked')->attr('value'));
+
+        $vente = $this->derniereVente();
+        self::assertSame('Fanta Camara', $vente->getClient()?->getNom());
+        self::assertSame($this->officine->pharmacie->getId(), $vente->getClient()->getPharmacie()?->getId());
+        self::assertSame(TypeVente::Ordonnance, $vente->getType());
+        self::assertSame(['ORD-77', 'Dr Sangaré'], [$vente->getOrdonnance()?->getNumero(), $vente->getOrdonnance()?->getPrescripteur()]);
+
+        // « Retirer » le client garde aussi le type de vente.
+        $this->poster('/caisse/client', ['client' => '']);
+        self::assertResponseRedirects('/caisse');
+        $vente = $this->derniereVente();
+        self::assertNull($vente->getClient());
+        self::assertSame(TypeVente::Ordonnance, $vente->getType());
+    }
+
     public function testR07RemiseIndisponiblePourUnClientNonPrivilegie(): void
     {
         $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie]);

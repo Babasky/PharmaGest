@@ -122,7 +122,7 @@ final class AnnulationEtClotureTest extends CaisseTestCase
 
         $this->ouvrirCaisse($this->officine->proprietaire);
         $this->ajouter($produit, 2);
-        $this->encaisser(['carte' => ['montant' => '2400', 'reference' => 'CB-1']]);
+        $this->encaisser(['wave' => ['montant' => '2400', 'reference' => 'WV-1']]);
 
         $crawler = $this->client->request('GET', '/');
         self::assertSame('1', $crawler->filter('.card:contains("Ventes du jour") .fs-5')->text());
@@ -134,6 +134,8 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-success', 'clôturée, sans écart');
         self::assertSelectorTextContains('#synthese', "2\u{00A0}400\u{00A0}FCFA");
+        self::assertSelectorTextContains('#synthese', 'Wave');
+        self::assertSelectorTextNotContains('#synthese', 'Carte bancaire');
     }
 
     public function testChacunVoitSesSessionsLAdjointVoitTout(): void

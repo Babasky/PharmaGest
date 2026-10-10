@@ -53,7 +53,7 @@ final class RecetteController extends AbstractAppController
             'par_origine' => $recettes->parOrigine($periode->debut, $periode->fin),
             'origines' => OrigineRecette::cases(),
             'origine' => $filtre?->value,
-            'modes' => ModeReglement::cases(),
+            'modes' => ModeReglement::proposes(),
             'aujourdhui' => $this->horloge->now(),
             'csrf_nouvelle' => self::CSRF_NOUVELLE,
         ]);
@@ -74,7 +74,7 @@ final class RecetteController extends AbstractAppController
             if (!ctype_digit($montant)) {
                 throw new FinanceException('Le montant de la recette doit être positif.');
             }
-            if (null === $mode) {
+            if (null === $mode || !\in_array($mode, ModeReglement::proposes(), true)) {
                 throw new FinanceException('Choisissez le mode de paiement.');
             }
             $recette = $this->service->enregistrerManuelle($date, (string) $donnees->get('libelle'), (int) $montant, $mode);

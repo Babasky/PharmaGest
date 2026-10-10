@@ -1,12 +1,13 @@
-{# Saisie des paiements : espèces remises (monnaie calculée à la volée) et paiements mobiles ou carte. #}
+{# Saisie des paiements : espèces remises (monnaie calculée à la volée) et paiements mobiles (Orange Money, Moov Money, Wave). #}
 <div class="row g-2 align-items-end">
     <div class="col-6">
         <label class="form-label small mb-1" for="paiement-especes">Espèces remises</label>
         <input type="text" inputmode="numeric" class="form-control text-end" id="paiement-especes" name="paiement[especes][remis]" placeholder="{{ du }}" autocomplete="off" data-caisse-target="remis" data-action="input->caisse#monnaie">
     </div>
     <div class="col-6 small">Monnaie à rendre : <strong data-caisse-target="monnaie">—</strong></div>
-    {% for mode in ['orange_money', 'moov_money', 'carte'] %}
-        {% set libelle = {orange_money: 'Orange Money', moov_money: 'Moov Money', carte: 'Carte bancaire'}[mode] %}
+    {% for moyen in enum('App\\Enum\\ModePaiement').mobiles %}
+        {% set mode = moyen.value %}
+        {% set libelle = moyen.libelle %}
         <div class="col-6">
             <label class="form-label small mb-1" for="paiement-{{ mode }}">{{ libelle }}</label>
             <input type="text" inputmode="numeric" class="form-control form-control-sm text-end" id="paiement-{{ mode }}" name="paiement[{{ mode }}][montant]" autocomplete="off" data-action="input->caisse#monnaie" data-caisse-target="autre">
@@ -16,4 +17,4 @@
         </div>
     {% endfor %}
 </div>
-<p class="small text-body-secondary mt-2 mb-2">Paiement mixte : saisissez les montants Orange Money, Moov Money ou carte ; le reste est payé en espèces.</p>
+<p class="small text-body-secondary mt-2 mb-2">Paiement mixte : saisissez les montants Orange Money, Moov Money ou Wave ; le reste est payé en espèces.</p>
