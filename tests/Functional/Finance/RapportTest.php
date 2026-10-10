@@ -44,7 +44,7 @@ final class RapportTest extends AmoTestCase
         $synthese = $this->ligne('#tableau-synthese', "Chiffre d'affaires");
         self::assertSame(["Chiffre d'affaires", "4\u{00A0}000\u{00A0}FCFA", "0\u{00A0}FCFA", '—'], $synthese);
         self::assertSame(['Nombre de ventes', '2', '0', '—'], $this->ligne('#tableau-synthese', 'Nombre de ventes'));
-        self::assertSame(['Ordonnance AMO / assurance', '1', "2\u{00A0}000\u{00A0}FCFA", "50\u{00A0}%"], $this->ligne('#tableau-par-type', 'Ordonnance AMO'));
+        self::assertSame(['AMO / Autres', '1', "2\u{00A0}000\u{00A0}FCFA", "50\u{00A0}%"], $this->ligne('#tableau-par-type', 'AMO / Autres'));
         self::assertSame(['Orange Money', '1', "2\u{00A0}000\u{00A0}FCFA", "50\u{00A0}%"], $this->ligne('#tableau-par-mode', 'Orange Money'));
         self::assertSame(['Espèces', '1', "600\u{00A0}FCFA", "15\u{00A0}%"], $this->ligne('#tableau-par-mode', 'Espèces'));
         self::assertSame(['Part AMO (créance sur les organismes)', '—', "1\u{00A0}400\u{00A0}FCFA", "35\u{00A0}%"], $this->ligne('#tableau-par-mode', 'Part AMO'));

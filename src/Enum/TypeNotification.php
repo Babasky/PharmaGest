@@ -12,6 +12,7 @@ enum TypeNotification: string
     case Perime = 'perime';
     case Abonnement = 'abonnement';
     case Bordereau = 'bordereau';
+    case Transfert = 'transfert';
 
     public function libelle(): string
     {
@@ -21,6 +22,7 @@ enum TypeNotification: string
             self::Perime => 'Lot périmé',
             self::Abonnement => 'Abonnement',
             self::Bordereau => 'Bordereau AMO impayé',
+            self::Transfert => 'Transfert à réceptionner',
         };
     }
 
@@ -32,6 +34,7 @@ enum TypeNotification: string
             self::Perime => 'exclamation-octagon',
             self::Abonnement => 'patch-exclamation',
             self::Bordereau => 'shield-exclamation',
+            self::Transfert => 'arrow-left-right',
         };
     }
 
@@ -39,7 +42,7 @@ enum TypeNotification: string
     {
         return match ($this) {
             self::Rupture, self::Abonnement => 'warning',
-            self::Peremption, self::Bordereau => 'primary',
+            self::Peremption, self::Bordereau, self::Transfert => 'primary',
             self::Perime => 'danger',
         };
     }

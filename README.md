@@ -30,7 +30,8 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 | `o.guindo@kanaga.ml` | Propriétaire | Échéance dans 12 jours (bandeau d'alerte) |
 | `k.sangare@djoliba.ml` | Propriétaire | Période d'essai |
 | `i.ouattara@paix.ml` | Propriétaire | Abonnement expiré : lecture seule |
-| `m.dembele@groupe-dembele.ml` | Propriétaire Premium | Deux pharmacies (sélecteur en haut de page) |
+| `m.dembele@groupe-dembele.ml` | Propriétaire Premium | Deux pharmacies, Kati et Koulikoro (sélecteur en haut de page), avec des **Transferts** de stock entre elles |
+| `s.cisse@groupe-dembele.ml` | Adjoint | Pharmacie de Koulikoro : un transfert venu de Kati à réceptionner |
 
 Codes PIN de la Pharmacie du Fleuve (remise hors plafond, vente sans ordonnance, changement de vendeur) :
 Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**,
@@ -57,6 +58,13 @@ lot périmé et bordereau INPS impayé pour la Pharmacie du Fleuve ; échéance 
 les autres officines. Le **Journal d'audit** (propriétaire) liste les actions sensibles de la démo, et
 « Mon abonnement › Exporter toutes mes données » télécharge l'export complet (ZIP). Le super admin consulte le
 journal de la plateforme (espace plateforme, construit avec EasyAdmin).
+
+**Transferts de stock entre officines.** Le menu **Stock › Transferts** (propriétaire et adjoint) n'est utile qu'à
+un pharmacien qui détient plusieurs officines : le transfert n'est possible qu'entre officines du même propriétaire.
+L'officine d'origine prépare le transfert puis l'expédie (le stock sort lot par lot, premier périmé premier sorti) ;
+l'officine destinataire confirme la réception (les mêmes lots, dates de péremption et prix d'achat entrent chez elle).
+Dans la démo, Kati a envoyé à Koulikoro un transfert déjà reçu, un transfert expédié qui attend la confirmation de
+Salif Cissé (adjoint de Koulikoro) et un transfert encore en préparation.
 
 ## Sans DDEV
 
