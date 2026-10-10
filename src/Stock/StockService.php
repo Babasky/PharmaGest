@@ -96,6 +96,29 @@ class StockService
     }
 
     /**
+     * Entrée d'un lot transféré par une autre officine du même propriétaire (ST-11) : mêmes numéro, date de
+     * péremption et prix d'achat que le lot d'origine. Un lot arrivé périmé entre quand même (il est physiquement là) :
+     * il ne compte pas dans le stock disponible et apparaît parmi les périmés à détruire.
+     *
+     * @throws StockException
+     */
+    public function entrerParTransfert(Produit $produit, string $numero, ?\DateTimeImmutable $datePeremption, int $quantite, int $prixAchat, string $document): Lot
+    {
+        if ($quantite <= 0) {
+            throw new StockException('La quantité doit être supérieure à zéro.');
+        }
+
+        return $this->transaction(function () use ($produit, $numero, $datePeremption, $quantite, $prixAchat, $document): Lot {
+            $lot = new Lot($produit, $numero, $datePeremption, $quantite, $prixAchat, $this->aujourdhui());
+            $this->em->persist($lot);
+            $this->mouvementer($lot, TypeMouvement::Transfert, $quantite, null, $document);
+            $this->em->flush();
+
+            return $lot;
+        });
+    }
+
+    /**
      * Sort une quantité d'un produit en FEFO (RG-04) : les lots qui périment en premier sortent en premier,
      * une même sortie peut consommer plusieurs lots. Les lots périmés ne sortent jamais ainsi (RG-05).
      *

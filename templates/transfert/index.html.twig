@@ -1,0 +1,99 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Transferts entre officines{% endblock %}
+
+{% block content %}
+    {% set a_recevoir = entrants|filter(t => t.estExpedie) %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-body fw-semibold">Nouveau transfert</div>
+                <div class="card-body">
+                    {% if not ecriture_autorisee() %}
+                        <p class="small text-body-secondary mb-0">Abonnement expiré : lecture seule.</p>
+                    {% elseif destinations is empty %}
+                        <p class="small text-body-secondary mb-0" id="aucune-destination">
+                            Le stock ne se transfère qu'entre officines du même pharmacien. Aucune autre officine
+                            de votre propriétaire n'est active sur PharmaGest.
+                        </p>
+                    {% else %}
+                        <form method="post" action="{{ path('app_transfert_nouveau') }}" id="nouveau-transfert">
+                            <input type="hidden" name="_token" value="{{ csrf_token(csrf_nouveau) }}">
+                            <label class="form-label" for="destination">Officine destinataire</label>
+                            <select class="form-select mb-2" id="destination" name="destination" required>
+                                {% for d in destinations %}<option value="{{ d.id }}">{{ d.nom }} ({{ d.ville }})</option>{% endfor %}
+                            </select>
+                            <label class="form-label" for="note">Note <span class="text-body-secondary small">(facultative)</span></label>
+                            <input type="text" class="form-control mb-2" id="note" name="note" maxlength="255" placeholder="Ex. : dépannage rupture Coartem">
+                            <button class="btn btn-success" type="submit">Créer le transfert</button>
+                        </form>
+                        <p class="small text-body-secondary mt-3 mb-0">
+                            Seules les officines du même pharmacien sont proposées. Le stock sort à l'expédition, lot par lot
+                            (premier périmé, premier sorti), et entre chez le destinataire quand il confirme la réception.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-body fw-semibold d-flex justify-content-between">
+                    <span>Reçus des autres officines</span>
+                    {% if a_recevoir is not empty %}<span class="badge text-bg-primary" id="nombre-a-recevoir">{{ a_recevoir|length }} à réceptionner</span>{% endif %}
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="entrants">
+                        <thead class="table-light">
+                            <tr><th class="ps-3">Transfert</th><th>De</th><th>Expédié le</th><th class="text-end">Valeur</th><th class="pe-3">Statut</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for t in entrants %}
+                                <tr>
+                                    <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_transfert_voir', {id: t.id}) }}">{{ t.numero }}</a></td>
+                                    <td>{{ t.pharmacieOrigine.nom }}</td>
+                                    <td class="small text-nowrap">{{ t.expedieLe ? t.expedieLe|date('d/m/Y') }}</td>
+                                    <td class="montant">{{ t.valeur|fcfa }}</td>
+                                    <td class="pe-3"><span class="badge text-bg-{{ t.statut.couleur }}">{{ t.estExpedie ? 'À réceptionner' : t.statut.libelle }}</span></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="text-center text-body-secondary py-4">Aucun transfert reçu.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <form method="get" class="d-flex flex-wrap gap-2 mb-3">
+                <select name="statut" class="form-select" style="max-width: 13rem" aria-label="Statut">
+                    <option value="">Tous les statuts</option>
+                    {% for s in statuts %}<option value="{{ s.value }}"{{ statut == s.value ? ' selected' }}>{{ s.libelle }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Filtrer</button>
+            </form>
+            <div class="card shadow-sm">
+                <div class="card-header bg-body fw-semibold">Envoyés à d'autres officines</div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="sortants">
+                        <thead class="table-light">
+                            <tr><th class="ps-3">Transfert</th><th>Vers</th><th>Date</th><th class="text-end">Produits</th><th class="pe-3">Statut</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for t in sortants %}
+                                <tr>
+                                    <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_transfert_voir', {id: t.id}) }}">{{ t.numero }}</a></td>
+                                    <td>{{ t.pharmacieDestination.nom }}</td>
+                                    <td class="small text-nowrap">{{ (t.expedieLe ?? t.creeLe)|date('d/m/Y') }}</td>
+                                    <td class="text-end">{{ t.lignes|length }}</td>
+                                    <td class="pe-3"><span class="badge text-bg-{{ t.statut.couleur }}">{{ t.statut.libelle }}</span></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="text-center text-body-secondary py-4">Aucun transfert envoyé.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% include 'layout/_pagination.html.twig' with {page: sortants, route: 'app_transfert_index', params: {statut: statut}} %}
+        </div>
+    </div>
+{% endblock %}

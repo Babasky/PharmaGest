@@ -612,3 +612,60 @@ vente, et son taux s'applique sur ce prix.
   sur la commande, pour le propriétaire et l'adjoint, comme l'Excel. Un brouillon n'a pas de PDF (pas de numéro).
 - Le PDF reprend le contenu de l'Excel : pharmacie (avec logo), fournisseur, numéro, date, lignes, total, et la
   mention « commande annulée » le cas échéant. L'email au fournisseur garde l'Excel en pièce jointe.
+
+## Décisions — Transferts de stock entre officines (demande de Modibo, 10/10/2026)
+
+Exigence ST-11 du cahier des charges (prévue en V2, avancée à la demande de Modibo) : « le transfert doit se faire
+uniquement si les officines appartiennent au même pharmacien ».
+
+### Qui est « le même pharmacien »
+
+- Le lien existait déjà : un propriétaire détient plusieurs officines par ses affectations (offre multi-pharmacies,
+  créée par l'éditeur dans l'espace plateforme en saisissant l'email d'un propriétaire existant). Aucun nouveau lien
+  n'a été ajouté.
+- Deux officines appartiennent au même pharmacien si elles ont au moins un **propriétaire actif en commun**
+  (affectation active, compte actif). La règle est vérifiée à la création, à l'expédition et à la réception :
+  si le lien a été retiré entre-temps, l'opération est refusée.
+- Les officines archivées ou suspendues ne sont pas proposées comme destination.
+- Aucune vérification d'offre n'est ajoutée : seule une offre multi-pharmacies (Premium) permet à un propriétaire
+  d'avoir plusieurs officines, ce qui revient à la ligne « Transferts de stock : Premium » du tableau des offres.
+
+### Déroulement
+
+- Accès : **propriétaire et adjoint** (menu Stock › Transferts). Le vendeur et le caissier n'y ont pas accès.
+- L'officine d'origine **crée** le transfert (numéro TRF-AAAA-NNNNNN, propre à l'officine d'origine, attribué dès la
+  création : un transfert n'est jamais supprimé, seulement annulé), ajoute les produits et quantités (le stock
+  disponible est vérifié à la saisie) puis l'**expédie**.
+- À l'expédition, chaque produit sort en **FEFO** ; les lots périmés ne partent jamais. Les lots prélevés sont notés
+  sur le transfert avec leur numéro, leur date de péremption (éventuellement vide) et leur prix d'achat. Le stock de
+  l'origine baisse immédiatement (marchandise en route).
+- Les propriétaires et adjoints de l'officine destinataire reçoivent une notification. Ils voient le transfert dans
+  « Reçus des autres officines » et **confirment la réception** en une fois : chaque lot entre chez eux avec le même
+  numéro, la même date de péremption et le même prix d'achat (la valeur du stock est conservée). La notification est
+  alors marquée lue.
+- Réception **en totalité seulement** : un écart constaté (casse, manquant) se corrige ensuite par un ajustement de
+  stock motivé, comme pour toute autre correction.
+- Un lot devenu périmé pendant le trajet entre quand même (il est physiquement là) : il ne compte pas dans le stock
+  disponible et apparaît parmi les lots périmés à détruire.
+- **Annulation** possible seulement avant l'expédition, avec un motif ; aucun stock n'a bougé. Après expédition,
+  il n'y a pas de retour arrière automatique : on fait un transfert dans l'autre sens.
+
+### Catalogue de la destination
+
+- Chaque officine a son propre catalogue. Le produit reçu est rattaché au produit actif de la destination qui a le
+  **même nom commercial et le même dosage** (règle de l'import).
+- S'il n'existe pas, il est **créé** dans le catalogue de la destination avec la fiche de l'origine (DCI, forme,
+  conditionnement, prix, seuils, ordonnance, AMO, TVA), sans catégorie, étagère ni fournisseur, qui sont propres à
+  chaque officine. Le message de réception liste les produits créés pour qu'ils soient complétés.
+
+### Traçabilité
+
+- Les mouvements de stock sont de type **Transfert** des deux côtés (sortie à l'origine, entrée à la destination) et
+  portent le numéro du transfert, visibles dans l'historique de la fiche produit.
+- Le journal d'audit enregistre l'expédition et l'annulation (officine d'origine) et la réception (officine
+  destinataire), avec les produits, quantités et la valeur au prix d'achat.
+- Le transfert garde son historique : créé, expédié, reçu ou annulé, par qui et quand.
+- Isolation : le transfert appartient à l'officine d'origine ; l'officine destinataire n'en voit que les transferts
+  expédiés ou reçus qui lui sont adressés (un transfert en préparation lui est invisible), et ne lit jamais d'autres
+  données de l'origine. Une troisième officine reçoit une page « introuvable ».
+
