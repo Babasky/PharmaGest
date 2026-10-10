@@ -44,6 +44,9 @@ class AuditLogger
     public const TAUX_AMO_AJOUTE = 'parametres.taux_amo';
     public const PHARMACIE_ARCHIVAGE_ANNONCE = 'pharmacie.archivage_annonce';
     public const DONNEES_EXPORTEES = 'donnees.exportees';
+    public const TRANSFERT_EXPEDIE = 'transfert.expedie';
+    public const TRANSFERT_RECU = 'transfert.recu';
+    public const TRANSFERT_ANNULE = 'transfert.annule';
 
     /** Actions de la plateforme : les seules que le super admin consulte (il ne voit jamais l'activité d'une officine). */
     public const ACTIONS_PLATEFORME = [
@@ -82,6 +85,9 @@ class AuditLogger
         self::TAUX_AMO_AJOUTE => 'Taux AMO enregistré',
         self::PHARMACIE_ARCHIVAGE_ANNONCE => 'Archivage annoncé au propriétaire',
         self::DONNEES_EXPORTEES => 'Export complet des données',
+        self::TRANSFERT_EXPEDIE => 'Transfert de stock expédié',
+        self::TRANSFERT_RECU => 'Transfert de stock reçu',
+        self::TRANSFERT_ANNULE => 'Transfert de stock annulé',
     ];
 
     public static function libelle(string $action): string

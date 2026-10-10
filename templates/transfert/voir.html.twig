@@ -1,0 +1,152 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Transfert {{ transfert.numero }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_transfert_index') }}"><i class="bi bi-arrow-left"></i> Transferts</a>
+{% endblock %}
+
+{% block content %}
+    {% set jeton = csrf_token('transfert-' ~ transfert.id) %}
+    {% set ecriture = ecriture_autorisee() %}
+    {% set modifiable = sortant and transfert.estEnPreparation and ecriture %}
+    {% set expedie = transfert.expedieLe is not null %}
+
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+        <span class="badge fs-6 text-bg-{{ transfert.statut.couleur }}" id="statut">{{ transfert.statut.libelle }}</span>
+        <span class="fw-semibold" id="trajet">{{ transfert.pharmacieOrigine.nom }} <i class="bi bi-arrow-right"></i> {{ transfert.pharmacieDestination.nom }}</span>
+        {% if transfert.note %}<span class="small text-body-secondary">{{ transfert.note }}</span>{% endif %}
+    </div>
+
+    <ul class="list-unstyled small text-body-secondary mb-3" id="historique">
+        <li>Créé le {{ transfert.creeLe|date('d/m/Y à H:i') }}{{ transfert.creePar ? ' par ' ~ transfert.creePar.nom }}</li>
+        {% if transfert.expedieLe %}<li>Expédié le {{ transfert.expedieLe|date('d/m/Y à H:i') }}{{ transfert.expediePar ? ' par ' ~ transfert.expediePar.nom }}</li>{% endif %}
+        {% if transfert.recuLe %}<li>Reçu le {{ transfert.recuLe|date('d/m/Y à H:i') }}{{ transfert.recuPar ? ' par ' ~ transfert.recuPar.nom }}</li>{% endif %}
+        {% if transfert.annuleLe %}<li>Annulé le {{ transfert.annuleLe|date('d/m/Y à H:i') }}{{ transfert.annulePar ? ' par ' ~ transfert.annulePar.nom }} : {{ transfert.motifAnnulation }}</li>{% endif %}
+    </ul>
+
+    {% if modifiable %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" class="d-flex gap-2" id="recherche-produit">
+                    <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Ajouter un produit : nom ou DCI" aria-label="Rechercher un produit" autofocus>
+                    <button class="btn btn-outline-success" type="submit"><i class="bi bi-search"></i></button>
+                </form>
+                {% if q %}
+                    <ul class="list-group list-group-flush mt-2" id="resultats">
+                        {% for produit in resultats %}
+                            <li class="list-group-item d-flex flex-wrap align-items-center gap-2 px-0">
+                                <span class="me-auto">{{ produit.designation }} <span class="small text-body-secondary">· stock {{ synthese[produit.id].stock ?? 0 }}</span></span>
+                                <form method="post" action="{{ path('app_transfert_ajouter', {id: transfert.id}) }}" class="d-flex gap-2">
+                                    <input type="hidden" name="_token" value="{{ jeton }}">
+                                    <input type="hidden" name="produit" value="{{ produit.id }}">
+                                    <input type="number" min="1" max="100000" class="form-control form-control-sm text-end" style="width: 6rem" name="quantite" value="1" aria-label="Quantité de {{ produit.nomCommercial }}">
+                                    <button class="btn btn-sm btn-success" type="submit">Ajouter</button>
+                                </form>
+                            </li>
+                        {% else %}
+                            <li class="list-group-item px-0 text-body-secondary">Aucun produit actif ne correspond.</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+        <form method="post" action="{{ path('app_transfert_lignes', {id: transfert.id}) }}" id="lignes-transfert"><input type="hidden" name="_token" value="{{ jeton }}"></form>
+    {% endif %}
+
+    <div class="card shadow-sm mb-3">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="lignes">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Produit</th>
+                        {% if sortant and not expedie %}<th class="text-end">Stock</th>{% endif %}
+                        <th class="text-end">Quantité</th>
+                        {% if expedie %}
+                            <th>Lots</th>
+                            <th class="text-end pe-3">Valeur</th>
+                        {% endif %}
+                        {% if modifiable %}<th class="pe-3"></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in transfert.lignes %}
+                        {% set p = ligne.produit %}
+                        <tr data-produit="{{ p.nomCommercial }}">
+                            <td class="ps-3">
+                                {{ p.designation }}
+                                {% if p.conditionnement %}<div class="small text-body-secondary">{{ p.conditionnement }}</div>{% endif %}
+                            </td>
+                            {% if sortant and not expedie %}<td class="text-end">{{ synthese[p.id].stock ?? 0 }}</td>{% endif %}
+                            {% if modifiable %}
+                                <td>
+                                    <input type="number" min="0" max="100000" form="lignes-transfert" class="form-control form-control-sm text-end ms-auto" style="max-width: 6.5rem" name="quantite[{{ ligne.id }}]" value="{{ ligne.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}">
+                                </td>
+                            {% else %}
+                                <td class="text-end fw-semibold">{{ ligne.quantite }}</td>
+                            {% endif %}
+                            {% if expedie %}
+                                <td class="small">
+                                    {% for lot in ligne.lots %}
+                                        <div class="lot"><span class="font-monospace">{{ lot.numero }}</span> · {{ lot.quantite }} · pér. {{ lot.datePeremption ? lot.datePeremption|date('d/m/Y') : 'non renseignée' }} · {{ lot.prixAchat|fcfa }}</div>
+                                    {% endfor %}
+                                </td>
+                                <td class="montant pe-3">{{ ligne.valeur|fcfa }}</td>
+                            {% endif %}
+                            {% if modifiable %}
+                                <td class="pe-3 text-end">
+                                    <form method="post" action="{{ path('app_transfert_retirer', {id: transfert.id, ligne: ligne.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ jeton }}">
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit" title="Retirer {{ p.nomCommercial }}"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucun produit : recherchez-en un ci-dessus pour l'ajouter.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if transfert.lignes is not empty %}
+                    <tfoot class="table-light fw-semibold">
+                        <tr>
+                            <td class="ps-3">Total</td>
+                            {% if sortant and not expedie %}<td></td>{% endif %}
+                            <td class="text-end" id="quantite-totale">{{ transfert.quantite }}</td>
+                            {% if expedie %}<td></td><td class="montant pe-3" id="valeur">{{ transfert.valeur|fcfa }}</td>{% endif %}
+                            {% if modifiable %}<td></td>{% endif %}
+                        </tr>
+                    </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    {% if modifiable %}
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            {% if transfert.lignes is not empty %}
+                <button class="btn btn-outline-success" type="submit" form="lignes-transfert"><i class="bi bi-check2"></i> Enregistrer les quantités</button>
+                <form method="post" action="{{ path('app_transfert_expedier', {id: transfert.id}) }}">
+                    <input type="hidden" name="_token" value="{{ jeton }}">
+                    <button class="btn btn-success" type="submit" data-turbo-confirm="Expédier le transfert à {{ transfert.pharmacieDestination.nom }} ? Le stock sortira de votre officine et le transfert ne sera plus modifiable."><i class="bi bi-truck"></i> Expédier</button>
+                </form>
+            {% endif %}
+        </div>
+        <form method="post" action="{{ path('app_transfert_annuler', {id: transfert.id}) }}" id="annuler" class="mb-3" style="max-width: 32rem">
+            <input type="hidden" name="_token" value="{{ jeton }}">
+            <div class="input-group">
+                <input type="text" class="form-control" name="motif" maxlength="255" required placeholder="Motif de l'annulation" aria-label="Motif">
+                <button class="btn btn-outline-danger" type="submit">Annuler le transfert</button>
+            </div>
+        </form>
+    {% elseif not sortant and transfert.estExpedie and ecriture %}
+        <div class="alert alert-primary d-flex flex-wrap align-items-center gap-3" id="a-receptionner">
+            <span class="me-auto">Vérifiez la marchandise reçue de {{ transfert.pharmacieOrigine.nom }}, puis confirmez : les lots entreront dans votre stock avec leurs numéros, dates de péremption et prix d'achat.</span>
+            <form method="post" action="{{ path('app_transfert_receptionner', {id: transfert.id}) }}">
+                <input type="hidden" name="_token" value="{{ jeton }}">
+                <button class="btn btn-success" type="submit"><i class="bi bi-box-arrow-in-down"></i> Confirmer la réception</button>
+            </form>
+        </div>
+    {% elseif sortant and transfert.estExpedie %}
+        <p class="small text-body-secondary" id="en-attente">En attente de la confirmation de réception par {{ transfert.pharmacieDestination.nom }}.</p>
+    {% endif %}
+{% endblock %}

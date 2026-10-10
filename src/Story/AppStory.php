@@ -19,6 +19,7 @@ use App\Security\CodePin;
 use App\Service\AbonnementService;
 use App\Service\GenerateurNotifications;
 use App\Stock\StockService;
+use App\Stock\TransfertService;
 use App\Tenant\TenantContext;
 use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\CategorieFactory;
@@ -58,6 +59,7 @@ final class AppStory extends Story
         private readonly GestionDepenses $depenses,
         private readonly RecetteService $recettes,
         private readonly GenerateurNotifications $notifications,
+        private readonly TransfertService $transferts,
         private readonly TokenStorageInterface $jetons,
         private readonly \Doctrine\ORM\EntityManagerInterface $em,
     ) {
@@ -116,6 +118,8 @@ final class AppStory extends Story
         $koulikoro = PharmacieFactory::createOne(['nom' => 'Pharmacie de Koulikoro', 'ville' => 'Koulikoro', 'offre' => $premium, 'numeroAutorisation' => 'AUT-KLK-0005']);
         $proprietaire = $this->equipe($kati, 'm.dembele@groupe-dembele.ml', 'Mariam Dembélé', [['y.toure@groupe-dembele.ml', 'Yacouba Touré', Utilisateur::ROLE_VENDEUR]]);
         AffectationFactory::createOne(['utilisateur' => $proprietaire, 'pharmacie' => $koulikoro]);
+        AffectationFactory::createOne(['utilisateur' => UtilisateurFactory::createOne(['email' => 's.cisse@groupe-dembele.ml', 'nom' => 'Salif Cissé', 'role' => Utilisateur::ROLE_ADJOINT]), 'pharmacie' => $koulikoro]);
+        $this->transferts($kati, $koulikoro, $proprietaire);
 
         // Centre de notifications (Lot 8) : alertes du jour pour chaque pharmacie, comme chaque matin.
         foreach ([$fleuve, $kanaga, $djoliba, $paix, $kati, $koulikoro] as $pharmacie) {
@@ -390,6 +394,63 @@ final class AppStory extends Story
         }
         $this->recettes->enregistrerManuelle($aujourdhui, 'Location de la vitrine à un laboratoire', 25000, ModeReglement::Especes);
         $this->tenantContext->forcer(null);
+    }
+
+    /**
+     * Transferts de stock (ST-11) entre les deux officines de Mariam Dembélé : un transfert Kati → Koulikoro reçu
+     * (le Coartem, inconnu à Koulikoro, a été ajouté à son catalogue), un expédié qui attend la confirmation de
+     * Koulikoro et un en préparation.
+     */
+    private function transferts(\App\Entity\Pharmacie $kati, \App\Entity\Pharmacie $koulikoro, Utilisateur $mariam): void
+    {
+        $this->jetons->setToken(new UsernamePasswordToken($mariam, 'main', $mariam->getRoles()));
+        $forme = static fn (string $nom) => \Zenstruck\Foundry\Persistence\repository(\App\Entity\FormeGalenique::class)->findOneBy(['nom' => $nom]);
+        $produits = [
+            'Doliprane' => ['Paracétamol', '500 mg', 'Comprimé', 'Boîte de 16', 1150, 1500, false],
+            'Coartem' => ['Artéméther + luméfantrine', '20/120 mg', 'Comprimé', 'Boîte de 24', 2900, 3800, true],
+            'Amoxicilline' => ['Amoxicilline', '500 mg', 'Gélule', 'Boîte de 12', 1800, 2400, true],
+            'Smecta' => ['Diosmectite', '3 g', 'Sachet', 'Boîte de 30', 2300, 3000, false],
+        ];
+        $catalogue = static function (\App\Entity\Pharmacie $pharmacie, array $noms) use ($produits, $forme): array {
+            $catalogue = [];
+            foreach ($noms as $nom) {
+                [$dci, $dosage, $nomForme, $conditionnement, $achat, $vente, $ordonnance] = $produits[$nom];
+                $catalogue[$nom] = ProduitFactory::createOne([
+                    'pharmacie' => $pharmacie, 'nomCommercial' => $nom, 'dci' => $dci, 'dosage' => $dosage, 'forme' => $forme($nomForme),
+                    'conditionnement' => $conditionnement, 'prixAchat' => $achat, 'prixVente' => $vente, 'seuilAlerte' => 10, 'stockMax' => 60,
+                    'ordonnanceObligatoire' => $ordonnance,
+                ]);
+            }
+
+            return $catalogue;
+        };
+
+        $this->tenantContext->forcer($kati);
+        $stockKati = $catalogue($kati, ['Doliprane', 'Coartem', 'Amoxicilline', 'Smecta']);
+        foreach ([['Doliprane', 'DK101', '+5 months', 40], ['Doliprane', 'DK102', '+2 years', 60], ['Coartem', 'CK210', '+14 months', 50], ['Amoxicilline', 'AK330', '+10 months', 45], ['Smecta', 'SK440', '+18 months', 30]] as [$nom, $numero, $peremption, $quantite]) {
+            $this->stock->entrer($stockKati[$nom], $numero, new \DateTimeImmutable('today '.$peremption), $quantite, (int) $stockKati[$nom]->getPrixAchat(), motif: 'Stock initial');
+        }
+        $this->tenantContext->forcer($koulikoro);
+        $stockKoulikoro = $catalogue($koulikoro, ['Doliprane', 'Amoxicilline']);
+        $this->stock->entrer($stockKoulikoro['Doliprane'], 'DL901', new \DateTimeImmutable('today +8 months'), 4, 1150, motif: 'Stock initial');
+
+        $this->tenantContext->forcer($kati);
+        $recu = $this->transferts->creer($koulikoro, 'Dépannage : Koulikoro en rupture de Coartem');
+        $this->transferts->ajouter($recu, $stockKati['Coartem'], 12);
+        $this->transferts->ajouter($recu, $stockKati['Doliprane'], 20);
+        $this->transferts->expedier($recu);
+        $this->tenantContext->forcer($koulikoro);
+        $this->transferts->receptionner($recu);
+
+        $this->tenantContext->forcer($kati);
+        $attendu = $this->transferts->creer($koulikoro);
+        $this->transferts->ajouter($attendu, $stockKati['Amoxicilline'], 15);
+        $this->transferts->expedier($attendu);
+        $prepare = $this->transferts->creer($koulikoro);
+        $this->transferts->ajouter($prepare, $stockKati['Smecta'], 6);
+
+        $this->tenantContext->forcer(null);
+        $this->jetons->setToken(null);
     }
 
     /**

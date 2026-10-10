@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Notification;
 use App\Entity\Pharmacie;
+use App\Entity\TransfertStock;
 use App\Entity\Utilisateur;
 use App\Enum\TypeNotification;
 use App\Repository\AffectationRepository;
@@ -72,6 +73,46 @@ class GenerateurNotifications
         } finally {
             $this->tenantContext->forcer($precedente);
         }
+    }
+
+    /**
+     * Prévient les responsables de l'officine destinataire qu'un transfert de stock (ST-11) leur a été expédié.
+     */
+    public function transfertAReceptionner(TransfertStock $transfert): int
+    {
+        $destination = $transfert->getPharmacieDestination();
+        $precedente = $this->tenantContext->getPharmacie();
+        $this->tenantContext->forcer($destination);
+        try {
+            $creees = $this->notifier(
+                $destination,
+                $this->responsables($destination),
+                TypeNotification::Transfert,
+                \sprintf('Transfert %s de %s à réceptionner : %d unité(s).', $transfert->getNumero(), $transfert->getPharmacieOrigine()->getNom(), $transfert->getQuantite()),
+                $this->urls->generate('app_transfert_voir', ['id' => $transfert->getId()]),
+                self::cleTransfert($transfert),
+            );
+            $this->em->flush();
+
+            return $creees;
+        } finally {
+            $this->tenantContext->forcer($precedente);
+        }
+    }
+
+    /**
+     * Le transfert est reçu : son avis « à réceptionner » n'a plus lieu d'être (pharmacie courante = destinataire).
+     */
+    public function transfertRecu(TransfertStock $transfert): void
+    {
+        foreach ($this->notifications->findBy(['cle' => self::cleTransfert($transfert), 'lueLe' => null]) as $notification) {
+            $notification->marquerLue($this->horloge->now());
+        }
+    }
+
+    private static function cleTransfert(TransfertStock $transfert): string
+    {
+        return 'transfert-'.$transfert->getId();
     }
 
     /**
