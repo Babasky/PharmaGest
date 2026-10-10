@@ -76,8 +76,14 @@
                         <th class="ps-3">Produit</th>
                         <th class="text-end">Stock</th>
                         <th class="text-end">Quantité</th>
-                        {% if responsable %}<th class="text-end">Prix estimé</th><th class="text-end">Montant</th>{% endif %}
-                        {% if not commande.estBrouillon %}<th class="text-end">Reçu</th><th class="text-end">Reste</th>{% endif %}
+                        {% if responsable %}
+                            <th class="text-end">Prix estimé</th>
+                            <th class="text-end">Montant</th>
+                        {% endif %}
+                        {% if not commande.estBrouillon %}
+                            <th class="text-end">Reçu</th>
+                            <th class="text-end">Reste</th>
+                        {% endif %}
                         {% if modifiable %}<th class="pe-3"></th>{% endif %}
                     </tr>
                 </thead>
@@ -85,16 +91,25 @@
                     {% for ligne in commande.lignes %}
                         {% set p = ligne.produit %}
                         <tr data-produit="{{ p.nomCommercial }}">
-                            <td class="ps-3">{{ p.designation }}{% if p.conditionnement %}<div class="small text-body-secondary">{{ p.conditionnement }}</div>{% endif %}</td>
+                            <td class="ps-3">
+                                {{ p.designation }}
+                                {% if p.conditionnement %}
+                                    <div class="small text-body-secondary">{{ p.conditionnement }}</div>
+                                {% endif %}
+                            </td>
                             <td class="text-end">{{ synthese[p.id].stock ?? 0 }}</td>
                             {% if modifiable %}
-                                <td><input type="number" min="0" max="100000" form="lignes-commande" class="form-control form-control-sm text-end ms-auto" style="max-width: 6.5rem" name="quantite[{{ ligne.id }}]" value="{{ ligne.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
+                                <td>
+                                    <input type="number" min="0" max="100000" form="lignes-commande" class="form-control form-control-sm text-end ms-auto" style="max-width: 6.5rem" name="quantite[{{ ligne.id }}]" value="{{ ligne.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}">
+                                </td>
                             {% else %}
                                 <td class="text-end fw-semibold">{{ ligne.quantite }}</td>
                             {% endif %}
                             {% if responsable %}
                                 {% if modifiable %}
-                                    <td><input type="text" inputmode="numeric" form="lignes-commande" class="form-control form-control-sm text-end ms-auto" style="max-width: 7.5rem" name="prix[{{ ligne.id }}]" value="{{ ligne.prixEstime }}" aria-label="Prix estimé de {{ p.nomCommercial }}"></td>
+                                    <td>
+                                        <input type="text" inputmode="numeric" form="lignes-commande" class="form-control form-control-sm text-end ms-auto" style="max-width: 7.5rem" name="prix[{{ ligne.id }}]" value="{{ ligne.prixEstime }}" aria-label="Prix estimé de {{ p.nomCommercial }}">
+                                    </td>
                                 {% else %}
                                     <td class="montant">{{ ligne.prixEstime|fcfa }}</td>
                                 {% endif %}
@@ -102,7 +117,7 @@
                             {% endif %}
                             {% if not commande.estBrouillon %}
                                 <td class="text-end">{{ ligne.quantiteRecue }}{% if ligne.quantiteRecue > ligne.quantite %} <i class="bi bi-exclamation-triangle text-warning" title="Plus que commandé"></i>{% endif %}</td>
-                                <td class="text-end">{{ ligne.reste ?: '—' }}</td>
+                                <td class="text-end">{{ ligne.reste ?: '0' }}</td>
                             {% endif %}
                             {% if modifiable %}
                                 <td class="pe-3 text-end">

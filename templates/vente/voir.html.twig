@@ -38,22 +38,42 @@
                 <div class="table-responsive">
                     <table class="table align-middle mb-0" id="lignes">
                         <thead class="table-light">
-                            <tr><th class="ps-3">Produit</th><th class="text-end">Qté</th><th class="text-end">Prix</th><th class="text-end">Remise</th><th class="text-end pe-3">Montant</th></tr>
+                            <tr>
+                                <th class="ps-3">Produit</th>
+                                <th class="text-end">Qté</th>
+                                <th class="text-end">Prix</th>
+                                <th class="text-end">Remise</th>
+                                <th class="text-end pe-3">Montant</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for ligne in vente.lignes %}
                                 <tr>
                                     <td class="ps-3">
                                         {{ ligne.produit.nomCommercial }}
-                                        {% if amo %}<span class="badge {{ ligne.remboursable ? 'text-bg-info' : 'text-bg-light border' }}">{{ ligne.remboursable ? 'Remboursable' : 'Non remboursable' }}</span>{% endif %}
+                                        {% if amo %}
+                                            <span class="badge {{ ligne.remboursable ? 'text-bg-info' : 'text-bg-light border' }}">
+                                                {{ ligne.remboursable ? 'Remboursable' : 'Non remboursable' }}
+                                            </span>
+                                        {% endif %}
                                         <div class="small text-body-secondary">
-                                            {% for ll in ligne.lots %}Lot {{ ll.lot.numero }} ({{ ll.quantite }}, {{ ll.lot.datePeremption ? 'pér. ' ~ ll.lot.datePeremption|date('m/Y') : 'sans péremption' }}){{ not loop.last ? ' · ' }}{% endfor %}
+                                            {% for ll in ligne.lots %}
+                                                Lot {{ ll.lot.numero }} ({{ ll.quantite }}, {{ ll.lot.datePeremption ? 'pér. ' ~ ll.lot.datePeremption|date('m/Y') : 'sans péremption' }}){{ not loop.last ? ' · ' }}
+                                            {% endfor %}
                                         </div>
                                     </td>
-                                    <td class="text-end">{{ ligne.quantite }}</td>
-                                    <td class="montant">{{ ligne.prixUnitaire|fcfa }}</td>
-                                    <td class="montant">{{ ligne.remise > 0 ? '− ' ~ ligne.remise|fcfa : '—' }}</td>
-                                    <td class="montant pe-3">{{ (ligne.montantBrut - ligne.remise)|fcfa }}</td>
+                                    <td class="text-end">
+                                        {{ ligne.quantite }}
+                                    </td>
+                                    <td class="montant">
+                                        {{ ligne.prixUnitaire|fcfa }}
+                                    </td>
+                                    <td class="montant">
+                                        {{ ligne.remise > 0 ? '− ' ~ ligne.remise|fcfa : '0' }}
+                                    </td>
+                                    <td class="montant pe-3">
+                                        {{ (ligne.montantBrut - ligne.remise)|fcfa }}
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -86,7 +106,12 @@
                     <div><span class="text-body-secondary">Client :</span> {{ vente.client ? vente.client.nom : 'client de passage' }}</div>
                     {% if amo %}<div><span class="text-body-secondary">Assuré :</span> {{ vente.organismeAmo.code }} {{ vente.numeroAssure }}</div>{% endif %}
                     {% if vente.ordonnance %}
-                        <div><span class="text-body-secondary">Ordonnance :</span> {{ vente.ordonnance.numero ? 'n° ' ~ vente.ordonnance.numero ~ ', ' }}du {{ vente.ordonnance.date|date('d/m/Y') }}{{ vente.ordonnance.prescripteur ? ', ' ~ vente.ordonnance.prescripteur }}{{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}</div>
+                        <div>
+                            <span class="text-body-secondary">Ordonnance :</span> 
+                            {{ vente.ordonnance.numero ? 'n° ' ~ vente.ordonnance.numero ~ ', ' }}du 
+                            {{ vente.ordonnance.date|date('d/m/Y') }}{{ vente.ordonnance.prescripteur ? ', ' ~ vente.ordonnance.prescripteur }}
+                            {{ vente.ordonnance.structure ? ' (' ~ vente.ordonnance.structure ~ ')' }}
+                        </div>
                     {% endif %}
                     {% if vente.autorisePar %}<div><span class="text-body-secondary">Autorisée par :</span> {{ vente.autorisePar.nom }}</div>{% endif %}
                     {% if creance %}

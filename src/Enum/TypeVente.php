@@ -16,7 +16,7 @@ enum TypeVente: string
         return match ($this) {
             self::SansOrdonnance => 'Sans ordonnance',
             self::Ordonnance => 'Ordonnance classique',
-            self::Amo => 'Ordonnance AMO / assurance',
+            self::Amo => 'AMO / Autres',
         };
     }
 

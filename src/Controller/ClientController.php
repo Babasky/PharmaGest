@@ -72,7 +72,7 @@ final class ClientController extends AbstractAppController
             $this->entityManager->flush();
             $this->addFlash('success', \sprintf('Client %s enregistré.', $client->getNom()));
 
-            return $this->redirectToRoute('app_client_index', ['q' => $client->getNom()]);
+            return $this->redirectToRoute('app_client_index');
         }
 
         return $this->render('referentiel/formulaire.html.twig', [
