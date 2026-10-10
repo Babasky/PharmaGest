@@ -209,4 +209,17 @@ final class StockTest extends AppWebTestCase
         $this->client->request('GET', '/stock?q='.$produit->getNomCommercial());
         self::assertSelectorTextContains('tbody', "12\u{00A0}500\u{00A0}FCFA");
     }
+
+    public function testRechercheDansLeStockSansChoisirDeCategorie(): void
+    {
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Doliprane']);
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Amoxicilline']);
+
+        $crawler = $this->connecter($this->officine->vendeur)->request('GET', '/stock');
+        $this->client->submit($crawler->filter('form[role="search"]')->form(['q' => 'Doli']));
+
+        self::assertResponseIsSuccessful('Le formulaire envoie « categorie= » quand aucune catégorie n\'est choisie.');
+        self::assertSelectorTextContains('tbody', 'Doliprane');
+        self::assertSelectorTextNotContains('tbody', 'Amoxicilline');
+    }
 }

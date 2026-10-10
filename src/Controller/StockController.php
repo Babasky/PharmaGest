@@ -42,7 +42,7 @@ final class StockController extends AbstractAppController
         CategorieRepository $categories,
         AlertesStock $alertes,
         #[MapQueryParameter] ?string $q = null,
-        #[MapQueryParameter] ?int $categorie = null,
+        #[MapQueryParameter(flags: \FILTER_NULL_ON_FAILURE)] ?int $categorie = null,
         #[MapQueryParameter] int $page = 1,
     ): Response {
         $resultats = $produits->rechercher($q, $categorie, false, $page);

@@ -30,7 +30,7 @@ final class ProduitController extends AbstractAppController
         ProduitRepository $produits,
         CategorieRepository $categories,
         #[MapQueryParameter] ?string $q = null,
-        #[MapQueryParameter] ?int $categorie = null,
+        #[MapQueryParameter(flags: \FILTER_NULL_ON_FAILURE)] ?int $categorie = null,
         #[MapQueryParameter] bool $archives = false,
         #[MapQueryParameter] int $page = 1,
     ): Response {

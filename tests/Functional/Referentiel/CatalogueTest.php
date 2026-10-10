@@ -57,7 +57,7 @@ final class CatalogueTest extends AppWebTestCase
         self::assertSelectorTextContains('main', "350\u{00A0}FCFA", 'Marge brute de référence.');
 
         foreach (['Doli', 'parac'] as $recherche) {
-            $this->client->request('GET', '/produits?q='.$recherche);
+            $this->client->request('GET', '/produits?categorie=&q='.$recherche);
             self::assertSelectorTextContains('tbody', 'Doliprane', $recherche);
         }
 
