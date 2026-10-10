@@ -1,0 +1,8 @@
+{# Formulaire de la fenêtre « Nouveau client » de la caisse (réaffiché avec ses erreurs en cas de saisie invalide). #}
+{{ form_start(formulaire_client, {attr: {id: 'formulaire-nouveau-client', 'data-action': 'caisse#creerClient'}}) }}
+    {{ form_widget(formulaire_client) }}
+    <div class="d-flex flex-wrap gap-2 justify-content-end">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn btn-success" type="submit"><i class="bi bi-person-check"></i> Enregistrer et choisir</button>
+    </div>
+{{ form_end(formulaire_client) }}

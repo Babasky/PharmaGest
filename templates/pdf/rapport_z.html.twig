@@ -43,7 +43,7 @@
     <h2>Encaissements par mode de paiement</h2>
     <table>
         <tr><th>Mode</th><th class="droite">Encaissé</th><th class="droite">Remboursé (annulations)</th><th class="droite">Net</th></tr>
-        {% for mode in enum_cases('App\\Enum\\ModePaiement') %}
+        {% for mode in synthese.modes %}
             <tr class="ligne">
                 <td>{{ mode.libelle }}</td>
                 <td class="droite">{{ synthese.encaissements[mode.value]|fcfa }}</td>

@@ -53,6 +53,17 @@ final class SyntheseSession
         }
     }
 
+    /**
+     * Modes à afficher : ceux proposés à la caisse, plus un ancien mode (carte) s'il a servi dans la session.
+     *
+     * @return list<ModePaiement>
+     */
+    public function modes(): array
+    {
+        return array_values(array_filter(ModePaiement::cases(), fn (ModePaiement $m) => \in_array($m, ModePaiement::proposes(), true)
+            || 0 !== $this->encaissements[$m->value] || 0 !== $this->decaissements[$m->value]));
+    }
+
     public function net(ModePaiement $mode): int
     {
         return $this->encaissements[$mode->value] - $this->decaissements[$mode->value];

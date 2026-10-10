@@ -34,7 +34,7 @@
                 <table class="table table-sm mb-0">
                     <thead class="table-light small"><tr><th class="ps-3">Mode</th><th class="text-end">Encaissé</th><th class="text-end">Remboursé</th><th class="text-end pe-3">Net</th></tr></thead>
                     <tbody>
-                        {% for mode in enum_cases('App\\Enum\\ModePaiement') %}
+                        {% for mode in synthese.modes %}
                             <tr>
                                 <td class="ps-3">{{ mode.libelle }}</td>
                                 <td class="montant">{{ synthese.encaissements[mode.value]|fcfa }}</td>

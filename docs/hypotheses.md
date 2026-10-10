@@ -229,7 +229,8 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 
 ### Paiements, tickets
 
-- Paiement **mixte** : espèces, Orange Money, Moov Money, carte (référence facultative). Les paiements
+- Paiement **mixte** : espèces, Orange Money, Moov Money, Wave (référence facultative ; la carte bancaire n'est plus
+  proposée depuis le 10/10/2026). Les paiements
   électroniques ne peuvent pas dépasser le montant dû ; le reste est payé en espèces et la monnaie est calculée sur
   les espèces remises.
 - Ticket **80 mm** et facture **A4** en PDF, réimprimables depuis la fiche de la vente.
@@ -369,7 +370,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - Une dépense est numérotée `DEP-AAAA-NNNNNN` **dès l'enregistrement** (RG-02). Elle se **corrige** (ancienne et
   nouvelle version au journal d'audit) et s'**annule** avec un motif : elle garde son numéro, reste visible et sort
   des totaux. Date dans le futur refusée.
-- Modes de paiement : espèces, Orange Money, Moov Money, carte, virement, chèque.
+- Modes de paiement : espèces, Orange Money, Moov Money, Wave, virement, chèque (carte bancaire retirée le 10/10/2026).
 - **Justificatif** : photo (JPEG, PNG, WebP) ou PDF, 5 Mo au plus, stocké tel quel hors du dossier public et servi
   après contrôle de la pharmacie (404 pour une autre pharmacie). Un nouveau fichier remplace l'ancien.
 - Dépenses et recettes : **propriétaire seul** (matrice des droits).
@@ -525,7 +526,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   statut « À encaisser ». Le stock est pris à la validation pour qu'un autre vendeur ne vende pas le même produit
   pendant que le client va payer.
 - L'**encaissement** par le caissier se fait dans **sa** session de caisse : paiements (espèces, Orange Money, Moov
-  Money, carte, paiement mixte), recette, créance AMO. La vente prend alors la date de l'encaissement (date de la
+  Money, Wave, paiement mixte), recette, créance AMO. La vente prend alors la date de l'encaissement (date de la
   recette et du chiffre d'affaires) ; le vendeur reste celui qui a validé, le caissier est celui de la session.
   Deux caissiers ne peuvent pas encaisser la même vente.
 - Une vente « À encaisser » que le client ne paie pas est **annulée** depuis l'encaissement, avec un motif obligatoire :
@@ -669,3 +670,24 @@ uniquement si les officines appartiennent au même pharmacien ».
   expédiés ou reçus qui lui sont adressés (un transfert en préparation lui est invisible), et ne lit jamais d'autres
   données de l'origine. Une troisième officine reçoit une page « introuvable ».
 
+## Décisions — Écran de caisse (demande de Modibo, 10/10/2026)
+
+### Moyens de paiement
+
+- La caisse et l'encaissement du caissier proposent **espèces, Orange Money, Moov Money et Wave**. La **carte
+  bancaire** n'est plus proposée (ni pour les recettes et dépenses saisies à la main).
+- Les paiements par carte déjà enregistrés restent lisibles : fiche de la vente, clôture, rapport Z, rapports et
+  recettes. La ligne « Carte bancaire » n'y apparaît que si un montant existe ; une dépense déjà réglée par carte
+  garde ce mode quand on la modifie.
+
+### Nouveau client depuis la caisse
+
+- Le bouton **Nouveau client** est toujours visible à côté de la recherche de clients ; il ouvre une fenêtre
+  (mêmes champs que la fiche client) sans quitter la caisse. Après une recherche sans résultat, la fenêtre reprend la
+  saisie (nom, ou téléphone si la saisie n'est faite que de chiffres).
+- Le client créé est **choisi automatiquement** pour la vente en cours ; le type de vente et l'ordonnance sont gardés.
+
+### Type de vente gardé
+
+- Le type de vente, l'ordonnance et l'assurance saisis mais pas encore appliqués sont enregistrés automatiquement
+  avant de choisir, retirer, rechercher ou créer un client : ils ne sont plus perdus au rechargement de l'écran.

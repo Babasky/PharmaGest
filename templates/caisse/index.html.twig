@@ -234,7 +234,7 @@
 
         <div class="col-12 col-xl-5">
             {# --- Client --- #}
-            <div class="card shadow-sm mb-3" id="client">
+            <div class="card shadow-sm mb-3" id="client" data-action="submit->caisse#garderVente">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start gap-2">
                         <div>
@@ -256,10 +256,15 @@
                             </form>
                         {% endif %}
                     </div>
-                    <form method="get" action="{{ path('app_caisse') }}" class="input-group input-group-sm mt-2" role="search">
-                        <input type="search" name="client" value="{{ recherche_client }}" class="form-control" placeholder="Nom, téléphone ou n° d'assuré" aria-label="Rechercher un client">
-                        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i><span class="visually-hidden">Rechercher un client</span></button>
-                    </form>
+                    <div class="d-flex gap-2 mt-2">
+                        <form method="get" action="{{ path('app_caisse') }}" class="input-group input-group-sm" role="search">
+                            <input type="search" name="client" value="{{ recherche_client }}" class="form-control" placeholder="Nom, téléphone ou n° d'assuré" aria-label="Rechercher un client">
+                            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i><span class="visually-hidden">Rechercher un client</span></button>
+                        </form>
+                        {% if ecriture_autorisee() %}
+                            <button class="btn btn-sm btn-outline-success text-nowrap" type="button" data-bs-toggle="modal" data-bs-target="#nouveau-client" id="bouton-nouveau-client"><i class="bi bi-person-plus"></i> Nouveau client</button>
+                        {% endif %}
+                    </div>
                     {% if recherche_client %}
                         <ul class="list-group list-group-flush mt-2" id="clients-trouves">
                             {% for c in clients %}
@@ -273,7 +278,7 @@
                                     </form>
                                 </li>
                             {% else %}
-                                <li class="list-group-item px-0 small text-body-secondary">Aucun client trouvé. <a href="{{ path('app_client_nouveau') }}">Créer un client</a></li>
+                                <li class="list-group-item px-0 small text-body-secondary">Aucun client trouvé.{% if ecriture_autorisee() %} <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#nouveau-client">Créer ce client</button>{% endif %}</li>
                             {% endfor %}
                         </ul>
                     {% endif %}
@@ -281,7 +286,7 @@
             </div>
 
             {# --- Type de vente, ordonnance, remise --- #}
-            <form method="post" action="{{ path('app_caisse_vente') }}" enctype="multipart/form-data" class="card shadow-sm mb-3" id="type-vente">
+            <form method="post" action="{{ path('app_caisse_vente') }}" enctype="multipart/form-data" class="card shadow-sm mb-3" id="type-vente" data-caisse-target="vente">
                 <input type="hidden" name="_token" value="{{ token }}">
                 <div class="card-body">
                     {% set type_courant = panier ? panier.type.value : 'sans_ordonnance' %}
@@ -394,5 +399,22 @@
                 </div>
             </div>
         </div>
+
+        {# --- Fenêtre « Nouveau client » : le client est créé et choisi sans quitter la caisse --- #}
+        {% if ecriture_autorisee() %}
+            <div class="modal fade" id="nouveau-client" tabindex="-1" aria-labelledby="nouveau-client-titre" aria-hidden="true" data-caisse-target="fenetreClient">
+                <div class="modal-dialog modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title fs-5" id="nouveau-client-titre"><i class="bi bi-person-plus"></i> Nouveau client</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                        </div>
+                        <div class="modal-body" data-caisse-target="corpsClient">
+                            {% include 'caisse/_nouveau_client.html.twig' %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
 {% endblock %}

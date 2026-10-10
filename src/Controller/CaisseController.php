@@ -9,6 +9,7 @@ use App\Entity\Utilisateur;
 use App\Entity\Vente;
 use App\Enum\TypeRemise;
 use App\Enum\TypeVente;
+use App\Form\ClientType;
 use App\Repository\AffectationRepository;
 use App\Repository\ClientRepository;
 use App\Repository\LotRepository;
@@ -24,6 +25,7 @@ use App\Vente\GestionCaisse;
 use App\Vente\VenteException;
 use App\Vente\VenteService;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -69,6 +71,13 @@ final class CaisseController extends AbstractAppController
         $panier = $this->ventes->panier($utilisateur);
         $resultats = null !== $q && '' !== trim($q) ? $produits->rechercher($q, null, false, 1)->elements : [];
         $dansPanier = null !== $panier ? $panier->getLignes()->map(static fn (LigneVente $l) => $l->getProduit())->toArray() : [];
+        $trouves = null !== $client && '' !== trim($client) ? $clients->rechercher($client, false, false, 1)->elements : [];
+
+        // La fenêtre « Nouveau client » reprend la saisie de la recherche restée sans résultat.
+        $nouveau = new Client();
+        if (null !== $client && '' !== trim($client) && [] === $trouves) {
+            preg_match('/^[\d\s+.-]+$/', trim($client)) ? $nouveau->setTelephone(trim($client)) : $nouveau->setNom(trim($client));
+        }
 
         return $this->render('caisse/index.html.twig', [
             'session' => $session,
@@ -80,7 +89,8 @@ final class CaisseController extends AbstractAppController
             'resultats' => $resultats,
             'stocks' => $lots->syntheseParProduit([...$resultats, ...$dansPanier], $stock->aujourdhui()),
             'recherche_client' => $client,
-            'clients' => null !== $client && '' !== trim($client) ? $clients->rechercher($client, false, false, 1)->elements : [],
+            'clients' => $trouves,
+            'formulaire_client' => $this->formulaireClient($nouveau)->createView(),
             'en_attente' => $ventesRepo->enAttente(),
             'a_encaisser' => $ventesRepo->aEncaisser(),
             'types' => TypeVente::cases(),
@@ -139,8 +149,8 @@ final class CaisseController extends AbstractAppController
             $type = TypeVente::tryFrom((string) $donnees->get('type')) ?? TypeVente::SansOrdonnance;
             $date = trim((string) $donnees->get('ordonnance_date'));
             $organisme = null;
-            if ($donnees->getInt('organisme') > 0) {
-                $organisme = $organismes->find($donnees->getInt('organisme')) ?? throw new VenteException('Organisme inconnu.');
+            if (self::identifiant($donnees->get('organisme')) > 0) {
+                $organisme = $organismes->find(self::identifiant($donnees->get('organisme'))) ?? throw new VenteException('Organisme inconnu.');
             }
             $this->ventes->definirVente($vente, $type, $vente->getClient(), [
                 'numero' => (string) $donnees->get('ordonnance_numero'),
@@ -163,7 +173,7 @@ final class CaisseController extends AbstractAppController
     public function client(Request $requete, ClientRepository $clients): Response
     {
         $vente = $this->ventes->panierOuNouveau($this->utilisateur());
-        $id = $requete->getPayload()->getInt('client');
+        $id = self::identifiant($requete->getPayload()->get('client'));
         $client = null;
         if ($id > 0) {
             $client = $clients->find($id);
@@ -173,12 +183,35 @@ final class CaisseController extends AbstractAppController
             $this->exigerMemePharmacie($client);
         }
         try {
-            $this->ventes->definirVente($vente, $vente->getType(), $client, [
-                'numero' => $vente->getOrdonnance()?->getNumero(),
-                'date' => $vente->getOrdonnance()?->getDate(),
-                'prescripteur' => $vente->getOrdonnance()?->getPrescripteur(),
-                'structure' => $vente->getOrdonnance()?->getStructure(),
-            ], null, $vente->getOrganismeAmo(), $vente->getNumeroAssure());
+            $this->ventes->definirVente($vente, $vente->getType(), $client, self::ordonnance($vente), null, $vente->getOrganismeAmo(), $vente->getNumeroAssure());
+        } catch (VenteException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_caisse');
+    }
+
+    /**
+     * Création d'un client depuis la fenêtre de la caisse : il est enregistré puis choisi pour la vente en cours,
+     * sans perdre le type de vente ni l'ordonnance. En cas d'erreur, seul le formulaire est renvoyé (422) pour
+     * être réaffiché dans la fenêtre.
+     */
+    #[Route('/client/nouveau', name: 'app_caisse_client_nouveau', methods: ['POST'])]
+    public function nouveauClient(Request $requete): Response
+    {
+        $client = new Client();
+        $formulaire = $this->formulaireClient($client);
+        $formulaire->handleRequest($requete);
+        if (!$formulaire->isSubmitted() || !$formulaire->isValid()) {
+            return $this->render('caisse/_nouveau_client.html.twig', ['formulaire_client' => $formulaire->createView()], new Response(null, Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
+
+        $this->entityManager->persist($client);
+        $this->entityManager->flush();
+        $vente = $this->ventes->panierOuNouveau($this->utilisateur());
+        try {
+            $this->ventes->definirVente($vente, $vente->getType(), $client, self::ordonnance($vente), null, $vente->getOrganismeAmo(), $vente->getNumeroAssure());
+            $this->addFlash('success', \sprintf('Client %s créé et choisi pour la vente.', $client->getNom()));
         } catch (VenteException $e) {
             $this->addFlash('error', $e->getMessage());
         }
@@ -351,5 +384,39 @@ final class CaisseController extends AbstractAppController
         }
 
         return (int) $texte;
+    }
+
+    /**
+     * @return FormInterface<Client>
+     */
+    private function formulaireClient(Client $client): FormInterface
+    {
+        return $this->createForm(ClientType::class, $client, [
+            'peut_privilegier' => $this->isGranted(Utilisateur::ROLE_ADJOINT),
+            'action' => $this->generateUrl('app_caisse_client_nouveau'),
+        ]);
+    }
+
+    /**
+     * Identifiant choisi dans une liste ; une valeur vide (« aucun ») vaut 0 au lieu d'une erreur 400.
+     */
+    private static function identifiant(mixed $valeur): int
+    {
+        return \is_scalar($valeur) ? (int) filter_var($valeur, \FILTER_VALIDATE_INT) : 0;
+    }
+
+    /**
+     * L'ordonnance déjà saisie, reprise telle quelle quand seul le client change.
+     *
+     * @return array{numero: ?string, date: ?\DateTimeImmutable, prescripteur: ?string, structure: ?string}
+     */
+    private static function ordonnance(Vente $vente): array
+    {
+        return [
+            'numero' => $vente->getOrdonnance()?->getNumero(),
+            'date' => $vente->getOrdonnance()?->getDate(),
+            'prescripteur' => $vente->getOrdonnance()?->getPrescripteur(),
+            'structure' => $vente->getOrdonnance()?->getStructure(),
+        ];
     }
 }

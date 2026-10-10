@@ -55,6 +55,8 @@ final class DepenseType extends AbstractType
             ->add('mode', EnumType::class, [
                 'label' => 'Mode de paiement',
                 'class' => ModeReglement::class,
+                // Une dépense déjà réglée par carte garde son mode ; la carte n'est plus proposée sinon.
+                'choices' => ModeReglement::Carte === $builder->getData()?->mode ? ModeReglement::cases() : ModeReglement::proposes(),
                 'choice_label' => static fn (ModeReglement $m) => $m->libelle(),
             ])
             ->add('beneficiaire', TextType::class, [

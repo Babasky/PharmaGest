@@ -43,7 +43,7 @@ le caissier sur l'**Encaissement**, le propriétaire et l'adjoint sur le tableau
 sans avoir à ouvrir de caisse, puis choisit :
 - **Encaisser** lui-même (il ouvre alors sa caisse avec son fond de caisse) ;
 - ou **Envoyer à la caisse** : la vente est validée, numérotée et ses produits sortent du stock ; elle attend dans la
-  file du caissier, qui l'encaisse dans sa propre session (espèces, Orange Money, Moov Money, carte, paiement mixte)
+  file du caissier, qui l'encaisse dans sa propre session (espèces, Orange Money, Moov Money, Wave, paiement mixte)
   ou l'annule si le client repart sans payer (les produits reviennent en stock).
 
 Dans la démo, Seydou a envoyé quatre ventes à Awa : deux encaissées (dont une prise en charge à 80 % par la mutuelle

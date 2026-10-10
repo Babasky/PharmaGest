@@ -199,7 +199,7 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | VE-01 | Écran de caisse : recherche par nom, DCI ou code-barres (douchette), panier, stock et étagère visibles, utilisable au clavier | MVP |
 | VE-02 | Trois types de vente : sans ordonnance, ordonnance classique, ordonnance AMO | MVP |
 | VE-03 | Contrôle des produits « ordonnance obligatoire » selon la politique de la pharmacie (blocage ou confirmation du propriétaire) | MVP |
-| VE-04 | Modes de paiement : espèces (avec monnaie à rendre), Orange Money, Moov Money, carte, crédit client ; paiement mixte | MVP |
+| VE-04 | Modes de paiement : espèces (avec monnaie à rendre), Orange Money, Moov Money, Wave, crédit client ; paiement mixte (carte bancaire retirée le 10/10/2026) | MVP |
 | VE-05 | Numérotation séquentielle par pharmacie et par année | MVP |
 | VE-06 | Ticket de caisse 80 mm et facture A4 (PDF) | MVP |
 | VE-07 | Mise en attente d'une vente et reprise (plusieurs clients au comptoir) | MVP |
