@@ -61,7 +61,7 @@
                     <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Nom, DCI" aria-label="Rechercher un produit" autofocus autocomplete="off" data-caisse-target="recherche">
                     <button class="btn btn-success" type="submit">Chercher</button>
                 </div>
-                <div class="form-text">Raccourcis : <kbd>F2</kbd> recherche · <kbd>F9</kbd> encaissement.</div>
+                <div class="form-text mt-3">Raccourcis : <kbd>F2</kbd> recherche · <kbd>F9</kbd> encaissement.</div>
             </form>
 
             {% if q %}
@@ -78,7 +78,12 @@
                                     <tr>
                                         <td class="ps-3">
                                             <span class="fw-semibold">{{ produit.nomCommercial }}</span>
-                                            {% if produit.ordonnanceObligatoire %}<span class="badge text-bg-warning ms-1" title="Ordonnance obligatoire">Ord.</span>{% endif %}
+                                            {% if produit.ordonnanceObligatoire %}
+                                                <span class="badge text-bg-warning ms-1" title="Ordonnance obligatoire">Ord.</span>
+                                            {% endif %}
+                                            {% if produit.remboursableAmo %}
+                                                <span class="badge text-bg-info ms-1" title="Remboursable AMO">AMO</span>
+                                            {% endif %}
                                             <div class="small text-body-secondary">{{ [produit.dci, produit.dosage, produit.forme ? produit.forme.nom : null]|filter(v => v)|join(' · ') }}</div>
                                         </td>
                                         <td class="small text-nowrap">{{ produit.etagere ? produit.etagere.code : '—' }}</td>
