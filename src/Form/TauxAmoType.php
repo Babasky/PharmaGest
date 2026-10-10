@@ -27,7 +27,7 @@ final class TauxAmoType extends AbstractType
                 'group_by' => static fn (OrganismeAmo $o) => $o->getType()->libelle(),
                 'placeholder' => 'Choisir…',
             ])
-            ->add('taux', IntegerType::class, ['label' => 'Part prise en charge (%)', 'attr' => ['min' => 0, 'max' => 100]])
+            ->add('taux', IntegerType::class, ['label' => 'Part (%)', 'attr' => ['min' => 0, 'max' => 100]])
             ->add('dateEffet', DateType::class, ['label' => 'À partir du', 'widget' => 'single_text', 'input' => 'datetime_immutable']);
     }
 
