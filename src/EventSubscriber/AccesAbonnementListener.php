@@ -53,7 +53,7 @@ final class AccesAbonnementListener
         if (!$etat->statut->permetEcriture() && !$requete->isMethodSafe()) {
             $session = $requete->getSession();
             if ($session instanceof FlashBagAwareSessionInterface) {
-                $session->getFlashBag()->add('danger', 'Votre abonnement a expiré : PharmaGest est en lecture seule. Vous pouvez consulter et exporter vos données ; contactez l\'éditeur pour renouveler.');
+                $session->getFlashBag()->add('danger', 'Votre abonnement a expiré : SoftPharm est en lecture seule. Vous pouvez consulter et exporter vos données ; contactez l\'éditeur pour renouveler.');
             }
             $retour = $requete->headers->get('referer');
             $event->setResponse(new RedirectResponse(

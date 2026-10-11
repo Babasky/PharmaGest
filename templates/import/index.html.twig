@@ -15,7 +15,7 @@
                         <ol class="small mb-3 ps-3">
                             <li>Téléchargez le <a href="{{ path('app_import_modele', {type: definition.code}) }}">fichier modèle Excel</a> (ou utilisez votre fichier : les colonnes sont reconnues par leur titre).</li>
                             <li>Remplissez une ligne par {{ definition.libelle|lower|slice(0, -1) }}.</li>
-                            <li>Déposez le fichier : PharmaGest le vérifie <strong>sans rien enregistrer</strong> et vous montre les erreurs ligne par ligne.</li>
+                            <li>Déposez le fichier : SoftPharm le vérifie <strong>sans rien enregistrer</strong> et vous montre les erreurs ligne par ligne.</li>
                             <li>Confirmez pour importer les lignes valides.</li>
                         </ol>
                         {% if erreur %}<div class="alert alert-danger py-2">{{ erreur }}</div>{% endif %}

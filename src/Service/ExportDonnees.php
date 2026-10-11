@@ -74,7 +74,7 @@ class ExportDonnees
     {
         $nom = strtolower(trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $pharmacie->getNom()) ?: 'pharmacie'), '-'));
 
-        return \sprintf('pharmagest-%s-%s.zip', $nom, $this->horloge->now()->format('Y-m-d'));
+        return \sprintf('softpharm-%s-%s.zip', $nom, $this->horloge->now()->format('Y-m-d'));
     }
 
     /**
@@ -187,7 +187,7 @@ class ExportDonnees
     private function lisezMoi(Pharmacie $pharmacie, array $tables, int $nombreFichiers): string
     {
         $lignes = [
-            \sprintf('Export complet PharmaGest — %s (%s)', $pharmacie->getNom(), $pharmacie->getVille()),
+            \sprintf('Export complet SoftPharm — %s (%s)', $pharmacie->getNom(), $pharmacie->getVille()),
             'Généré le '.$this->horloge->now()->format('d/m/Y à H:i').' (heure de Bamako)',
             '',
             'Dossier « donnees » : un fichier CSV par table, à ouvrir avec Excel (UTF-8, séparateur point-virgule).',

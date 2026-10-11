@@ -125,29 +125,29 @@ final class CaisseTest extends CaisseTestCase
         }
     }
 
-    public function testPaiementsProposesEspecesOrangeMoovEtWaveSansCarte(): void
+    public function testPaiementsProposesEspecesOrangeMoovWaveEtCarte(): void
     {
         $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1500]);
         LotFactory::createOne(['produit' => $produit]);
 
         $this->ouvrirCaisse($this->officine->vendeur);
-        $this->ajouter($produit, 2);
+        $this->ajouter($produit, 3);
         $crawler = $this->client->request('GET', '/caisse');
         $libelles = $crawler->filter('#encaissement label.form-label')->each(static fn ($l) => $l->text());
-        self::assertSame(['Espèces remises', 'Orange Money', 'Moov Money', 'Wave'], $libelles);
-        self::assertSelectorNotExists('#encaissement [name^="paiement[carte]"]');
+        self::assertSame(['Espèces remises', 'Orange Money', 'Moov Money', 'Wave', 'Carte bancaire'], $libelles);
 
-        // Un montant « carte » envoyé malgré tout n'est pas retenu : le reste est payé en espèces.
+        // Paiement mixte : carte (saisie à la main avec le n° du ticket du terminal), Wave, et le reste en espèces.
         $this->encaisser([
-            'carte' => ['montant' => '1000'],
-            'wave' => ['montant' => '2000', 'reference' => 'WV-42'],
+            'carte' => ['montant' => '2000', 'reference' => 'CB-0815'],
+            'wave' => ['montant' => '1500', 'reference' => 'WV-42'],
             'especes' => ['remis' => '1000'],
         ]);
         $vente = $this->derniereVente();
         self::assertSame(StatutVente::Validee, $vente->getStatut());
-        self::assertSame([2000, 1000, 0], [$vente->montantPaye(ModePaiement::Wave), $vente->montantPaye(ModePaiement::Especes), $vente->montantPaye(ModePaiement::Carte)]);
+        self::assertSame([2000, 1500, 1000], [$vente->montantPaye(ModePaiement::Carte), $vente->montantPaye(ModePaiement::Wave), $vente->montantPaye(ModePaiement::Especes)]);
         $this->client->request('GET', '/ventes/'.$vente->getId());
         self::assertSelectorTextContains('#totaux', 'Wave (WV-42)');
+        self::assertSelectorTextContains('#totaux', 'Carte bancaire (CB-0815)');
     }
 
     public function testNouveauClientCreeDansLaFenetreDeLaCaisseSansPerdreLeTypeDeVente(): void
@@ -389,7 +389,7 @@ final class CaisseTest extends CaisseTestCase
         $this->client->request('POST', '/caisse/ouvrir', ['fond' => '0']);
         self::assertResponseRedirects();
         $this->client->followRedirect();
-        self::assertSelectorTextContains('main', 'PharmaGest est en lecture seule');
+        self::assertSelectorTextContains('main', 'SoftPharm est en lecture seule');
         $sessions = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->createQuery('SELECT COUNT(s.id) FROM App\Entity\SessionCaisse s')->getSingleScalarResult());
         self::assertSame(0, (int) $sessions);
     }

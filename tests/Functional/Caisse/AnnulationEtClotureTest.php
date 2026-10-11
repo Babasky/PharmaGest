@@ -135,7 +135,7 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         self::assertSelectorTextContains('.alert-success', 'clôturée, sans écart');
         self::assertSelectorTextContains('#synthese', "2\u{00A0}400\u{00A0}FCFA");
         self::assertSelectorTextContains('#synthese', 'Wave');
-        self::assertSelectorTextNotContains('#synthese', 'Carte bancaire');
+        self::assertSelectorTextContains('#synthese', 'Carte bancaire');
     }
 
     public function testChacunVoitSesSessionsLAdjointVoitTout(): void

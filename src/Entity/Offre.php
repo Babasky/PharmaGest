@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\OffreRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Offre commerciale (Essentiel, Standard, Premium). Les limites se règlent ici, sans toucher au code.
@@ -29,10 +30,12 @@ class Offre
 
     /** Nombre maximum d'utilisateurs actifs par pharmacie (propriétaire compris). Null = illimité. */
     #[ORM\Column(nullable: true)]
+    #[Assert\Positive(message: 'Au moins un utilisateur (laisser vide pour illimité).')]
     private ?int $maxUtilisateurs;
 
     /** Nombre maximum de pharmacies pour un même propriétaire. */
     #[ORM\Column]
+    #[Assert\Positive(message: 'Au moins une pharmacie.')]
     private int $maxPharmacies;
 
     /** @var list<string> */
@@ -41,6 +44,7 @@ class Offre
 
     /** Tarif annuel en FCFA ; null tant qu'il n'est pas fixé. */
     #[ORM\Column(nullable: true)]
+    #[Assert\PositiveOrZero(message: 'Le tarif ne peut pas être négatif.')]
     private ?int $tarifAnnuel = null;
 
     #[ORM\Column]
@@ -74,9 +78,27 @@ class Offre
         return $this->maxUtilisateurs;
     }
 
+    /**
+     * Une baisse ne désactive personne : elle bloque seulement les nouveaux comptes au-delà de la limite.
+     */
+    public function setMaxUtilisateurs(?int $maxUtilisateurs): static
+    {
+        $this->maxUtilisateurs = $maxUtilisateurs;
+
+        return $this;
+    }
+
     public function getMaxPharmacies(): int
     {
         return $this->maxPharmacies;
+    }
+
+    /** Un champ vidé donne 0, refusé par la validation. */
+    public function setMaxPharmacies(?int $maxPharmacies): static
+    {
+        $this->maxPharmacies = $maxPharmacies ?? 0;
+
+        return $this;
     }
 
     /**

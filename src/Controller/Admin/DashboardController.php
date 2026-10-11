@@ -73,13 +73,13 @@ final class DashboardController extends AbstractDashboardController
     public function configureDashboard(): Dashboard
     {
         return Dashboard::new()
-            ->setTitle('PharmaGest <small>Plateforme</small>')
+            ->setTitle('SoftPharm <small>Plateforme</small>')
             ->setLocales(['fr']);
     }
 
     public function configureAssets(): Assets
     {
-        // Icônes Bootstrap et graphiques (Stimulus) des pages propres à PharmaGest, sans le thème de l'officine.
+        // Icônes Bootstrap et graphiques (Stimulus) des pages propres à SoftPharm, sans le thème de l'officine.
         return Assets::new()->addAssetMapperEntry('admin');
     }
 

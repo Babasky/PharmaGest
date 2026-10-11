@@ -32,7 +32,7 @@ final class EtatAbonnementTest extends AppWebTestCase
         ]);
         self::assertResponseRedirects();
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-dismissible.alert-danger', 'PharmaGest est en lecture seule');
+        self::assertSelectorTextContains('.alert-dismissible.alert-danger', 'SoftPharm est en lecture seule');
 
         $cree = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Utilisateur::class)->findOneBy(['email' => 'bloque@test.ml']));
         self::assertNull($cree);

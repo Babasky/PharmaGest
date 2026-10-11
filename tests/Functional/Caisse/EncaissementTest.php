@@ -8,6 +8,7 @@ use App\Entity\Paiement;
 use App\Entity\Recette;
 use App\Entity\Utilisateur;
 use App\Entity\Vente;
+use App\Enum\ModePaiement;
 use App\Enum\StatutVente;
 use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\LotFactory;
@@ -117,7 +118,8 @@ final class EncaissementTest extends CaisseTestCase
         $this->ouvrirCaisse($this->officine->vendeur);
         self::assertSelectorTextContains('#a-encaisser', (string) $vente->getNumero());
         $this->client->request('GET', '/encaissement/'.$vente->getId());
-        $this->client->submitForm('Encaisser');
+        // Le client paie par carte bancaire (saisie à la main).
+        $this->client->submitForm('Encaisser', ['paiement[carte][montant]' => '2000', 'paiement[carte][reference]' => 'CB-77']);
         self::assertResponseRedirects('/ventes/'.$vente->getId().'?caisse=1');
         $this->client->followRedirect();
         self::assertSelectorExists('a[href="/caisse"]');
@@ -126,6 +128,7 @@ final class EncaissementTest extends CaisseTestCase
         self::assertSame(StatutVente::Validee, $vente->getStatut());
         self::assertSame($this->officine->adjoint->getId(), $vente->getVendeur()->getId());
         self::assertSame($this->officine->vendeur->getId(), $vente->getSession()?->getUtilisateur()->getId());
+        self::assertSame(2000, $vente->montantPaye(ModePaiement::Carte));
     }
 
     public function testUneVenteQueLeClientNePaiePasEstAnnuleeEtLeStockRevient(): void

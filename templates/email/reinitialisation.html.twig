@@ -1,7 +1,7 @@
 {% extends 'email/base.html.twig' %}
 
 {% block contenu %}
-    <p>Vous avez demandé à réinitialiser le mot de passe de votre compte PharmaGest (<strong>{{ utilisateur.email }}</strong>).</p>
+    <p>Vous avez demandé à réinitialiser le mot de passe de votre compte SoftPharm (<strong>{{ utilisateur.email }}</strong>).</p>
     <p>Cliquez sur le bouton ci-dessous pour en choisir un nouveau. Le lien est valable une heure et ne peut servir qu'une fois.</p>
     <p style="text-align:center;margin:28px 0;">
         <a href="{{ lien }}" style="background:#198754;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:5px;display:inline-block;font-weight:bold;">Choisir un nouveau mot de passe</a>

@@ -67,7 +67,7 @@ final class AppStory extends Story
 
     public function build(): void
     {
-        UtilisateurFactory::new()->superAdmin()->create(['email' => 'admin@pharmagest.ml', 'nom' => 'Éditeur PharmaGest']);
+        UtilisateurFactory::new()->superAdmin()->create(['email' => 'admin@pharmagest.ml', 'nom' => 'Éditeur SoftPharm']);
 
         // Officine active, offre Standard, équipe complète, deux paiements.
         $fleuve = PharmacieFactory::createOne([

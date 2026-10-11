@@ -55,7 +55,7 @@ final class ImportProduits extends AbstractDefinitionImport
         return [
             new Colonne('nom_commercial', 'Nom commercial', true, 'Nom sur la boîte.', 'Doliprane'),
             new Colonne('dci', 'DCI', false, 'Molécule.', 'Paracétamol'),
-            new Colonne('forme', 'Forme', false, 'Une forme galénique de la liste PharmaGest.', 'Comprimé'),
+            new Colonne('forme', 'Forme', false, 'Une forme galénique de la liste SoftPharm.', 'Comprimé'),
             new Colonne('dosage', 'Dosage', false, '', '500 mg'),
             new Colonne('conditionnement', 'Conditionnement', false, '', 'Boîte de 16'),
             new Colonne('categorie', 'Catégorie', false, '« Principale » ou « Principale > Sous-catégorie ». Créée si elle n\'existe pas.', 'Médicaments > Antalgiques'),

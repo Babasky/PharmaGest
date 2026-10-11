@@ -31,7 +31,7 @@ class ExportBordereau
     {
         $pharmacie = $this->pharmacie($bordereau);
         $classeur = new Spreadsheet();
-        $classeur->getProperties()->setCreator('PharmaGest')->setTitle('Bordereau '.$bordereau->getLibelle());
+        $classeur->getProperties()->setCreator('SoftPharm')->setTitle('Bordereau '.$bordereau->getLibelle());
         $feuille = $classeur->getActiveSheet();
         $feuille->setTitle('Bordereau');
 

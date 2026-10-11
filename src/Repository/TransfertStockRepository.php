@@ -75,4 +75,19 @@ class TransfertStockRepository extends ServiceEntityRepository
             ->andWhere('t.id = :id')->setParameter('id', $id)
             ->getQuery()->getOneOrNullResult();
     }
+
+    /**
+     * La pharmacie a un transfert à traiter : sortant en préparation, ou entrant expédié (hors filtre tenant).
+     */
+    public function aTraiter(Pharmacie $pharmacie): bool
+    {
+        return null !== $this->createQueryBuilder('t')
+            ->select('t.id')
+            ->andWhere('(t.pharmacie = :p AND t.statut = :preparation) OR (t.pharmacieDestination = :p AND t.statut = :expedie)')
+            ->setParameter('p', $pharmacie)
+            ->setParameter('preparation', StatutTransfert::EnPreparation)
+            ->setParameter('expedie', StatutTransfert::Expedie)
+            ->setMaxResults(1)
+            ->getQuery()->getOneOrNullResult();
+    }
 }
