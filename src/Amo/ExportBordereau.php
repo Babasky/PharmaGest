@@ -10,6 +10,7 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -125,11 +126,11 @@ class ExportBordereau
         $sansCopie = [];
         foreach ($bordereau->getCreances() as $n => $creance) {
             $ordonnance = $creance->getVente()->getOrdonnance();
-            $image = null === $ordonnance ? null : $this->copies->dataUri($pharmacie, $ordonnance);
-            if (null === $image) {
+            if (null === $ordonnance || null === $this->copies->chemin($pharmacie, $ordonnance)) {
                 $sansCopie[] = $creance;
             } else {
-                $annexes[] = ['numero' => $n + 1, 'creance' => $creance, 'image' => $image];
+                // Une copie PDF ne s'insère pas dans le PDF du bordereau : son annexe renvoie au fichier, fourni dans le ZIP.
+                $annexes[] = ['numero' => $n + 1, 'creance' => $creance, 'image' => $this->copies->dataUri($pharmacie, $ordonnance), 'fichier' => $this->nomCopie($n + 1, $creance)];
             }
         }
 
@@ -144,6 +145,41 @@ class ExportBordereau
     public function reponsePdf(BordereauAmo $bordereau): Response
     {
         return GenerateurPdf::reponse($this->pdf($bordereau), $this->nomFichier($bordereau).'.pdf');
+    }
+
+    /**
+     * Archive ZIP des copies d'ordonnances du bordereau (photos et PDF), nommées par n° de ligne et de vente,
+     * à remettre à l'organisme avec le bordereau. Fichier temporaire, supprimé après l'envoi.
+     */
+    public function reponseCopies(BordereauAmo $bordereau): Response
+    {
+        $pharmacie = $this->pharmacie($bordereau);
+        $chemin = (string) tempnam(sys_get_temp_dir(), 'ord');
+        $zip = new \ZipArchive();
+        if (true !== $zip->open($chemin, \ZipArchive::OVERWRITE)) {
+            throw new \RuntimeException('Impossible de préparer l\'archive des ordonnances.');
+        }
+        foreach ($bordereau->getCreances() as $n => $creance) {
+            $ordonnance = $creance->getVente()->getOrdonnance();
+            $copie = null === $ordonnance ? null : $this->copies->chemin($pharmacie, $ordonnance);
+            if (null !== $copie) {
+                $zip->addFile($copie, $this->nomCopie($n + 1, $creance));
+            }
+        }
+        $zip->close();
+
+        $reponse = new BinaryFileResponse($chemin, headers: ['Content-Type' => 'application/zip', 'Cache-Control' => 'private, no-store']);
+        $reponse->setContentDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $this->nomFichier($bordereau).'-ordonnances.zip');
+
+        return $reponse->deleteFileAfterSend();
+    }
+
+    /** Nom de la copie dans l'archive, repris dans l'annexe du PDF : « 03-V-2026-000012.pdf ». */
+    private function nomCopie(int $rang, CreanceAmo $creance): string
+    {
+        $copie = (string) $creance->getVente()->getOrdonnance()?->getCopie();
+
+        return \sprintf('%02d-%s.%s', $rang, $creance->getVente()->getNumero(), pathinfo($copie, \PATHINFO_EXTENSION));
     }
 
     private function nomFichier(BordereauAmo $bordereau): string

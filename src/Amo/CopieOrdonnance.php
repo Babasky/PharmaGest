@@ -8,10 +8,10 @@ use App\Stockage\StockageFichiers;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
- * Photo ou scan de l'ordonnance (AM-01), jointe en annexe du bordereau AMO (AM-07).
+ * Photo, scan ou PDF de l'ordonnance (AM-01), jointe en annexe du bordereau AMO (AM-07).
  *
  * L'image est recompressée en JPEG (1600 px au plus) : elle reste lisible, se charge vite en 3G et
- * s'intègre telle quelle au PDF du bordereau.
+ * s'intègre telle quelle au PDF du bordereau. Le PDF est gardé tel quel, après contrôle de son contenu.
  */
 class CopieOrdonnance
 {
@@ -19,6 +19,7 @@ class CopieOrdonnance
     public const TAILLE_MAXIMALE = 8 * 1024 * 1024;
     private const COTE_MAXIMAL = 1600;
     private const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    private const PDF = 'application/pdf';
 
     public function __construct(private readonly StockageFichiers $stockage)
     {
@@ -35,8 +36,15 @@ class CopieOrdonnance
         if ($fichier->getSize() > self::TAILLE_MAXIMALE) {
             throw new AmoException('La copie de l\'ordonnance ne doit pas dépasser 8 Mo.');
         }
-        if (!\in_array($fichier->getMimeType(), self::TYPES, true)) {
-            throw new AmoException('La copie de l\'ordonnance doit être une photo (JPEG, PNG ou WebP).');
+        // Type lu dans le contenu du fichier, pas dans son nom ni dans ce que déclare le navigateur.
+        $type = $fichier->getMimeType();
+        if (self::PDF === $type) {
+            $this->remplacer($pharmacie, $ordonnance, $this->lirePdf($fichier), 'pdf');
+
+            return;
+        }
+        if (!\in_array($type, self::TYPES, true)) {
+            throw new AmoException('La copie de l\'ordonnance doit être une photo (JPEG, PNG ou WebP) ou un PDF.');
         }
         $image = @imagecreatefromstring((string) file_get_contents($fichier->getPathname()));
         if (false === $image) {
@@ -64,8 +72,26 @@ class CopieOrdonnance
         imagejpeg($fond, null, 80);
         $contenu = (string) ob_get_clean();
 
+        $this->remplacer($pharmacie, $ordonnance, $contenu, 'jpg');
+    }
+
+    /**
+     * @throws AmoException
+     */
+    private function lirePdf(UploadedFile $fichier): string
+    {
+        $contenu = (string) file_get_contents($fichier->getPathname());
+        if (!str_starts_with($contenu, '%PDF-')) {
+            throw new AmoException('Ce PDF est illisible.');
+        }
+
+        return $contenu;
+    }
+
+    private function remplacer(Pharmacie $pharmacie, Ordonnance $ordonnance, string $contenu, string $extension): void
+    {
         $ancienne = $ordonnance->getCopie();
-        $ordonnance->setCopie($this->stockage->ecrire($pharmacie, self::CATEGORIE, $contenu, 'jpg'));
+        $ordonnance->setCopie($this->stockage->ecrire($pharmacie, self::CATEGORIE, $contenu, $extension));
         $this->stockage->supprimer($pharmacie, self::CATEGORIE, $ancienne);
     }
 
@@ -74,10 +100,10 @@ class CopieOrdonnance
         return null === $ordonnance->getCopie() ? null : $this->stockage->chemin($pharmacie, self::CATEGORIE, $ordonnance->getCopie());
     }
 
-    /** Image en data URI pour Dompdf, qui ne charge aucune ressource externe. */
+    /** Image en data URI pour Dompdf, qui ne charge aucune ressource externe ; null pour une copie PDF. */
     public function dataUri(Pharmacie $pharmacie, Ordonnance $ordonnance): ?string
     {
-        $chemin = $this->chemin($pharmacie, $ordonnance);
+        $chemin = $ordonnance->copieEstPdf() ? null : $this->chemin($pharmacie, $ordonnance);
 
         return null === $chemin ? null : 'data:image/jpeg;base64,'.base64_encode((string) file_get_contents($chemin));
     }

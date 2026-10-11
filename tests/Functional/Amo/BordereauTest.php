@@ -6,6 +6,7 @@ use App\Entity\BordereauAmo;
 use App\Entity\CreanceAmo;
 use App\Entity\JournalAudit;
 use App\Entity\ReglementAmo;
+use App\Entity\Vente;
 use App\Enum\StatutBordereau;
 use App\Enum\StatutCreance;
 use App\Enum\StatutVente;
@@ -146,7 +147,7 @@ final class BordereauTest extends AmoTestCase
         $this->client->submitForm('Annuler la vente', ['motif' => 'Test']);
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-danger', 'bordereau transmis');
-        self::assertSame(StatutVente::Validee, $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(\App\Entity\Vente::class, $seconde)?->getStatut()));
+        self::assertSame(StatutVente::Validee, $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Vente::class, $seconde)?->getStatut()));
         self::assertSame(StatutCreance::Transmise, $this->creance($seconde)->getStatut());
     }
 
@@ -247,6 +248,52 @@ final class BordereauTest extends AmoTestCase
         $taille = getimagesize($reponse->getFile()->getPathname());
         self::assertIsArray($taille);
         self::assertSame([1600, 1200], [$taille[0], $taille[1]]);
+    }
+
+    public function testCopiePdfDansLeBordereauEtArchiveDesOrdonnances(): void
+    {
+        $autre = $this->creerOfficine();
+        $this->ouvrirCaisse($this->officine->adjoint);
+        $photo = $this->vendreAmo(1, null, ['ordonnance_copie' => self::photo()]);
+        $pdf = $this->vendreAmo(1, null, ['ordonnance_copie' => self::pdf()]);
+        $this->vendreAmo(2);
+        $this->creerBordereau();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#alerte-copies', '1 ordonnance sans copie');
+        self::assertSelectorExists('#creances a[href="/ventes/'.$pdf.'/ordonnance"] .bi-file-earmark-pdf');
+        $bordereau = $this->bordereau();
+        $numeroPdf = $this->sansFiltre(static fn (EntityManagerInterface $em) => (string) $em->find(Vente::class, $pdf)?->getNumero());
+        $numeroPhoto = $this->sansFiltre(static fn (EntityManagerInterface $em) => (string) $em->find(Vente::class, $photo)?->getNumero());
+
+        // Le PDF du bordereau garde une page d'annexe par copie ; celle du PDF renvoie au fichier de l'archive.
+        $this->client->request('GET', '/amo/bordereaux/'.$bordereau->getId().'/pdf');
+        $document = (string) $this->client->getResponse()->getContent();
+        self::assertSame(3, preg_match_all('#/Type\s*/Page[^s]#', $document), 'Le relevé, puis une annexe pour la photo et une pour le PDF.');
+
+        // L'archive temporaire est supprimée une fois envoyée : on relit ce qui a été envoyé.
+        $this->client->request('GET', '/amo/bordereaux/'.$bordereau->getId().'/ordonnances');
+        $archive = tempnam(sys_get_temp_dir(), 'zip');
+        file_put_contents($archive, $this->client->getInternalResponse()->getContent());
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'application/zip');
+        $zip = new \ZipArchive();
+        self::assertTrue($zip->open($archive));
+        $noms = [];
+        for ($i = 0; $i < $zip->numFiles; ++$i) {
+            $noms[] = (string) $zip->getNameIndex($i);
+        }
+        sort($noms);
+        self::assertSame(['01-'.$numeroPhoto.'.jpg', '02-'.$numeroPdf.'.pdf'], $noms);
+        self::assertStringStartsWith('%PDF-', (string) $zip->getFromName('02-'.$numeroPdf.'.pdf'));
+        $zip->close();
+
+        // Le vendeur n'y a pas accès, une autre pharmacie non plus.
+        $this->connecter($this->officine->vendeur);
+        $this->client->request('GET', '/amo/bordereaux/'.$bordereau->getId().'/ordonnances');
+        self::assertResponseStatusCodeSame(403);
+        $this->connecter($autre->proprietaire);
+        $this->client->request('GET', '/amo/bordereaux/'.$bordereau->getId().'/ordonnances');
+        self::assertResponseStatusCodeSame(404);
     }
 
     private function jetonBordereau(?int $id): string

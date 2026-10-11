@@ -128,7 +128,9 @@
                 <div class="card shadow-sm mb-3" id="copie-ordonnance">
                     <div class="card-body small">
                         <div class="fw-semibold mb-2">Copie de l'ordonnance</div>
-                        {% if vente.ordonnance.copie %}
+                        {% if vente.ordonnance.copieEstPdf %}
+                            <a href="{{ path('app_vente_ordonnance', {id: vente.id}) }}" target="_blank" class="btn btn-sm btn-outline-secondary mb-2" id="copie-pdf"><i class="bi bi-file-earmark-pdf"></i> Ouvrir l'ordonnance (PDF)</a>
+                        {% elseif vente.ordonnance.copie %}
                             <a href="{{ path('app_vente_ordonnance', {id: vente.id}) }}" target="_blank"><img src="{{ path('app_vente_ordonnance', {id: vente.id}) }}" alt="Ordonnance de la vente {{ vente.numero }}" class="img-fluid rounded border mb-2" style="max-height: 14rem"></a>
                         {% else %}
                             <p class="text-body-secondary mb-2">Aucune copie{{ vente.type.value == 'amo' ? ' : elle est attendue en annexe du bordereau AMO' }}.</p>
@@ -137,7 +139,7 @@
                             <form method="post" action="{{ path('app_vente_ordonnance_copie', {id: vente.id}) }}" enctype="multipart/form-data">
                                 <input type="hidden" name="_token" value="{{ csrf_token('copie-ordonnance-' ~ vente.id) }}">
                                 <div class="input-group input-group-sm">
-                                    <input type="file" name="copie" class="form-control" accept="image/jpeg,image/png,image/webp" capture="environment" required aria-label="Photo de l'ordonnance">
+                                    <input type="file" name="copie" class="form-control" accept="image/jpeg,image/png,image/webp,application/pdf" required aria-label="Photo ou PDF de l'ordonnance">
                                     <button class="btn btn-outline-success" type="submit">{{ vente.ordonnance.copie ? 'Remplacer' : 'Joindre' }}</button>
                                 </div>
                             </form>

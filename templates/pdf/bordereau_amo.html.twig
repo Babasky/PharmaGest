@@ -94,7 +94,11 @@
     {% for annexe in annexes %}
         <div class="annexe">
             <p style="text-align: left;"><strong>Annexe {{ annexe.numero }}</strong> · vente {{ annexe.creance.vente.numero }} du {{ annexe.creance.dateVente|date('d/m/Y') }} · {{ annexe.creance.vente.client ? annexe.creance.vente.client.nom }}{{ annexe.creance.vente.numeroAssure ? ' (n° ' ~ annexe.creance.vente.numeroAssure ~ ')' }}</p>
-            <img src="{{ annexe.image }}" alt="Ordonnance">
+            {% if annexe.image %}
+                <img src="{{ annexe.image }}" alt="Ordonnance">
+            {% else %}
+                <p style="text-align: left;">Ordonnance fournie au format PDF : fichier {{ annexe.fichier }} de l'archive des ordonnances jointe au bordereau.</p>
+            {% endif %}
         </div>
     {% endfor %}
 </body>

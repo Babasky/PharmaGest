@@ -125,6 +125,7 @@ final class AmoController extends AbstractAppController
         return $this->render('amo/bordereau.html.twig', [
             'bordereau' => $bordereau,
             'sans_copie' => $sansCopie,
+            'avec_copie' => $bordereau->getCreances()->count() - $sansCopie,
             'aujourdhui' => new \DateTimeImmutable('today'),
         ]);
     }
@@ -234,6 +235,14 @@ final class AmoController extends AbstractAppController
         $this->exigerMemePharmacie($bordereau);
 
         return $export->reponsePdf($bordereau);
+    }
+
+    #[Route('/bordereaux/{id}/ordonnances', name: 'app_amo_bordereau_ordonnances', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function ordonnances(BordereauAmo $bordereau, ExportBordereau $export): Response
+    {
+        $this->exigerMemePharmacie($bordereau);
+
+        return $export->reponseCopies($bordereau);
     }
 
     /**
