@@ -54,7 +54,7 @@ final class SyntheseSession
     }
 
     /**
-     * Modes à afficher : ceux proposés à la caisse, plus un ancien mode (carte) s'il a servi dans la session.
+     * Modes à afficher : ceux proposés à la caisse, plus un mode retiré s'il a servi dans la session.
      *
      * @return list<ModePaiement>
      */

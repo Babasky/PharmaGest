@@ -1,4 +1,4 @@
-# Cahier des charges — PharmaGest
+# Cahier des charges — SoftPharm
 
 SaaS multi-tenant de gestion d'officines adapté au Mali — 3 oct. 2026 · @Modibo
 
@@ -7,7 +7,7 @@ SaaS multi-tenant de gestion d'officines adapté au Mali — 3 oct. 2026 · @Mod
 
 ## 1. Présentation du projet
 
-PharmaGest est un logiciel en ligne, vendu par abonnement annuel, qui permet à une officine malienne de gérer son stock, ses ventes (y compris les ordonnances AMO), ses commandes, ses dépenses et ses rapports depuis un simple navigateur.
+SoftPharm est un logiciel en ligne, vendu par abonnement annuel, qui permet à une officine malienne de gérer son stock, ses ventes (y compris les ordonnances AMO), ses commandes, ses dépenses et ses rapports depuis un simple navigateur.
 
 ### 1.1 Contexte
 
@@ -199,7 +199,7 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | VE-01 | Écran de caisse : recherche par nom, DCI ou code-barres (douchette), panier, stock et étagère visibles, utilisable au clavier | MVP |
 | VE-02 | Trois types de vente : sans ordonnance, ordonnance classique, ordonnance AMO | MVP |
 | VE-03 | Contrôle des produits « ordonnance obligatoire » selon la politique de la pharmacie (blocage ou confirmation du propriétaire) | MVP |
-| VE-04 | Modes de paiement : espèces (avec monnaie à rendre), Orange Money, Moov Money, Wave, crédit client ; paiement mixte (carte bancaire retirée le 10/10/2026) | MVP |
+| VE-04 | Modes de paiement : espèces (avec monnaie à rendre), Orange Money, Moov Money, Wave, carte bancaire (saisie manuelle), crédit client ; paiement mixte | MVP |
 | VE-05 | Numérotation séquentielle par pharmacie et par année | MVP |
 | VE-06 | Ticket de caisse 80 mm et facture A4 (PDF) | MVP |
 | VE-07 | Mise en attente d'une vente et reprise (plusieurs clients au comptoir) | MVP |
@@ -523,7 +523,7 @@ Le MVP est accepté quand les 12 scénarios ci-dessous passent en recette, sans 
 - Sur une vente AMO, la remise ne porte que sur la part assuré.
 - La part AMO est une créance ; elle devient une recette au règlement du bordereau.
 - L'abonnement est payé hors plateforme et activé manuellement.
-- Le nom « PharmaGest » est un nom de travail.
+- Le nom « SoftPharm » est un nom de travail.
 
 ### 11.2 Points ouverts
 

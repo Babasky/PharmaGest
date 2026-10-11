@@ -3,7 +3,7 @@
 {% block contenu %}
     <p>
         {% if etat.statut.value == 'essai' %}La période d'essai{% else %}L'abonnement{% endif %}
-        PharmaGest de <strong>{{ pharmacie.nom }}</strong> (offre {{ pharmacie.offre.nom }}) se termine le
+        SoftPharm de <strong>{{ pharmacie.nom }}</strong> (offre {{ pharmacie.offre.nom }}) se termine le
         <strong>{{ etat.echeance|date('d/m/Y') }}</strong>, dans {{ etat.joursRestants }} jours.
     </p>
     <p>

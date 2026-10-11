@@ -1,6 +1,6 @@
 # Guide de mise en production
 
-Ce guide installe PharmaGest sur un serveur Linux (Ubuntu 24.04 LTS) avec Nginx, PHP-FPM 8.3, MySQL 8, un worker
+Ce guide installe SoftPharm sur un serveur Linux (Ubuntu 24.04 LTS) avec Nginx, PHP-FPM 8.3, MySQL 8, un worker
 Messenger supervisé, un certificat HTTPS et des sauvegardes chiffrées (§ 7.1 et § 6 du
 [cahier des charges](cahier-des-charges.md)). Les fichiers d'exemple sont dans [`deploy/`](../deploy).
 
@@ -70,7 +70,7 @@ DEFAULT_URI=https://app.pharmagest.ml
 DATABASE_URL="mysql://pharmagest:<mot de passe>@127.0.0.1:3306/pharmagest?serverVersion=8.0.32&charset=utf8mb4"
 MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
 MAILER_DSN=smtp://<utilisateur>:<mot de passe>@<serveur SMTP>:587
-MAILER_FROM="PharmaGest <no-reply@pharmagest.ml>"
+MAILER_FROM="SoftPharm <no-reply@pharmagest.ml>"
 ```
 
 Coordonnées de l'éditeur (factures d'abonnement, page « compte suspendu ») : paramètre `app.editeur` dans
@@ -90,7 +90,7 @@ applique les migrations, bascule le lien `current` puis relance PHP-FPM et le wo
 Après le premier déploiement, créer le compte de l'éditeur :
 
 ```bash
-cd /var/www/pharmagest/current && sudo -u www-data php bin/console app:super-admin:creer admin@pharmagest.ml "PharmaGest"
+cd /var/www/pharmagest/current && sudo -u www-data php bin/console app:super-admin:creer admin@pharmagest.ml "SoftPharm"
 ```
 
 Ne jamais lancer `composer demo` ni charger les données de démonstration en production.

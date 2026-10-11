@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# PharmaGest — déploiement d'une version (à lancer sur le serveur, en tant que www-data).
+# SoftPharm — déploiement d'une version (à lancer sur le serveur, en tant que www-data).
 #   deploy/deployer.sh v1.0.0
 #
 # Chaque version est installée dans releases/<date>, partage var/fichiers et .env.local avec les précédentes,

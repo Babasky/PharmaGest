@@ -1,7 +1,7 @@
 # Revue de sécurité — OWASP Top 10 (2021)
 
 Revue faite au Lot 8 avant la mise en production (§ 6 du [cahier des charges](cahier-des-charges.md) : « Revue selon
-l'OWASP Top 10 avant mise en production »). Pour chaque risque : ce qui protège PharmaGest, où c'est dans le code, et
+l'OWASP Top 10 avant mise en production »). Pour chaque risque : ce qui protège SoftPharm, où c'est dans le code, et
 ce qui reste à faire. À relire à chaque lot qui ajoute un écran, un fichier ou un export.
 
 ## A01 — Contrôle d'accès

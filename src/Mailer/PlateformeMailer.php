@@ -23,7 +23,7 @@ class PlateformeMailer
 
     public function activation(Utilisateur $utilisateur, ?Pharmacie $pharmacie): void
     {
-        $this->envoyer($utilisateur, 'Activez votre compte PharmaGest', 'email/activation.html.twig', [
+        $this->envoyer($utilisateur, 'Activez votre compte SoftPharm', 'email/activation.html.twig', [
             'pharmacie' => $pharmacie,
             'lien' => $this->liens->generer($utilisateur, LienCompte::ACTIVATION),
         ]);
@@ -38,7 +38,7 @@ class PlateformeMailer
 
     public function rappelEcheance(Utilisateur $proprietaire, Pharmacie $pharmacie, EtatAbonnement $etat): void
     {
-        $this->envoyer($proprietaire, \sprintf('Votre abonnement PharmaGest se termine dans %d jours', $etat->joursRestants), 'email/rappel_echeance.html.twig', [
+        $this->envoyer($proprietaire, \sprintf('Votre abonnement SoftPharm se termine dans %d jours', $etat->joursRestants), 'email/rappel_echeance.html.twig', [
             'pharmacie' => $pharmacie,
             'etat' => $etat,
         ]);

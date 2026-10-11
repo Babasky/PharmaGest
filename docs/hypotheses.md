@@ -11,7 +11,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 | H2 | Sur une vente AMO, la remise ne porte que sur la part assuré. | **Lot 4** : calcul de la vente ; créances au Lot 5 (RG-09) |
 | H3 | La part AMO est une créance ; elle devient une recette au règlement du bordereau. | **Lot 5** : créance à la vente, règlements par bordereau ; **Lot 7** : recette à la date du règlement (RG-10) |
 | H4 | L'abonnement est payé hors plateforme et activé manuellement. | **Lot 1** : le super admin enregistre le paiement |
-| H5 | Le nom « PharmaGest » est un nom de travail. | Nom centralisé dans `app.name` et `app.editeur` (`config/services.yaml`) |
+| H5 | Le nom « SoftPharm » est un nom de travail. | Nom centralisé dans `app.name` et `app.editeur` (`config/services.yaml`) |
 
 ## Décisions — Lot 0 (socle)
 
@@ -229,8 +229,8 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 
 ### Paiements, tickets
 
-- Paiement **mixte** : espèces, Orange Money, Moov Money, Wave (référence facultative ; la carte bancaire n'est plus
-  proposée depuis le 10/10/2026). Les paiements
+- Paiement **mixte** : espèces, Orange Money, Moov Money, Wave, carte bancaire (référence facultative ; la carte,
+  retirée le 10/10/2026, est revenue le 11/10/2026, saisie à la main sans lien avec le terminal). Les paiements
   électroniques ne peuvent pas dépasser le montant dû ; le reste est payé en espèces et la monnaie est calculée sur
   les espèces remises.
 - Ticket **80 mm** et facture **A4** en PDF, réimprimables depuis la fiche de la vente.
@@ -370,7 +370,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 - Une dépense est numérotée `DEP-AAAA-NNNNNN` **dès l'enregistrement** (RG-02). Elle se **corrige** (ancienne et
   nouvelle version au journal d'audit) et s'**annule** avec un motif : elle garde son numéro, reste visible et sort
   des totaux. Date dans le futur refusée.
-- Modes de paiement : espèces, Orange Money, Moov Money, Wave, virement, chèque (carte bancaire retirée le 10/10/2026).
+- Modes de paiement : espèces, Orange Money, Moov Money, Wave, carte bancaire, virement, chèque.
 - **Justificatif** : photo (JPEG, PNG, WebP) ou PDF, 5 Mo au plus, stocké tel quel hors du dossier public et servi
   après contrôle de la pharmacie (404 pour une autre pharmacie). Un nouveau fichier remplace l'ancien.
 - Dépenses et recettes : **propriétaire seul** (matrice des droits).
@@ -418,7 +418,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   il se **réduit en icônes** (déplié au survol), état mémorisé dans le navigateur ; offcanvas sur tablette et mobile.
 - **Barre supérieure** : recherche de produit, pharmacie courante, thème clair / sombre (mémorisé), avatar et menu du
   compte. **Fil d'Ariane** à côté du titre de page.
-- Couleur principale : le vert PharmaGest (#198754) est conservé (logo, tickets, PDF) ; police Noto Sans (Google Fonts,
+- Couleur principale : le vert SoftPharm (#198754) est conservé (logo, tickets, PDF) ; police Noto Sans (Google Fonts,
   repli sur la police système hors ligne).
 ## Décisions — Lot 8 (finition)
 
@@ -486,7 +486,7 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   listes d'EasyAdmin, à la place de la mise en page de l'officine. Les adresses restent sous `/admin` et l'accès reste
   réservé au super admin (`access_control` sur `/admin` et `#[IsGranted('ROLE_SUPER_ADMIN')]` sur chaque contrôleur).
 - **Écrans CRUD d'EasyAdmin** : pharmacies (liste avec recherche, statut et échéance ; modification de la fiche),
-  offres (consultation seule, paramétrage en V1 : SA-04), organismes AMO, formes galéniques et catégories de dépenses
+  offres (modification des limites et du tarif annuel depuis le 11/10/2026, voir plus bas), organismes AMO, formes galéniques et catégories de dépenses
   par défaut (création, modification, désactivation par la case « Proposé aux pharmacies »).
 - **Rien ne se supprime** depuis l'espace plateforme : les actions « Supprimer » d'EasyAdmin sont désactivées (RG-15) ;
   une pharmacie se suspend ou s'archive, une valeur de référentiel se désactive.
@@ -634,6 +634,9 @@ uniquement si les officines appartiennent au même pharmacien ».
 ### Déroulement
 
 - Accès : **propriétaire et adjoint** (menu Stock › Transferts). Le vendeur et le caissier n'y ont pas accès.
+  Depuis le 11/10/2026, l'entrée du menu et les pages n'existent que si un propriétaire de l'officine courante
+  possède **plusieurs pharmacies** (non archivées) ; un transfert encore à traiter (en préparation, ou expédié vers
+  l'officine) les garde ouverts pour pouvoir l'annuler ou le réceptionner.
 - L'officine d'origine **crée** le transfert (numéro TRF-AAAA-NNNNNN, propre à l'officine d'origine, attribué dès la
   création : un transfert n'est jamais supprimé, seulement annulé), ajoute les produits et quantités (le stock
   disponible est vérifié à la saisie) puis l'**expédie**.
@@ -674,11 +677,10 @@ uniquement si les officines appartiennent au même pharmacien ».
 
 ### Moyens de paiement
 
-- La caisse et l'encaissement du caissier proposent **espèces, Orange Money, Moov Money et Wave**. La **carte
-  bancaire** n'est plus proposée (ni pour les recettes et dépenses saisies à la main).
-- Les paiements par carte déjà enregistrés restent lisibles : fiche de la vente, clôture, rapport Z, rapports et
-  recettes. La ligne « Carte bancaire » n'y apparaît que si un montant existe ; une dépense déjà réglée par carte
-  garde ce mode quand on la modifie.
+- La caisse et l'encaissement du caissier proposent **espèces, Orange Money, Moov Money, Wave et carte bancaire**.
+  La carte, retirée le 10/10/2026, est revenue le 11/10/2026 à la demande de Modibo : le montant et le numéro du
+  ticket du terminal se saisissent à la main, sans intégration du terminal de paiement. Elle est aussi proposée pour
+  les recettes et dépenses saisies à la main.
 
 ### Nouveau client depuis la caisse
 
@@ -691,3 +693,25 @@ uniquement si les officines appartiennent au même pharmacien ».
 
 - Le type de vente, l'ordonnance et l'assurance saisis mais pas encore appliqués sont enregistrés automatiquement
   avant de choisir, retirer, rechercher ou créer un client : ils ne sont plus perdus au rechargement de l'écran.
+
+## Décisions — SoftPharm, offres modifiables, carte bancaire (demande de Modibo, 11/10/2026)
+
+### Nom de l'application
+
+- L'application s'appelle **SoftPharm** : titres, logo, e-mails, PDF, exports, documentation. Le code (namespaces,
+  base de données, dépôt, domaines `pharmagest.ml` et chemins de déploiement) garde l'ancien nom technique.
+
+### Offres modifiables par le super admin (SA-04)
+
+- Dans l'espace plateforme › Offres, le super admin modifie le **nombre d'utilisateurs** (vide = illimité), le
+  **nombre de pharmacies par propriétaire** et le **tarif annuel** (vide = à fixer). Ni création ni suppression
+  d'offre ; le nom, le code et les fonctions incluses ne changent pas depuis l'écran.
+- Un abonnement déjà payé **garde son montant** : le nouveau tarif sert aux prochains paiements (montant proposé à
+  l'enregistrement d'un paiement).
+- Une **baisse** du nombre d'utilisateurs ne désactive aucun compte : elle empêche seulement d'en créer ou d'en
+  réactiver au-delà de la limite.
+- Chaque modification est tracée dans le journal de la plateforme (« Offre modifiée », valeurs avant et après).
+
+### Carte bancaire
+
+- Voir « Moyens de paiement » ci-dessus : la carte est de nouveau proposée, saisie à la main.

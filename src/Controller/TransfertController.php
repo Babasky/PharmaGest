@@ -11,6 +11,7 @@ use App\Enum\StatutTransfert;
 use App\Repository\LotRepository;
 use App\Repository\ProduitRepository;
 use App\Repository\TransfertStockRepository;
+use App\Security\Voter\TransfertVoter;
 use App\Stock\StockException;
 use App\Stock\StockService;
 use App\Stock\TransfertService;
@@ -22,7 +23,8 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Transferts de stock entre officines du même propriétaire (ST-11), pour le propriétaire et l'adjoint.
+ * Transferts de stock entre officines du même propriétaire (ST-11), pour le propriétaire et l'adjoint,
+ * quand le propriétaire possède plusieurs pharmacies ({@see TransfertVoter}).
  *
  * L'officine d'origine prépare, expédie ou annule ; l'officine destinataire confirme la réception.
  * Le transfert est chargé hors filtre tenant par {@see TransfertService::trouver()}, qui ne le rend
@@ -30,6 +32,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  */
 #[Route('/transferts')]
 #[IsGranted(Utilisateur::ROLE_ADJOINT)]
+#[IsGranted(TransfertVoter::ACCES, message: 'Les transferts sont réservés aux propriétaires de plusieurs pharmacies.')]
 final class TransfertController extends AbstractAppController
 {
     private const CSRF_NOUVEAU = 'transfert-nouveau';

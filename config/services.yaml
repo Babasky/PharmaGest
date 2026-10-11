@@ -7,7 +7,7 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    app.name: 'PharmaGest'
+    app.name: 'SoftPharm'
     app.timezone: 'Africa/Bamako'
     app.currency: 'FCFA'
     # Déconnexion automatique après inactivité (secondes), § 6 Sécurité.
@@ -16,7 +16,7 @@ parameters:
     app.dossier_fichiers: '%kernel.project_dir%/var/fichiers'
     # Coordonnées de l'éditeur : factures d'abonnement et page « compte suspendu ».
     app.editeur:
-        nom: 'PharmaGest'
+        nom: 'SoftPharm'
         adresse: 'Bamako, Mali'
         telephone: '+223 00 00 00 00'
         email: 'contact@pharmagest.ml'

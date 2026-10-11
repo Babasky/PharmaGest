@@ -30,13 +30,13 @@ enum ModeReglement: string
     }
 
     /**
-     * Modes proposés pour saisir une recette ou une dépense (la carte bancaire n'est plus proposée).
+     * Modes proposés pour saisir une recette ou une dépense.
      *
      * @return list<self>
      */
     public static function proposes(): array
     {
-        return array_values(array_filter(self::cases(), static fn (self $m) => self::Carte !== $m));
+        return self::cases();
     }
 
     public static function depuisPaiement(ModePaiement $mode): self

@@ -4,7 +4,7 @@ namespace App\Enum;
 
 /**
  * Modes de paiement d'une vente (VE-04). Une vente peut être réglée par plusieurs modes (paiement mixte).
- * La carte bancaire n'est plus proposée à la caisse : elle reste lisible dans l'historique des ventes déjà encaissées.
+ * La carte bancaire est saisie à la main (montant et référence du ticket du terminal), sans lien avec le terminal.
  */
 enum ModePaiement: string
 {
@@ -32,17 +32,17 @@ enum ModePaiement: string
      */
     public static function proposes(): array
     {
-        return [self::Especes, self::OrangeMoney, self::MoovMoney, self::Wave];
+        return [self::Especes, self::OrangeMoney, self::MoovMoney, self::Wave, self::Carte];
     }
 
     /**
-     * Modes mobiles saisis à côté des espèces (paiement mixte).
+     * Modes saisis à côté des espèces (paiement mixte) : paiements mobiles et carte bancaire.
      *
      * @return list<self>
      */
-    public static function mobiles(): array
+    public static function horsEspeces(): array
     {
-        return [self::OrangeMoney, self::MoovMoney, self::Wave];
+        return [self::OrangeMoney, self::MoovMoney, self::Wave, self::Carte];
     }
 
     public function icone(): string

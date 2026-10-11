@@ -23,6 +23,7 @@ class AuditLogger
     public const PHARMACIE_REACTIVEE = 'pharmacie.reactivee';
     public const PHARMACIE_ARCHIVEE = 'pharmacie.archivee';
     public const ABONNEMENT_PAIEMENT = 'abonnement.paiement';
+    public const OFFRE_MODIFIEE = 'offre.modifiee';
     public const STOCK_ENTREE = 'stock.entree';
     public const STOCK_AJUSTEMENT = 'stock.ajustement';
     public const STOCK_DESTRUCTION = 'stock.destruction';
@@ -51,7 +52,7 @@ class AuditLogger
     /** Actions de la plateforme : les seules que le super admin consulte (il ne voit jamais l'activité d'une officine). */
     public const ACTIONS_PLATEFORME = [
         self::PHARMACIE_CREEE, self::PHARMACIE_SUSPENDUE, self::PHARMACIE_REACTIVEE, self::PHARMACIE_ARCHIVEE,
-        self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT,
+        self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT, self::OFFRE_MODIFIEE,
     ];
 
     public const LIBELLES = [
@@ -64,6 +65,7 @@ class AuditLogger
         self::PHARMACIE_REACTIVEE => 'Pharmacie réactivée',
         self::PHARMACIE_ARCHIVEE => 'Pharmacie archivée',
         self::ABONNEMENT_PAIEMENT => "Paiement d'abonnement",
+        self::OFFRE_MODIFIEE => 'Offre modifiée',
         self::STOCK_ENTREE => 'Entrée de stock manuelle',
         self::STOCK_AJUSTEMENT => 'Ajustement de stock',
         self::STOCK_DESTRUCTION => 'Destruction de stock',

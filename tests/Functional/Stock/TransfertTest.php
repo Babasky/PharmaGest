@@ -14,6 +14,7 @@ use App\Entity\Utilisateur;
 use App\Enum\StatutTransfert;
 use App\Enum\TypeMouvement;
 use App\Service\AuditLogger;
+use App\Tenant\TenantContext;
 use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\PharmacieFactory;
@@ -149,13 +150,47 @@ final class TransfertTest extends AppWebTestCase
         self::assertSelectorTextContains('#statut', 'Reçu');
     }
 
-    public function testRefuseEntreOfficinesDePharmaciensDifferents(): void
+    public function testMenuTransfertsSeulementSiLeProprietairePossedePlusieursPharmacies(): void
     {
-        $this->connecter($this->gamma->proprietaire)->request('GET', '/transferts');
-        self::assertSelectorExists('#aucune-destination');
-        self::assertSelectorNotExists('#nouveau-transfert');
+        // Mariam possède Alpha et Bêta : le menu est là, pour elle comme pour les adjoints des deux officines.
+        foreach ([$this->alpha->proprietaire, $this->alpha->adjoint, $this->adjointBeta] as $utilisateur) {
+            $this->connecter($utilisateur)->request('GET', '/');
+            self::assertSelectorExists('.pg-menu a[href="/transferts"]', $utilisateur->getNom());
+        }
+        $this->connecter($this->alpha->vendeur)->request('GET', '/');
+        self::assertSelectorNotExists('.pg-menu a[href="/transferts"]');
+
+        // Le propriétaire de Gamma n'a qu'une pharmacie : ni menu, ni pages.
+        foreach ([$this->gamma->proprietaire, $this->gamma->adjoint] as $utilisateur) {
+            $this->connecter($utilisateur)->request('GET', '/');
+            self::assertSelectorNotExists('.pg-menu a[href="/transferts"]');
+            $this->client->request('GET', '/transferts');
+            self::assertResponseStatusCodeSame(403);
+        }
 
         // Même en forgeant le formulaire vers une officine d'un autre pharmacien.
+        $this->client->request('POST', '/transferts/nouveau', ['_token' => $this->jeton('transfert-nouveau'), 'destination' => (string) $this->alpha->pharmacie->getId()]);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(0, $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(TransfertStock::class)->count([])));
+
+        // Dès que son propriétaire ouvre une deuxième pharmacie, Gamma voit les transferts.
+        $omega = PharmacieFactory::new()->offre(Offre::PREMIUM)->create(['nom' => 'Officine Oméga', 'ville' => 'Ségou']);
+        $tenant = self::getContainer()->get(TenantContext::class);
+        $tenant->forcer($omega);
+        AffectationFactory::createOne(['utilisateur' => $this->gamma->proprietaire, 'pharmacie' => $omega]);
+        $tenant->forcer(null);
+        $this->connecter($this->gamma->adjoint)->request('GET', '/');
+        self::assertSelectorExists('.pg-menu a[href="/transferts"]');
+    }
+
+    public function testRefuseEntreOfficinesDePharmaciensDifferents(): void
+    {
+        // Gamma a une seconde officine (Oméga) : le module est ouvert, mais Alpha reste hors de portée.
+        $omega = PharmacieFactory::new()->offre(Offre::PREMIUM)->create(['nom' => 'Officine Oméga', 'ville' => 'Ségou']);
+        AffectationFactory::createOne(['utilisateur' => $this->gamma->proprietaire, 'pharmacie' => $omega]);
+        $crawler = $this->connecter($this->gamma->proprietaire)->request('GET', '/transferts');
+        self::assertSame(['Officine Oméga (Ségou)'], $crawler->filter('#destination option')->each(static fn ($o) => $o->text()));
+
         $this->client->request('POST', '/transferts/nouveau', [
             '_token' => $this->jeton('transfert-nouveau'),
             'destination' => (string) $this->alpha->pharmacie->getId(),
@@ -223,7 +258,7 @@ final class TransfertTest extends AppWebTestCase
         $this->connecter($this->adjointBeta)->request('GET', '/transferts/'.$id);
         self::assertResponseStatusCodeSame(404);
         $this->connecter($this->gamma->adjoint)->request('GET', '/transferts/'.$id);
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(403, 'Gamma n\'a pas accès au module.');
 
         $this->connecter($this->alpha->proprietaire)->request('GET', '/transferts/'.$id);
         $this->client->submitForm('Expédier');
@@ -241,7 +276,7 @@ final class TransfertTest extends AppWebTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-danger, .alert-error', 'Seule l\'officine destinataire confirme la réception');
         $this->connecter($this->gamma->proprietaire)->request('GET', '/transferts/'.$id);
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(403);
 
         // Le vendeur n'a pas accès aux transferts.
         $this->connecter($this->alpha->vendeur)->request('GET', '/transferts');

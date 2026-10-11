@@ -254,8 +254,55 @@ final class PharmacieAdminTest extends AppWebTestCase
         $this->client->request('POST', '/admin/pharmacies/'.$pharmacie->getId().'/delete');
         self::assertResponseStatusCodeSame(403);
 
-        $this->client->request('GET', '/admin/offres/'.OffreFactory::parCode(Offre::STANDARD)->getId().'/edit');
-        self::assertResponseStatusCodeSame(403, 'Les offres sont en consultation seule (SA-04 en V1).');
+        $this->client->request('POST', '/admin/offres/'.OffreFactory::parCode(Offre::STANDARD)->getId().'/delete');
+        self::assertResponseStatusCodeSame(403, 'Une offre se modifie, elle ne se supprime pas.');
+        $this->client->request('GET', '/admin/offres/new');
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testLeSuperAdminModifieUneOffre(): void
+    {
+        // Officine Standard avec trois utilisateurs actifs (propriétaire, adjoint, vendeur).
+        $officine = $this->creerOfficine(static fn (PharmacieFactory $f) => $f->offre(Offre::STANDARD));
+        $standard = OffreFactory::parCode(Offre::STANDARD);
+
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/offres/'.$standard->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#main', 'ne désactive aucun compte');
+        $this->client->submit($crawler->filter('button[value="saveAndReturn"]')->form(), [
+            'Offre[maxUtilisateurs]' => '2',
+            'Offre[maxPharmacies]' => '2',
+            'Offre[tarifAnnuel]' => '180000',
+        ]);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#main', "180\u{00A0}000\u{00A0}FCFA");
+
+        $modifiee = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Offre::class, $standard->getId()));
+        self::assertInstanceOf(Offre::class, $modifiee);
+        self::assertSame([2, 2, 180000], [$modifiee->getMaxUtilisateurs(), $modifiee->getMaxPharmacies(), $modifiee->getTarifAnnuel()]);
+        self::assertSame(1, $this->compterAudit(AuditLogger::OFFRE_MODIFIEE));
+        $this->client->request('GET', '/admin/journal');
+        self::assertSelectorTextContains('#main', 'Offre modifiée');
+
+        // Le nouveau tarif est proposé au prochain paiement de l'abonnement.
+        $crawler = $this->client->request('GET', '/admin/pharmacies/'.$officine->pharmacie->getId());
+        self::assertSame('180000', $crawler->filter('#paiement_montant')->attr('value'));
+
+        // Baisse sous l'effectif actuel : personne n'est désactivé, mais l'équipe ne peut plus grandir.
+        $this->connecter($officine->proprietaire)->request('GET', '/equipe');
+        self::assertSelectorTextContains('main', '0 place disponible');
+        self::assertSelectorTextContains('main', $officine->vendeur->getNom());
+
+        // Vide = illimité ; un nombre de pharmacies nul est refusé.
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/offres/'.$standard->getId().'/edit');
+        $this->client->submit($crawler->filter('button[value="saveAndReturn"]')->form(), ['Offre[maxUtilisateurs]' => '', 'Offre[maxPharmacies]' => '0']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('#main', 'Au moins une pharmacie');
+        $this->client->submit($this->client->getCrawler()->filter('button[value="saveAndReturn"]')->form(), ['Offre[maxUtilisateurs]' => '', 'Offre[maxPharmacies]' => '1']);
+        self::assertResponseRedirects();
+        $this->client->request('GET', '/admin/offres');
+        self::assertSelectorTextContains('#main', 'Illimités');
     }
 
     private function soumettreCreation(string $nom, string $emailProprietaire, string $offre): void

@@ -212,8 +212,9 @@ final class StockTest extends AppWebTestCase
 
     public function testRechercheDansLeStockSansChoisirDeCategorie(): void
     {
-        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Doliprane']);
-        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Amoxicilline']);
+        // DCI fixées : une DCI tirée au hasard (« Amoxicilline ») s'afficherait sous le Doliprane.
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Doliprane', 'dci' => 'Paracétamol']);
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Amoxicilline', 'dci' => 'Amoxicilline']);
 
         $crawler = $this->connecter($this->officine->vendeur)->request('GET', '/stock');
         $this->client->submit($crawler->filter('form[role="search"]')->form(['q' => 'Doli']));

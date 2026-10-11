@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# PharmaGest — sauvegarde nocturne (§ 6 : chaque nuit, chiffrée, conservée 30 jours, copie hors du serveur).
+# SoftPharm — sauvegarde nocturne (§ 6 : chaque nuit, chiffrée, conservée 30 jours, copie hors du serveur).
 #
 # Sauvegarde la base MySQL et les fichiers des pharmacies, chiffre l'archive avec GPG (clé publique de l'éditeur :
 # le serveur ne peut pas déchiffrer ses propres sauvegardes), la copie sur un stockage distant avec rclone, puis

@@ -134,5 +134,5 @@
         "zenstruck/foundry": "*"
     },
     "name": "pharmagest/pharmagest",
-    "description": "PharmaGest — SaaS multi-tenant de gestion de pharmacies (Mali)"
+    "description": "SoftPharm — SaaS multi-tenant de gestion de pharmacies (Mali)"
 }

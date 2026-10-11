@@ -1,4 +1,4 @@
-# Configuration DDEV de PharmaGest — https://ddev.readthedocs.io
+# Configuration DDEV de SoftPharm — https://ddev.readthedocs.io
 name: pharmagest
 type: symfony
 docroot: public

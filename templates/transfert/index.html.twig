@@ -14,7 +14,7 @@
                     {% elseif destinations is empty %}
                         <p class="small text-body-secondary mb-0" id="aucune-destination">
                             Le stock ne se transfère qu'entre officines du même pharmacien. Aucune autre officine
-                            de votre propriétaire n'est active sur PharmaGest.
+                            de votre propriétaire n'est active sur SoftPharm.
                         </p>
                     {% else %}
                         <form method="post" action="{{ path('app_transfert_nouveau') }}" id="nouveau-transfert">

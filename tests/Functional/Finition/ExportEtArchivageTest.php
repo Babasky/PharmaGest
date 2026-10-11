@@ -38,7 +38,7 @@ final class ExportEtArchivageTest extends AppWebTestCase
         $this->client->request('GET', '/abonnement/export');
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('Content-Type', 'application/zip');
-        self::assertStringContainsString('attachment; filename=pharmagest-', (string) $this->client->getResponse()->headers->get('Content-Disposition'));
+        self::assertStringContainsString('attachment; filename=softpharm-', (string) $this->client->getResponse()->headers->get('Content-Disposition'));
 
         $zip = $this->ouvrir((string) $this->client->getInternalResponse()->getContent());
         $noms = [];
@@ -87,7 +87,7 @@ final class ExportEtArchivageTest extends AppWebTestCase
         self::assertSame($ancienne->proprietaire->getEmail(), $export->getTo()[0]->getAddress());
         $pieces = $export->getAttachments();
         self::assertCount(1, $pieces);
-        self::assertStringStartsWith('pharmagest-pharmacie-ancienne-', (string) $pieces[0]->getFilename());
+        self::assertStringStartsWith('softpharm-pharmacie-ancienne-', (string) $pieces[0]->getFilename());
         self::assertStringContainsString('Doliprane', (string) $this->ouvrir($pieces[0]->getBody())->getFromName('donnees/produit.csv'));
 
         $etats = $this->sansFiltre(static fn (EntityManagerInterface $em) => array_map(
