@@ -104,6 +104,11 @@ class Ordonnance implements TenantAwareInterface
         return $this;
     }
 
+    public function copieEstPdf(): bool
+    {
+        return null !== $this->copie && str_ends_with($this->copie, '.pdf');
+    }
+
     /** Seule la date est obligatoire ; prescripteur, numéro et structure sont facultatifs. */
     public function estComplete(): bool
     {

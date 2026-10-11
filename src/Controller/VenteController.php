@@ -76,8 +76,13 @@ final class VenteController extends AbstractAppController
         if (null === $chemin) {
             throw $this->createNotFoundException();
         }
-        $reponse = new BinaryFileResponse($chemin, headers: ['Content-Type' => 'image/jpeg', 'Cache-Control' => 'private, no-store']);
-        $reponse->setContentDisposition('inline', 'ordonnance-'.$vente->getNumero().'.jpg');
+        $pdf = $ordonnance->copieEstPdf();
+        $reponse = new BinaryFileResponse($chemin, headers: [
+            'Content-Type' => $pdf ? 'application/pdf' : 'image/jpeg',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+        $reponse->setContentDisposition('inline', 'ordonnance-'.$vente->getNumero().($pdf ? '.pdf' : '.jpg'));
 
         return $reponse;
     }
@@ -94,7 +99,7 @@ final class VenteController extends AbstractAppController
                 throw new AmoException('Le bordereau de cette vente est transmis : la copie de l\'ordonnance ne change plus.');
             }
             if (!$fichier instanceof UploadedFile) {
-                throw new AmoException('Choisissez la photo de l\'ordonnance.');
+                throw new AmoException('Choisissez la photo ou le PDF de l\'ordonnance.');
             }
             $copies->enregistrer($this->pharmacie(), $ordonnance, $fichier);
             $this->entityManager->flush();

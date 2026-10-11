@@ -78,6 +78,43 @@ final class SuiviEtDroitsAmoTest extends AmoTestCase
         self::assertNotNull($this->derniereVente()->getOrdonnance()?->getCopie());
     }
 
+    public function testCopieDeLOrdonnanceEnPdf(): void
+    {
+        $this->ouvrirCaisse($this->officine->vendeur);
+        $vente = $this->vendreAmo();
+        $this->client->request('GET', '/ventes/'.$vente);
+
+        // Le type est lu dans le contenu : un faux PDF est refusé malgré son nom et le type annoncé.
+        $faux = tempnam(sys_get_temp_dir(), 'pdf');
+        file_put_contents($faux, 'pas un PDF');
+        $this->client->submitForm('Joindre', ['copie' => new UploadedFile($faux, 'ordonnance.pdf', 'application/pdf', null, true)]);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-danger', 'doit être une photo (JPEG, PNG ou WebP) ou un PDF');
+
+        $this->client->submitForm('Joindre', ['copie' => self::pdf()]);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', 'Copie de l\'ordonnance enregistrée');
+        self::assertSelectorTextContains('#copie-pdf', 'Ouvrir l\'ordonnance (PDF)');
+        self::assertSelectorNotExists('#copie-ordonnance img');
+        $copie = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Vente::class, $vente)?->getOrdonnance()?->getCopie());
+        self::assertMatchesRegularExpression('/^[a-f0-9]{24}\.pdf$/', (string) $copie);
+
+        $this->client->request('GET', '/ventes/'.$vente.'/ordonnance');
+        self::assertResponseHeaderSame('Content-Type', 'application/pdf');
+        self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
+        self::assertStringContainsString('.pdf', (string) $this->client->getResponse()->headers->get('Content-Disposition'));
+
+        // Une photo peut remplacer le PDF, et inversement.
+        $this->client->request('GET', '/ventes/'.$vente);
+        $this->client->submitForm('Remplacer', ['copie' => self::photo(800, 600)]);
+        $this->client->followRedirect();
+        self::assertSelectorExists('#copie-ordonnance img');
+
+        // PDF joint dès la caisse.
+        $this->vendreAmo(1, null, ['ordonnance_copie' => self::pdf()]);
+        self::assertTrue($this->derniereVente()->getOrdonnance()?->copieEstPdf());
+    }
+
     public function testLeVendeurNAccedePasAuModuleAmoEtLesDonneesRestentDansLeurPharmacie(): void
     {
         $autre = $this->creerOfficine();

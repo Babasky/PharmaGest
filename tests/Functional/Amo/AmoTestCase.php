@@ -108,4 +108,30 @@ abstract class AmoTestCase extends CaisseTestCase
 
         return new UploadedFile($chemin, 'ordonnance.png', 'image/png', null, true);
     }
+
+    /** Ordonnance scannée en PDF (une page, minimale mais valide). */
+    protected static function pdf(): UploadedFile
+    {
+        $objets = [
+            '<< /Type /Catalog /Pages 2 0 R >>',
+            '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+            '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>',
+        ];
+        $contenu = "%PDF-1.4\n";
+        $positions = [];
+        foreach ($objets as $i => $objet) {
+            $positions[] = \strlen($contenu);
+            $contenu .= ($i + 1)." 0 obj\n".$objet."\nendobj\n";
+        }
+        $xref = \strlen($contenu);
+        $contenu .= "xref\n0 4\n0000000000 65535 f \n";
+        foreach ($positions as $position) {
+            $contenu .= \sprintf("%010d 00000 n \n", $position);
+        }
+        $contenu .= "trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n".$xref."\n%%EOF\n";
+        $chemin = tempnam(sys_get_temp_dir(), 'ord').'.pdf';
+        file_put_contents($chemin, $contenu);
+
+        return new UploadedFile($chemin, 'ordonnance.pdf', 'application/pdf', null, true);
+    }
 }

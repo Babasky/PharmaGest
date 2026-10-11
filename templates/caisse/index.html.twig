@@ -305,14 +305,14 @@
                         <div class="col-6"><input type="text" name="ordonnance_structure" value="{{ ord ? ord.structure }}" class="form-control form-control-sm" placeholder="Structure (facultatif)" aria-label="Structure de santé"></div>
                         <div class="col-12">
                             <label class="form-label small text-body-secondary mb-0" for="ordonnance-copie">
-                                Photo de l'ordonnance {{ type_courant == 'amo' ? '(jointe au bordereau AMO)' : '(facultatif)' }}
+                                Photo ou PDF de l'ordonnance {{ type_courant == 'amo' ? '(jointe au bordereau AMO)' : '(facultatif)' }}
                                 {% if ord and ord.copie %}
                                     <span class="badge text-bg-success" id="copie-jointe">
                                         <i class="bi bi-check"></i> jointe
                                     </span>
                                 {% endif %}
                             </label>
-                            <input type="file" name="ordonnance_copie" id="ordonnance-copie" accept="image/jpeg,image/png,image/webp,image/pdf" capture="environment" class="form-control form-control-sm">
+                            <input type="file" name="ordonnance_copie" id="ordonnance-copie" accept="image/jpeg,image/png,image/webp,application/pdf" class="form-control form-control-sm">
                         </div>
                     </fieldset>
                     {% if not (panier and panier.client and panier.client.assureAmo) %}

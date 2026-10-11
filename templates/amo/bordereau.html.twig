@@ -6,6 +6,9 @@
     <a class="btn btn-outline-secondary" href="{{ path('app_amo_bordereaux') }}"><i class="bi bi-arrow-left"></i> Bordereaux</a>
     <a class="btn btn-outline-success" href="{{ path('app_amo_bordereau_excel', {id: bordereau.id}) }}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
     <a class="btn btn-outline-success" href="{{ path('app_amo_bordereau_pdf', {id: bordereau.id}) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> PDF avec ordonnances</a>
+    {% if avec_copie > 0 %}
+        <a class="btn btn-outline-success" href="{{ path('app_amo_bordereau_ordonnances', {id: bordereau.id}) }}" id="archive-ordonnances"><i class="bi bi-file-earmark-zip"></i> Ordonnances (ZIP)</a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -22,7 +25,7 @@
     </div>
 
     {% if sans_copie > 0 %}
-        <div class="alert alert-warning small" id="alerte-copies"><i class="bi bi-camera"></i> {{ sans_copie }} ordonnance{{ sans_copie > 1 ? 's' }} sans copie : ajoutez la photo depuis la fiche de la vente pour qu'elle figure en annexe du PDF.</div>
+        <div class="alert alert-warning small" id="alerte-copies"><i class="bi bi-camera"></i> {{ sans_copie }} ordonnance{{ sans_copie > 1 ? 's' }} sans copie : ajoutez la photo ou le PDF depuis la fiche de la vente pour qu'elle figure en annexe du PDF.</div>
     {% endif %}
 
     <div class="row g-3 mb-3">
@@ -54,7 +57,7 @@
                             <td>{{ vente.client ? vente.client.nom }}<div class="small text-body-secondary">{{ vente.numeroAssure }}</div></td>
                             <td class="small">
                                 {% if ord %}{{ ord.date ? ord.date|date('d/m/Y') }}{{ ord.prescripteur ? ' · ' ~ ord.prescripteur }}{% endif %}
-                                {% if ord and ord.copie %}<i class="bi bi-camera text-success" title="Copie jointe"></i>{% else %}<span class="badge text-bg-warning">sans copie</span>{% endif %}
+                                {% if ord and ord.copie %}<a href="{{ path('app_vente_ordonnance', {id: vente.id}) }}" target="_blank" class="text-success" title="Voir la copie jointe"><i class="bi bi-{{ ord.copieEstPdf ? 'file-earmark-pdf' : 'camera' }}"></i></a>{% else %}<span class="badge text-bg-warning">sans copie</span>{% endif %}
                             </td>
                             <td class="montant">{{ creance.montant|fcfa }}</td>
                             {% if bordereau.estTransmis %}
