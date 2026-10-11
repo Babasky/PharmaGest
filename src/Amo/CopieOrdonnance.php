@@ -18,6 +18,8 @@ class CopieOrdonnance
     public const CATEGORIE = 'ordonnances';
     public const TAILLE_MAXIMALE = 8 * 1024 * 1024;
     private const COTE_MAXIMAL = 1600;
+    /** Au-delà, l'image décompressée occuperait des centaines de Mo (« bombe » de décompression) : refusée avant d'être lue. */
+    public const PIXELS_MAXIMUM = 30_000_000;
     private const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
     public function __construct(private readonly StockageFichiers $stockage)
@@ -37,6 +39,13 @@ class CopieOrdonnance
         }
         if (!\in_array($fichier->getMimeType(), self::TYPES, true)) {
             throw new AmoException('La copie de l\'ordonnance doit être une photo (JPEG, PNG ou WebP).');
+        }
+        $dimensions = @getimagesize($fichier->getPathname());
+        if (false === $dimensions) {
+            throw new AmoException('Cette image est illisible.');
+        }
+        if ($dimensions[0] * $dimensions[1] > self::PIXELS_MAXIMUM) {
+            throw new AmoException('Cette image est trop grande : prenez la photo en résolution normale.');
         }
         $image = @imagecreatefromstring((string) file_get_contents($fichier->getPathname()));
         if (false === $image) {

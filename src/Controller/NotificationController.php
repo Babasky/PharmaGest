@@ -53,8 +53,9 @@ final class NotificationController extends AbstractAppController
         $this->entityManager->flush();
 
         $lien = (string) $notification->getLien();
-        // Seulement un chemin de l'application (jamais une autre adresse).
-        if (!str_starts_with($lien, '/') || str_starts_with($lien, '//')) {
+        // Seulement un chemin de l'application (jamais une autre adresse). Les navigateurs lisent « /\site » comme
+        // « //site » : barre oblique inverse et caractères de contrôle sont refusés eux aussi.
+        if (!str_starts_with($lien, '/') || str_starts_with($lien, '//') || 1 === preg_match('/[\\\\\x00-\x1F]/', $lien)) {
             return $this->redirectToRoute('app_notification_index');
         }
 

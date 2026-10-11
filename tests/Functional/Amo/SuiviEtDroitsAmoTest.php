@@ -52,6 +52,12 @@ final class SuiviEtDroitsAmoTest extends AmoTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-danger', 'doit être une photo');
 
+        // « Bombe » de décompression : quelques octets annonçant 20 000 × 20 000 pixels (1,6 Go une fois décodée).
+        // Refusée avant d'être décodée, sans faire tomber la requête.
+        $this->client->submitForm('Joindre', ['copie' => self::pngAnnoncant(20000, 20000)]);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-danger', 'Cette image est trop grande');
+
         $this->client->submitForm('Joindre', ['copie' => self::photo(800, 600)]);
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-success', 'Copie de l\'ordonnance enregistrée');
@@ -96,5 +102,19 @@ final class SuiviEtDroitsAmoTest extends AmoTestCase
         }
         $this->client->request('GET', '/amo');
         self::assertSelectorTextContains('#encours-total', "0\u{00A0}FCFA");
+    }
+
+    /** PNG minimal dont l'en-tête annonce les dimensions données (le contenu n'est jamais décodé). */
+    private static function pngAnnoncant(int $largeur, int $hauteur): UploadedFile
+    {
+        $bloc = static fn (string $type, string $donnees): string => pack('N', \strlen($donnees)).$type.$donnees.pack('N', crc32($type.$donnees));
+        $png = "\x89PNG\r\n\x1a\n"
+            .$bloc('IHDR', pack('NNCCCCC', $largeur, $hauteur, 8, 2, 0, 0, 0))
+            .$bloc('IDAT', (string) gzcompress(str_repeat("\0", 64)))
+            .$bloc('IEND', '');
+        $chemin = tempnam(sys_get_temp_dir(), 'bombe').'.png';
+        file_put_contents($chemin, $png);
+
+        return new UploadedFile($chemin, 'ordonnance.png', 'image/png', null, true);
     }
 }

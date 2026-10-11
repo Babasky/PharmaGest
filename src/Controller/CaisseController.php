@@ -97,7 +97,7 @@ final class CaisseController extends AbstractAppController
             'organismes' => $organismes->actifs(),
             'vendeurs' => array_filter(
                 array_map(static fn ($a) => $a->getUtilisateur(), $affectations->equipe($this->pharmacie())),
-                static fn (Utilisateur $u) => $u->aUnCodePin() && $u->isActif() && $u->getId() !== $utilisateur->getId(),
+                static fn (Utilisateur $u) => self::peutPrendreLaCaisseParPin($u) && $u->aUnCodePin() && $u->isActif() && $u->getId() !== $utilisateur->getId(),
             ),
         ]);
     }
@@ -328,7 +328,8 @@ final class CaisseController extends AbstractAppController
         $id = $requete->getPayload()->getInt('utilisateur');
         $cible = null;
         foreach ($affectations->equipe($this->pharmacie()) as $affectation) {
-            if ($affectation->getUtilisateur()->getId() === $id && $affectation->isActif() && $affectation->getUtilisateur()->isActif()) {
+            if ($affectation->getUtilisateur()->getId() === $id && $affectation->isActif() && $affectation->getUtilisateur()->isActif()
+                && self::peutPrendreLaCaisseParPin($affectation->getUtilisateur())) {
                 $cible = $affectation->getUtilisateur();
             }
         }
@@ -345,7 +346,16 @@ final class CaisseController extends AbstractAppController
         $security->login($cible, 'form_login', 'main');
         $this->addFlash('success', \sprintf('Bonjour %s : la caisse est à vous.', $cible->getNom()));
 
-        return $this->redirectToRoute('app_caisse');
+        return $this->redirectToRoute(Utilisateur::ROLE_CAISSIER === $cible->getRole() ? 'app_encaissement_index' : 'app_caisse');
+    }
+
+    /**
+     * Un code PIN à 4 chiffres ne doit pas ouvrir les droits du propriétaire ou d'un adjoint (finances, équipe, export) :
+     * par PIN, on ne prend que le compte d'un vendeur ou d'un caissier. Les autres se connectent avec leur mot de passe.
+     */
+    private static function peutPrendreLaCaisseParPin(Utilisateur $utilisateur): bool
+    {
+        return \in_array($utilisateur->getRole(), [Utilisateur::ROLE_VENDEUR, Utilisateur::ROLE_CAISSIER], true);
     }
 
     private static function fichier(Request $requete, string $champ): ?UploadedFile
