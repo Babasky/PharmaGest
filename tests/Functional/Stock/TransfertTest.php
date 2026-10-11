@@ -197,7 +197,9 @@ final class TransfertTest extends AppWebTestCase
         ]);
         self::assertResponseRedirects('/transferts');
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-danger, .alert-error', 'Officine Gamma et Officine Alpha n\'appartiennent pas au même pharmacien');
+        self::assertSelectorTextContains('.alert-danger, .alert-error', 'ne fait pas partie de vos officines');
+        // Le nom d'une pharmacie d'un autre pharmacien n'est jamais révélé (identifiant envoyé à la main).
+        self::assertSelectorTextNotContains('body', 'Officine Alpha');
         self::assertSame(0, $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(TransfertStock::class)->count([])));
     }
 

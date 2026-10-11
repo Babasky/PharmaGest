@@ -88,8 +88,10 @@ class CodePin
      */
     private function essai(string $cle, callable $verification): bool
     {
+        // L'essai est compté AVANT la vérification : des requêtes envoyées en même temps ne peuvent pas passer
+        // toutes entre le contrôle du compteur et son incrément (et tester ainsi bien plus de 5 codes).
         $limite = $this->limiteur->create($cle);
-        if (0 === $limite->consume(0)->getRemainingTokens()) {
+        if (!$limite->consume()->isAccepted()) {
             throw new CodePinException('Trop d\'essais de code PIN : réessayez dans 15 minutes.');
         }
         if ($verification()) {
@@ -97,7 +99,6 @@ class CodePin
 
             return true;
         }
-        $limite->consume();
 
         return false;
     }

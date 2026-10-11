@@ -113,6 +113,10 @@ class TransfertService
     public function creer(Pharmacie $destination, ?string $note = null): TransfertStock
     {
         $origine = $this->tenantContext->exigerPharmacie();
+        if ($origine->getId() !== $destination->getId() && !$this->memeProprietaire($origine, $destination)) {
+            // Sans le nom de l'officine visée : un identifiant envoyé à la main ne doit rien révéler d'une autre pharmacie.
+            throw new StockException('Cette officine ne fait pas partie de vos officines : choisissez-en une dans la liste.');
+        }
         $this->exigerMemeProprietaire($origine, $destination);
         if (!\in_array($destination->getId(), array_map(static fn (Pharmacie $p) => $p->getId(), $this->destinations($origine)), true)) {
             throw new StockException(\sprintf('%s ne peut pas recevoir de transfert (officine suspendue ou archivée).', $destination->getNom()));
