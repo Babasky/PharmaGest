@@ -103,6 +103,7 @@ chacune avec un test qui la reproduit :
 | Code PIN : le compteur d'essais était lu avant la vérification et incrémenté après ; des requêtes simultanées pouvaient tester bien plus de 5 codes (y compris celui du propriétaire). | L'essai est compté avant la vérification (`CodePin::essai()`). | `CodePinTest` (blocage après 5 erreurs) |
 | Création d'un transfert vers un identifiant quelconque : le message d'erreur donnait le nom de n'importe quelle pharmacie de la plateforme. | Message neutre tant que l'officine n'appartient pas au même pharmacien. | `TransfertTest::testRefuseEntreOfficinesDePharmaciensDifferents` |
 | Lien de notification `/\site` : lu par les navigateurs comme `//site` (redirection vers un autre site). | Barre oblique inverse et caractères de contrôle refusés. | `SecuriteTest::testUneNotificationNOuvreJamaisUnAutreSite` |
+| Changement de vendeur par code PIN vers le compte du propriétaire ou d'un adjoint : un PIN à 4 chiffres ouvrait tous leurs droits (finances, équipe, export). | Décision de Modibo : par PIN, on ne prend que le compte d'un vendeur ou d'un caissier ; propriétaire et adjoint se connectent avec leur mot de passe. | `CaisseTest::testLeCodePinNOuvrePasLeCompteDuProprietaireNiDUnAdjoint` |
 | Copie d'ordonnance : une petite image annonçant des dimensions énormes était décodée en mémoire (« bombe » de décompression). | Dimensions lues avant le décodage, 30 millions de pixels au plus. | `SuiviEtDroitsAmoTest::testCopieDeLOrdonnanceDepuisLaFicheDeLaVente` |
 
 Rapport complet (constats vérifiés sans faille, points à décider) : remis à Modibo avec la PR.
@@ -116,5 +117,4 @@ Rapport complet (constats vérifiés sans faille, points à décider) : remis à
 | Double authentification du propriétaire (PH-06) | V1 |
 | Déclaration APDP et avis d'un juriste (loi n° 2013-015) | Avant le pilote (point ouvert § 11.2) |
 | Test d'intrusion externe | Avant l'ouverture commerciale |
-| Changement de vendeur par code PIN vers le compte du propriétaire ou d'un adjoint (un PIN à 4 chiffres ouvre alors tous leurs droits) | À décider (tests du 11/10/2026) |
 | Messages de connexion qui révèlent un compte désactivé ou non activé sans mot de passe | À décider (tests du 11/10/2026) |

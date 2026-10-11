@@ -6,6 +6,7 @@ use App\Entity\JournalAudit;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
 use App\Entity\OrganismeAmo;
+use App\Entity\Utilisateur;
 use App\Entity\Vente;
 use App\Enum\ModePaiement;
 use App\Enum\PolitiqueSansOrdonnance;
@@ -13,10 +14,12 @@ use App\Enum\StatutVente;
 use App\Enum\TypeMouvement;
 use App\Enum\TypeVente;
 use App\Security\CodePin;
+use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\ClientFactory;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\PharmacieFactory;
 use App\Tests\Factory\ProduitFactory;
+use App\Tests\Factory\UtilisateurFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -396,17 +399,41 @@ final class CaisseTest extends CaisseTestCase
 
     public function testChangementRapideDeVendeurParCodePin(): void
     {
-        self::getContainer()->get(CodePin::class)->definir($this->officine->adjoint, '2580');
+        $collegue = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_VENDEUR, 'nom' => 'Collègue Vendeur']);
+        AffectationFactory::createOne(['utilisateur' => $collegue, 'pharmacie' => $this->officine->pharmacie]);
+        self::getContainer()->get(CodePin::class)->definir($collegue, '2580');
 
         $this->ouvrirCaisse($this->officine->vendeur);
-        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $this->officine->adjoint->getId(), 'code_pin' => '0852']);
+        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '0852']);
         self::assertStringContainsString('Code PIN incorrect', $this->erreur());
 
-        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $this->officine->adjoint->getId(), 'code_pin' => '2580']);
+        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '2580']);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-success', 'Bonjour '.$this->officine->adjoint->getNom());
+        self::assertSelectorTextContains('.alert-success', 'Bonjour Collègue Vendeur');
         self::assertSelectorExists('form[action="/caisse/ouvrir"]', 'Chacun a sa propre session de caisse.');
-        self::assertSelectorTextContains('header', $this->officine->adjoint->getNom());
+        self::assertSelectorTextContains('header', 'Collègue Vendeur');
+    }
+
+    /**
+     * Tests de vulnérabilité (11/10/2026) : un vendeur qui connaît ou devine le PIN du propriétaire ou d'un adjoint
+     * ne prend pas leur compte ; ils ne sont même pas proposés dans la liste.
+     */
+    public function testLeCodePinNOuvrePasLeCompteDuProprietaireNiDUnAdjoint(): void
+    {
+        self::getContainer()->get(CodePin::class)->definir($this->officine->proprietaire, '2580');
+        self::getContainer()->get(CodePin::class)->definir($this->officine->adjoint, '3691');
+
+        $this->ouvrirCaisse($this->officine->vendeur);
+        $this->client->request('GET', '/caisse');
+        $proposes = $this->client->getCrawler()->filter('#changer-utilisateur option')->each(static fn ($o) => $o->text());
+        self::assertNotContains($this->officine->proprietaire->getNom(), $proposes);
+        self::assertNotContains($this->officine->adjoint->getNom(), $proposes);
+
+        foreach ([[$this->officine->proprietaire, '2580'], [$this->officine->adjoint, '3691']] as [$cible, $pin]) {
+            $this->poster('/caisse/changer-vendeur', ['utilisateur' => $cible->getId(), 'code_pin' => $pin]);
+            self::assertStringContainsString('Code PIN incorrect', $this->erreur());
+            self::assertSelectorTextContains('header', $this->officine->vendeur->getNom());
+        }
     }
 
     public function testR01LesVentesDUneAutrePharmacieSontIntrouvables(): void

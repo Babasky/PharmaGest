@@ -4,6 +4,8 @@ namespace App\Tests\Functional\Caisse;
 
 use App\Entity\Utilisateur;
 use App\Security\CodePin;
+use App\Tests\Factory\AffectationFactory;
+use App\Tests\Factory\UtilisateurFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -41,14 +43,16 @@ final class CodePinTest extends CaisseTestCase
 
     public function testLeCodeEstBloqueApresCinqErreurs(): void
     {
-        self::getContainer()->get(CodePin::class)->definir($this->officine->adjoint, '2580');
+        $collegue = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_VENDEUR]);
+        AffectationFactory::createOne(['utilisateur' => $collegue, 'pharmacie' => $this->officine->pharmacie]);
+        self::getContainer()->get(CodePin::class)->definir($collegue, '2580');
         $this->ouvrirCaisse($this->officine->vendeur);
 
         for ($i = 0; $i < 5; ++$i) {
-            $this->poster('/caisse/changer-vendeur', ['utilisateur' => $this->officine->adjoint->getId(), 'code_pin' => '000'.$i]);
+            $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '000'.$i]);
             self::assertStringContainsString('Code PIN incorrect', $this->erreur());
         }
-        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $this->officine->adjoint->getId(), 'code_pin' => '2580']);
+        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '2580']);
         self::assertStringContainsString('Trop d\'essais', $this->erreur(), 'Même le bon code est refusé pendant le blocage.');
     }
 }
