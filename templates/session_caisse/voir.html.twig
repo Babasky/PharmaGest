@@ -79,7 +79,7 @@
                             <button class="btn btn-danger mt-3" type="submit" data-turbo-confirm="Clôturer la session {{ session.numero }} ?"><i class="bi bi-lock"></i> Clôturer la caisse</button>
                         </form>
                     {% elseif not session.estOuverte and session.comptage is not empty %}
-                        <table class="table table-sm small mb-0">
+                        <table class="table table-sm small mb-0" id="comptage">
                             {% for cle, nombre in session.comptage %}
                                 <tr><td>{{ coupures[cle][0] }}</td><td class="text-end">× {{ nombre }}</td><td class="montant">{{ (coupures[cle][1] * nombre)|fcfa }}</td></tr>
                             {% endfor %}

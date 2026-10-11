@@ -166,7 +166,11 @@ class SessionCaisse implements TenantAwareInterface
      */
     public function getComptage(): array
     {
-        return $this->comptage ?? [];
+        // MySQL réordonne les clés d'un objet JSON : on rend toujours le comptage
+        // dans l'ordre de COUPURES, de la plus grosse coupure à la plus petite.
+        $comptage = $this->comptage ?? [];
+
+        return array_replace(array_intersect_key(array_fill_keys(array_keys(self::COUPURES), 0), $comptage), $comptage);
     }
 
     public function getEspecesAttendues(): ?int

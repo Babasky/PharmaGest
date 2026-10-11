@@ -11,6 +11,7 @@ use App\Enum\TypeMouvement;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\ProduitFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DomCrawler\Crawler;
 
 /**
  * Annulation le jour même (VE-09, RG-12), clôture de caisse et rapport Z (FI-06, FI-07, RG-13) ;
@@ -94,6 +95,8 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         self::assertSelectorTextContains('.alert-warning', 'écart de -500');
         self::assertSelectorTextContains('#ecart', "-500\u{00A0}FCFA");
         self::assertSelectorNotExists('#cloture');
+        $coupures = $this->client->getCrawler()->filter('#comptage td:first-child')->each(static fn (Crawler $td): string => $td->text());
+        self::assertSame(['Billet de 10 000', 'Billet de 5 000', 'Pièce de 500'], $coupures, 'Le comptage commence par la plus grosse coupure.');
 
         $this->client->clickLink('Rapport Z');
         self::assertResponseIsSuccessful();
