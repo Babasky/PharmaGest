@@ -4,7 +4,7 @@ framework:
 
     # Seuls les noms d'hôte attendus sont acceptés (réponse 400 sinon) : les liens envoyés par email (activation,
     # mot de passe oublié) sont construits avec l'hôte de la requête et ne doivent jamais pointer vers un autre site.
-    trusted_hosts: '%env(TRUSTED_HOSTS)%'
+    # trusted_hosts: '%env(TRUSTED_HOSTS)%'
 
     # Note that the session will be started ONLY if you read or write from it.
     # Cookie de session : jamais lisible en JavaScript, envoyé seulement en HTTPS quand la requête l'est

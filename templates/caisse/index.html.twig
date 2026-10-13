@@ -55,13 +55,12 @@
     <div class="row g-3" {{ stimulus_controller('caisse') }}>
         <div class="col-12 col-xl-7">
             {# --- Recherche produit (nom, DCI) --- #}
-            <form method="get" action="{{ path('app_caisse') }}" class="mb-3" role="search">
+            <form method="get" action="{{ path('app_caisse') }}" class="mb-4" role="search">
                 <div class="input-group input-group-lg">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Nom, DCI" aria-label="Rechercher un produit" autofocus autocomplete="off" data-caisse-target="recherche">
                     <button class="btn btn-success" type="submit">Chercher</button>
                 </div>
-                <div class="form-text mt-3">Raccourcis : <kbd>F2</kbd> recherche · <kbd>F9</kbd> encaissement.</div>
             </form>
 
             {% if q %}
