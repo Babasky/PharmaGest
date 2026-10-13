@@ -1,0 +1,30 @@
+{#
+    Canaux du support activés par le super admin. Variables : support, pharmacie (peut être null).
+    Le message WhatsApp et l'objet de l'email nomment l'officine pour que le support sache qui écrit.
+#}
+{% set message = pharmacie ? 'Bonjour, ici ' ~ pharmacie.nom ~ ' (' ~ pharmacie.ville ~ '). ' : 'Bonjour, ' %}
+{% set sujet = 'Support ' ~ app_name ~ (pharmacie ? ' – ' ~ pharmacie.nom : '') %}
+<div class="list-group" id="support-canaux">
+    {% if support.lienWhatsapp %}
+        <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="{{ support.lienWhatsapp(message) }}" target="_blank" rel="noopener noreferrer" id="support-whatsapp">
+            <i class="bi bi-whatsapp fs-4 text-success"></i>
+            <span class="flex-grow-1"><span class="fw-semibold d-block">Écrire sur WhatsApp</span><span class="small text-body-secondary">{{ support.whatsapp|telephone }}</span></span>
+            <i class="bi bi-box-arrow-up-right text-body-secondary"></i>
+        </a>
+    {% endif %}
+    {% if support.lienTelephone %}
+        <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="{{ support.lienTelephone }}" id="support-telephone">
+            <i class="bi bi-telephone fs-4 text-primary"></i>
+            <span class="flex-grow-1"><span class="fw-semibold d-block">Appeler</span><span class="small text-body-secondary user-select-all">{{ support.telephone|telephone }}</span></span>
+        </a>
+    {% endif %}
+    {% if support.lienEmail %}
+        <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="{{ support.lienEmail(sujet) }}" id="support-email">
+            <i class="bi bi-envelope fs-4 text-warning"></i>
+            <span class="flex-grow-1"><span class="fw-semibold d-block">Envoyer un email</span><span class="small text-body-secondary user-select-all">{{ support.email }}</span></span>
+        </a>
+    {% endif %}
+</div>
+{% if support.horaires %}
+    <p class="small text-body-secondary mt-2 mb-0"><i class="bi bi-clock"></i> {{ support.horaires }}</p>
+{% endif %}

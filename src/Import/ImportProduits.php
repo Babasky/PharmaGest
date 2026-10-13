@@ -16,8 +16,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
- * Import du catalogue. Un produit existant est mis à jour s'il a le même nom commercial
- * et le même dosage. Les catégories, étagères
+ * Import du catalogue. Un produit existant est mis à jour s'il a le même code-barres
+ * (ou, sans code-barres, le même nom commercial et le même dosage). Les catégories, étagères
  * et fournisseurs inconnus sont créés.
  */
 final class ImportProduits extends AbstractDefinitionImport
@@ -58,6 +58,7 @@ final class ImportProduits extends AbstractDefinitionImport
             new Colonne('forme', 'Forme', false, 'Une forme galénique de la liste SoftPharm.', 'Comprimé'),
             new Colonne('dosage', 'Dosage', false, '', '500 mg'),
             new Colonne('conditionnement', 'Conditionnement', false, '', 'Boîte de 16'),
+            new Colonne('code_barres', 'Code-barres', false, 'Sert à reconnaître un produit déjà présent.', '3400930000000'),
             new Colonne('categorie', 'Catégorie', false, '« Principale » ou « Principale > Sous-catégorie ». Créée si elle n\'existe pas.', 'Médicaments > Antalgiques'),
             new Colonne('etagere', 'Étagère', false, 'Code de l\'étagère. Créée si elle n\'existe pas.', 'E1-R3'),
             new Colonne('fournisseur', 'Fournisseur', false, 'Nom du fournisseur habituel. Créé s\'il n\'existe pas.', 'PPM'),
@@ -90,14 +91,20 @@ final class ImportProduits extends AbstractDefinitionImport
         $remarques = [];
         $nom = Valeurs::texte($valeurs, 'nom_commercial');
         $dosage = Valeurs::texte($valeurs, 'dosage');
+        $codeBarres = Valeurs::texte($valeurs, 'code_barres');
+        $codeBarres = null === $codeBarres ? null : str_replace(' ', '', $codeBarres);
         $libelle = trim(($nom ?? '(sans nom)').' '.($dosage ?? ''));
 
         if (null === $nom) {
             $erreurs[] = 'Le nom commercial est obligatoire.';
         }
-        $this->dejaVu('nom:'.$nom.'|'.$dosage, $numero, 'Ce produit', $erreurs);
+        $avant = \count($erreurs);
+        $this->dejaVu(null !== $codeBarres ? 'cb:'.$codeBarres : 'nom:'.$nom.'|'.$dosage, $numero, null !== $codeBarres ? 'Ce code-barres' : 'Ce produit', $erreurs);
+        // Ligne en double : elle est ignorée et ne doit pas toucher au produit déjà mis à jour par la première.
+        $doublon = \count($erreurs) > $avant;
 
-        $produit = (null !== $nom ? $this->produits->findOneBy(['nomCommercial' => $nom, 'dosage' => $dosage]) : null)
+        $produit = ($doublon || null === $codeBarres ? null : $this->produits->parCodeBarres($codeBarres))
+            ?? ($doublon || null === $nom ? null : $this->produits->findOneBy(['nomCommercial' => $nom, 'dosage' => $dosage]))
             ?? new Produit();
 
         $produit->setNomCommercial((string) $nom)
@@ -115,6 +122,10 @@ final class ImportProduits extends AbstractDefinitionImport
             $produit->setSeuilAlerte($seuil);
         }
         $produit->setStockMax(Valeurs::entier($valeurs, 'stock_max', 'Stock maximum', $erreurs));
+        if (\array_key_exists('code_barres', $valeurs)) {
+            // Colonne absente du fichier : le code-barres déjà saisi est conservé.
+            $produit->setCodeBarres($codeBarres);
+        }
         if (\array_key_exists('prix_vente_amo', $valeurs)) {
             // Colonne absente du fichier : le prix AMO déjà saisi est conservé.
             $produit->setPrixVenteAmo(Valeurs::entier($valeurs, 'prix_vente_amo', 'Prix de vente AMO', $erreurs));
