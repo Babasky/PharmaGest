@@ -10,6 +10,7 @@ use App\Service\AuditLogger;
 use App\Tests\Factory\PharmacieFactory;
 use App\Tests\Support\AppWebTestCase;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DomCrawler\Crawler;
 
 /**
  * PH-03 : le propriétaire gère ses adjoints et vendeurs, dans la limite de son offre.
@@ -89,7 +90,7 @@ final class EquipeTest extends AppWebTestCase
         $bouton = $crawler->filter(\sprintf('button[data-bs-target="#desactiver-%d"]', $id));
         self::assertCount(1, $bouton);
         self::assertSame('button', $bouton->attr('type'));
-        self::assertCount(0, $bouton->ancestors()->reduce(static fn ($noeud) => 'form' === $noeud->nodeName()));
+        self::assertCount(0, $bouton->ancestors()->reduce(static fn (Crawler $noeud) => 'form' === $noeud->nodeName()));
 
         // La fenêtre nomme le compte, dit la conséquence et porte le formulaire.
         $fenetre = $crawler->filter(\sprintf('#desactiver-%d', $id));
