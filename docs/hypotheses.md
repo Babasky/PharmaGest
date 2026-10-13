@@ -583,6 +583,8 @@ vente, et son taux s'applique sur ce prix.
 
 ### Code-barres retiré du produit
 
+> Annulé le 13/10/2026 : le code-barres est de retour (voir « Retour du code-barres » plus bas).
+
 - Le champ code-barres est supprimé de la fiche produit, du formulaire, de l'import (colonne `code_barres` retirée du
   modèle, une colonne de ce nom dans un ancien fichier est simplement ignorée) et des données de démonstration.
   La migration supprime la colonne et son index d'unicité : les codes déjà saisis sont perdus.
@@ -716,6 +718,19 @@ uniquement si les officines appartiennent au même pharmacien ».
 
 - Voir « Moyens de paiement » ci-dessus : la carte est de nouveau proposée, saisie à la main.
 
+## Décisions — Retour du code-barres (demande de Modibo, 13/10/2026)
+
+- Le **code-barres** revient sur le produit : **facultatif**, **unique dans une pharmacie** (deux pharmacies peuvent
+  avoir le même produit avec le même code). Chiffres, lettres et tirets ; les espaces saisis sont retirés.
+  Les codes supprimés le 08/10/2026 ne sont pas récupérés : ils sont à ressaisir (fiche produit ou import).
+- **Fiche et formulaire produit** : champ « Code-barres (facultatif) ».
+- **Recherche** : le code-barres exact est reconnu partout où l'on cherche un produit (catalogue, caisse, stock,
+  commande, transfert), en plus du nom et de la DCI.
+- **Caisse (douchette)** : un code-barres scanné à l'identique ajoute directement le produit au panier (un second
+  scan augmente la quantité) ; un code inconnu affiche la recherche habituelle.
+- **Import** : colonne `code_barres` de nouveau dans le modèle. Un produit existant est reconnu par son code-barres,
+  sinon par nom commercial + dosage. Un fichier **sans** cette colonne garde le code déjà saisi.
+- Le bon de commande (Excel et PDF) garde la DCI : il n'est pas modifié par ce changement.
 ## Décisions — Service support client (demande de Modibo, 13/10/2026)
 
 - Le super admin règle le support dans l'espace plateforme › **Support client** : numéro **WhatsApp**, numéro à

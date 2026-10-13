@@ -23,7 +23,7 @@ class ProduitRepository extends ServiceEntityRepository
     }
 
     /**
-     * Recherche par nom commercial ou DCI (VE-01).
+     * Recherche par nom commercial, DCI ou code-barres exact (VE-01 : douchette).
      *
      * @return Page<Produit>
      */
@@ -40,7 +40,8 @@ class ProduitRepository extends ServiceEntityRepository
 
         if (null !== $recherche && '' !== trim($recherche)) {
             $q = trim($recherche);
-            $qb->andWhere('p.nomCommercial LIKE :debut OR p.dci LIKE :debut OR p.nomCommercial LIKE :mot OR p.dci LIKE :mot')
+            $qb->andWhere('p.codeBarres = :exact OR p.nomCommercial LIKE :debut OR p.dci LIKE :debut OR p.nomCommercial LIKE :mot OR p.dci LIKE :mot')
+                ->setParameter('exact', str_replace(' ', '', $q))
                 ->setParameter('debut', addcslashes($q, '%_').'%')
                 ->setParameter('mot', '% '.addcslashes($q, '%_').'%');
         }
@@ -50,6 +51,11 @@ class ProduitRepository extends ServiceEntityRepository
 
         /** @var Page<Produit> */
         return Page::depuis($qb, $page);
+    }
+
+    public function parCodeBarres(string $codeBarres): ?Produit
+    {
+        return $this->findOneBy(['codeBarres' => str_replace(' ', '', trim($codeBarres))]);
     }
 
     /**
