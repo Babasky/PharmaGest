@@ -1,0 +1,24 @@
+{#
+    Fenêtre de confirmation d'une action qui coupe un accès (désactiver un compte, suspendre ou archiver une pharmacie).
+    Le bouton qui l'ouvre porte data-bs-toggle="modal" data-bs-target="#<id>" ; le formulaire POST (avec son jeton
+    CSRF) n'est envoyé qu'après le clic sur le bouton de confirmation.
+    Paramètres : id, titre, action, jeton, bouton (libellé), icone ; bloc « message » pour le texte et les champs.
+#}
+<div class="modal fade" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}-titre" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" action="{{ action }}" class="modal-content text-start text-wrap">
+            <input type="hidden" name="_token" value="{{ jeton }}">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="{{ id }}-titre"><i class="bi bi-exclamation-triangle text-danger"></i> {{ titre }}</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                {% block message %}{% endblock %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" class="btn btn-danger"><i class="bi {{ icone }}"></i> {{ bouton }}</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -169,8 +169,11 @@ final class PharmacieAdminTest extends AppWebTestCase
     {
         $officine = $this->creerOfficine();
 
-        $this->connecter($this->admin)->request('GET', '/admin/pharmacies/'.$officine->pharmacie->getId());
-        $this->client->submitForm('Suspendre l\'accès', ['motif' => 'Impayé']);
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/pharmacies/'.$officine->pharmacie->getId());
+        // Le bouton n'envoie rien : il ouvre une fenêtre qui nomme la pharmacie et demande le motif.
+        self::assertCount(1, $crawler->filter('button[type="button"][data-bs-target="#suspendre-pharmacie"]:contains("Suspendre l\'accès")'));
+        self::assertSelectorTextContains('#suspendre-pharmacie .modal-body', 'Vous allez suspendre l\'accès de '.$officine->pharmacie->getNom());
+        $this->client->submitForm('Oui, suspendre', ['motif' => 'Impayé']);
         self::assertResponseRedirects();
 
         $this->connecter($officine->vendeur)->request('GET', '/');
@@ -192,8 +195,10 @@ final class PharmacieAdminTest extends AppWebTestCase
     {
         $officine = $this->creerOfficine();
 
-        $this->connecter($this->admin)->request('GET', '/admin/pharmacies/'.$officine->pharmacie->getId());
-        $this->client->submitForm('Archiver la pharmacie');
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/pharmacies/'.$officine->pharmacie->getId());
+        self::assertCount(1, $crawler->filter('button[type="button"][data-bs-target="#archiver-pharmacie"]:contains("Archiver la pharmacie")'));
+        self::assertSelectorTextContains('#archiver-pharmacie .modal-body', 'Vous allez archiver '.$officine->pharmacie->getNom());
+        $this->client->submitForm('Oui, archiver');
 
         $this->connecter($officine->proprietaire)->request('GET', '/equipe');
         self::assertResponseRedirects('/compte-suspendu');
