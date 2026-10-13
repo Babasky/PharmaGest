@@ -7,6 +7,7 @@ use App\Achat\CommandeService;
 use App\Achat\ExportCommandeExcel;
 use App\Achat\ReceptionService;
 use App\Achat\SuggestionsCommande;
+use App\Achat\TransmissionCommandes;
 use App\Entity\Commande;
 use App\Entity\Fournisseur;
 use App\Entity\LigneCommande;
@@ -30,6 +31,11 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 /**
  * Commandes fournisseurs (CO-01 à CO-06). Tout le monde prépare des brouillons ; passer ou envoyer une commande,
  * l'annuler et la réceptionner sont réservés au propriétaire et à l'adjoint, qui seuls voient les prix d'achat.
+ *
+ * Les suggestions se calculent selon les tendances de vente ou selon les ventes d'un jour ; elles deviennent
+ * un brouillon par fournisseur, ou partent directement aux grossistes par email après confirmation.
+ *
+ * @phpstan-import-type Suggestion from SuggestionsCommande
  */
 #[Route('/commandes')]
 #[IsGranted(Utilisateur::ROLE_VENDEUR)]
@@ -92,9 +98,15 @@ final class CommandeController extends AbstractAppController
     }
 
     #[Route('/suggestions', name: 'app_commande_suggestions', methods: ['GET'])]
-    public function suggestions(SuggestionsCommande $suggestions, #[MapQueryParameter] ?string $fournisseur = null): Response
-    {
-        $groupes = $suggestions->parFournisseur();
+    public function suggestions(
+        SuggestionsCommande $suggestions,
+        StockService $stock,
+        #[MapQueryParameter] ?string $fournisseur = null,
+        #[MapQueryParameter] ?string $base = null,
+        #[MapQueryParameter] ?string $date = null,
+    ): Response {
+        [$base, $jour, $liste] = $this->calculerSuggestions($suggestions, $stock, $base, $date);
+        $groupes = $suggestions->parFournisseur($liste);
         $choisi = null;
         $sansFournisseur = '0' === $fournisseur;
         if (ctype_digit((string) $fournisseur) && !$sansFournisseur) {
@@ -108,14 +120,84 @@ final class CommandeController extends AbstractAppController
                 }
             }
         }
+        $aTransmettre = [];
+        foreach ($liste as $s) {
+            if (null !== $s['fournisseur'] && $s['quantite'] > 0) {
+                $aTransmettre[(int) $s['fournisseur']->getId()] = $s['fournisseur'];
+            }
+        }
 
         return $this->render('commande/suggestions.html.twig', [
+            'base' => $base,
+            'jour' => $jour,
+            'aujourdhui' => $stock->aujourdhui(),
             'groupes' => $groupes,
             'fournisseur' => $choisi,
             'sans_fournisseur' => $sansFournisseur,
-            'suggestions' => null !== $choisi || $sansFournisseur ? $suggestions->pour($choisi) : [],
+            'suggestions' => null !== $choisi || $sansFournisseur ? $suggestions->pour($choisi, $liste) : [],
+            'a_transmettre' => array_values($aTransmettre),
             'csrf_suggestions' => self::CSRF_SUGGESTIONS,
         ]);
+    }
+
+    /** Un brouillon par fournisseur avec toutes les quantités suggérées, à vérifier avant l'envoi. */
+    #[Route('/suggestions/preparer', name: 'app_commande_preparer', methods: ['POST'])]
+    #[IsCsrfTokenValid(self::CSRF_SUGGESTIONS)]
+    public function preparer(Request $requete, SuggestionsCommande $suggestions, TransmissionCommandes $transmission, StockService $stock): Response
+    {
+        $donnees = $requete->getPayload();
+        [$base, $jour, $liste] = $this->calculerSuggestions($suggestions, $stock, (string) $donnees->get('base'), (string) $donnees->get('date'));
+        try {
+            $brouillons = $transmission->preparer($liste);
+        } catch (AchatException $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->redirectToRoute('app_commande_suggestions', ['base' => $base, 'date' => $jour->format('Y-m-d')]);
+        }
+        if ([] === $brouillons) {
+            $this->addFlash('error', 'Aucune quantité à commander chez un fournisseur.');
+
+            return $this->redirectToRoute('app_commande_suggestions', ['base' => $base, 'date' => $jour->format('Y-m-d')]);
+        }
+        $this->addFlash('success', \sprintf('%d brouillon(s) prêt(s) : %s. Vérifiez-les puis envoyez-les.', \count($brouillons), self::nomsFournisseurs($brouillons)));
+
+        return $this->redirectToRoute('app_commande_index', ['statut' => StatutCommande::Brouillon->value]);
+    }
+
+    /**
+     * Transmission directe : les commandes suggérées sont préparées puis envoyées par email à chaque grossiste,
+     * après la confirmation du responsable.
+     */
+    #[Route('/suggestions/transmettre', name: 'app_commande_transmettre', methods: ['POST'])]
+    #[IsGranted(Utilisateur::ROLE_ADJOINT)]
+    #[IsCsrfTokenValid(self::CSRF_SUGGESTIONS)]
+    public function transmettre(Request $requete, SuggestionsCommande $suggestions, TransmissionCommandes $transmission, StockService $stock): Response
+    {
+        $donnees = $requete->getPayload();
+        [$base, $jour, $liste] = $this->calculerSuggestions($suggestions, $stock, (string) $donnees->get('base'), (string) $donnees->get('date'));
+        try {
+            $bilan = $transmission->transmettre($transmission->preparer($liste));
+        } catch (AchatException $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->redirectToRoute('app_commande_suggestions', ['base' => $base, 'date' => $jour->format('Y-m-d')]);
+        }
+        if ([] !== $bilan['envoyees']) {
+            $this->addFlash('success', \sprintf('%d commande(s) envoyée(s) aux grossistes : %s.', \count($bilan['envoyees']), self::nomsFournisseurs($bilan['envoyees'], true)));
+        }
+        if ([] !== $bilan['sans_email']) {
+            $this->addFlash('warning', \sprintf('Sans adresse email, brouillon à transmettre autrement (téléphone, WhatsApp, bon imprimé) : %s.', self::nomsFournisseurs($bilan['sans_email'])));
+        }
+        foreach ($bilan['echecs'] as $echec) {
+            $this->addFlash('error', $echec);
+        }
+        if ([] === $bilan['envoyees'] && [] === $bilan['sans_email'] && [] === $bilan['echecs']) {
+            $this->addFlash('error', 'Aucune quantité à commander chez un fournisseur.');
+
+            return $this->redirectToRoute('app_commande_suggestions', ['base' => $base, 'date' => $jour->format('Y-m-d')]);
+        }
+
+        return $this->redirectToRoute('app_commande_index');
     }
 
     #[Route('/suggestions', name: 'app_commande_depuis_suggestions', methods: ['POST'])]
@@ -124,7 +206,7 @@ final class CommandeController extends AbstractAppController
     {
         $donnees = $requete->getPayload();
         $fournisseur = $this->fournisseurs->find((int) $donnees->get('fournisseur'));
-        $retour = $this->redirectToRoute('app_commande_suggestions', ['fournisseur' => $fournisseur?->getId()]);
+        $retour = $this->redirectToRoute('app_commande_suggestions', ['fournisseur' => $fournisseur?->getId(), 'base' => $donnees->get('base'), 'date' => $donnees->get('date')]);
         if (!$fournisseur instanceof Fournisseur) {
             $this->addFlash('error', 'Choisissez le fournisseur de la commande.');
 
@@ -363,6 +445,36 @@ final class CommandeController extends AbstractAppController
             'saisie' => $requete->isMethod('POST') ? $donnees->all() : null,
             'aujourdhui' => $stock->aujourdhui(),
         ], null === $erreur ? null : new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
+    }
+
+    /**
+     * Base des suggestions : « jour » (ventes d'un jour passé ou d'aujourd'hui) ou, par défaut, « tendances ».
+     *
+     * @return array{0: string, 1: \DateTimeImmutable, 2: list<Suggestion>}
+     */
+    private function calculerSuggestions(SuggestionsCommande $suggestions, StockService $stock, ?string $base, ?string $date): array
+    {
+        $aujourdhui = $stock->aujourdhui();
+        $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $date, $aujourdhui->getTimezone()) ?: $aujourdhui;
+        if ($jour > $aujourdhui) {
+            $jour = $aujourdhui;
+        }
+        if ('jour' === $base) {
+            return ['jour', $jour, $suggestions->selonVentesDu($jour)];
+        }
+
+        return ['tendances', $aujourdhui, $suggestions->selonTendances()];
+    }
+
+    /**
+     * @param list<Commande> $commandes
+     */
+    private static function nomsFournisseurs(array $commandes, bool $numeros = false): string
+    {
+        return implode(', ', array_map(
+            static fn (Commande $c) => $numeros ? \sprintf('%s (%s)', $c->getFournisseur()->getNom(), $c->getNumero()) : $c->getFournisseur()->getNom(),
+            $commandes,
+        ));
     }
 
     /**

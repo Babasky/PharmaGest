@@ -60,4 +60,32 @@ class MouvementStockRepository extends ServiceEntityRepository
 
         return $parMois;
     }
+
+    /**
+     * Quantités vendues par produit entre deux instants (fin exclue) : ventes moins annulations et retours clients.
+     * Base des suggestions de commande (ventes moyennes, rotation, ventes du jour).
+     *
+     * @return array<int, int> indexé par id de produit, seulement les produits vendus
+     */
+    public function ventesNettesParProduit(\DateTimeImmutable $depuis, \DateTimeImmutable $jusqua): array
+    {
+        $lignes = $this->createQueryBuilder('m')
+            ->select('IDENTITY(l.produit) AS produit', 'SUM(m.quantite) AS quantite')
+            ->join('m.lot', 'l')
+            ->andWhere('m.type IN (:types)')->setParameter('types', [TypeMouvement::Vente, TypeMouvement::Annulation, TypeMouvement::RetourClient])
+            ->andWhere('m.date >= :depuis')->setParameter('depuis', $depuis, Types::DATETIME_IMMUTABLE)
+            ->andWhere('m.date < :jusqua')->setParameter('jusqua', $jusqua, Types::DATETIME_IMMUTABLE)
+            ->groupBy('l.produit')
+            ->getQuery()->getArrayResult();
+
+        $ventes = [];
+        foreach ($lignes as $ligne) {
+            // Les sorties sont négatives, les annulations et retours positifs.
+            if (($vendu = -(int) $ligne['quantite']) > 0) {
+                $ventes[(int) $ligne['produit']] = $vendu;
+            }
+        }
+
+        return $ventes;
+    }
 }

@@ -76,6 +76,17 @@ class GenerateurNotifications
     }
 
     /**
+     * Prévient les responsables d'une officine des commandes parties d'elles-mêmes aux grossistes (envoi automatique).
+     */
+    public function commandesAutomatiques(Pharmacie $pharmacie, string $message, string $cle): int
+    {
+        $creees = $this->notifier($pharmacie, $this->responsables($pharmacie), TypeNotification::Commande, $message, $this->urls->generate('app_commande_index'), $cle);
+        $this->em->flush();
+
+        return $creees;
+    }
+
+    /**
      * Prévient les responsables de l'officine destinataire qu'un transfert de stock (ST-11) leur a été expédié.
      */
     public function transfertAReceptionner(TransfertStock $transfert): int
