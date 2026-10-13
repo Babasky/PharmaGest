@@ -13,6 +13,7 @@ enum TypeNotification: string
     case Abonnement = 'abonnement';
     case Bordereau = 'bordereau';
     case Transfert = 'transfert';
+    case Commande = 'commande';
 
     public function libelle(): string
     {
@@ -23,6 +24,7 @@ enum TypeNotification: string
             self::Abonnement => 'Abonnement',
             self::Bordereau => 'Bordereau AMO impayé',
             self::Transfert => 'Transfert à réceptionner',
+            self::Commande => 'Commande automatique',
         };
     }
 
@@ -35,6 +37,7 @@ enum TypeNotification: string
             self::Abonnement => 'patch-exclamation',
             self::Bordereau => 'shield-exclamation',
             self::Transfert => 'arrow-left-right',
+            self::Commande => 'truck',
         };
     }
 
@@ -42,7 +45,7 @@ enum TypeNotification: string
     {
         return match ($this) {
             self::Rupture, self::Abonnement => 'warning',
-            self::Peremption, self::Bordereau, self::Transfert => 'primary',
+            self::Peremption, self::Bordereau, self::Transfert, self::Commande => 'primary',
             self::Perime => 'danger',
         };
     }

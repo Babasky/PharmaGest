@@ -715,3 +715,40 @@ uniquement si les officines appartiennent au même pharmacien ».
 ### Carte bancaire
 
 - Voir « Moyens de paiement » ci-dessus : la carte est de nouveau proposée, saisie à la main.
+
+## Décisions — Commandes aux grossistes selon les ventes (demande de Modibo, 13/10/2026)
+
+### Suggestion selon les tendances de vente (CO-02 enrichi)
+
+- **Ventes analysées** : ventes moins annulations et retours clients des *N* derniers jours (paramètre de la
+  pharmacie, 30 par défaut, de 7 à 365). Ventes moyennes par jour = ventes de la période ÷ *N*.
+- **Rotation** affichée pour chaque produit : rapide (au moins 1 par jour), moyenne (au moins 1 par semaine), lente
+  (moins), aucune vente.
+- **Produits suggérés** : ceux au seuil d'alerte ou en dessous (comme avant), et ceux dont le stock disponible plus
+  ce qui est déjà commandé tombera au seuil avant la livraison : stock + attendu ≤ seuil + ventes/jour × délai.
+- **Délai de livraison** : celui de la fiche du fournisseur, **2 jours** quand elle ne le précise pas.
+- **Quantité** : seuil + ventes/jour × (délai + jours de couverture), moins stock et attendu, **plafonnée au stock
+  maximum** du produit (règle du pharmacien). Jours de couverture : paramètre, 15 par défaut. Sans vente sur la
+  période, la règle du Lot 6 reste : stock maximum (ou double du seuil) − stock − attendu.
+- **Habitudes d'achat** : un produit sans fournisseur habituel actif est rangé chez le fournisseur de sa dernière
+  commande passée dans l'année. La dernière commande (quantité, date) est affichée.
+
+### Suggestion selon les ventes du jour
+
+- Onglet « Selon les ventes du jour », pour aujourd'hui ou un jour passé : chaque produit vendu ce jour-là est
+  recommandé dans la quantité vendue (ventes moins annulations et retours), sans dépasser le stock maximum en
+  comptant stock et commandes en cours.
+
+### Transmission directe aux grossistes
+
+- Aucun grossiste n'offre d'interface de commande : la « transmission directe » est l'**email du bon de commande**
+  (Excel en pièce jointe, comme au Lot 6), une commande par fournisseur, en une seule action.
+- « **Préparer toutes les commandes** » (tout le monde) : un brouillon par fournisseur ; s'il existe déjà un brouillon
+  chez ce fournisseur, les produits y sont ajoutés sans doubler ceux qui y sont déjà.
+- « **Envoyer aux grossistes** » (propriétaire, adjoint) : prépare puis envoie, après une **confirmation**. Un
+  fournisseur sans email garde un brouillon, à transmettre par téléphone, WhatsApp ou bon imprimé.
+- **Envoi automatique** : désactivé par défaut (une commande envoyée ne se reprend pas). Le propriétaire peut l'activer
+  dans Paramètres › Règles de gestion : chaque soir à **21 h** (heure de Bamako), les commandes suggérées selon les
+  tendances partent aux grossistes qui ont un email, dans de nouvelles commandes (les brouillons en cours ne sont pas
+  touchés). Le propriétaire et l'adjoint reçoivent une notification avec le bilan. Une pharmacie en lecture seule
+  (abonnement expiré) n'envoie rien.

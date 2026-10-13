@@ -8,6 +8,7 @@ use App\Entity\LigneCommande;
 use App\Enum\StatutCommande;
 use App\Util\Page;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -83,5 +84,30 @@ class CommandeRepository extends ServiceEntityRepository
         }
 
         return $nombres;
+    }
+
+    /**
+     * Habitudes d'achat : dernière commande passée de chaque produit depuis une date (fournisseur, date, quantité).
+     *
+     * @return array<int, array{fournisseur: int, date: \DateTimeImmutable, quantite: int}> indexé par id de produit
+     */
+    public function derniersAchats(\DateTimeImmutable $depuis): array
+    {
+        $lignes = $this->getEntityManager()->createQueryBuilder()
+            ->select('IDENTITY(l.produit) AS produit', 'IDENTITY(c.fournisseur) AS fournisseur', 'c.envoyeeLe AS date', 'l.quantite')
+            ->from(LigneCommande::class, 'l')
+            ->join('l.commande', 'c')
+            ->andWhere('c.statut IN (:statuts)')
+            ->setParameter('statuts', [StatutCommande::Envoyee, StatutCommande::RecuePartiellement, StatutCommande::Recue])
+            ->andWhere('c.envoyeeLe >= :depuis')->setParameter('depuis', $depuis, Types::DATETIME_IMMUTABLE)
+            ->orderBy('c.envoyeeLe', 'DESC')->addOrderBy('c.id', 'DESC')
+            ->getQuery()->getArrayResult();
+
+        $achats = [];
+        foreach ($lignes as $l) {
+            $achats[(int) $l['produit']] ??= ['fournisseur' => (int) $l['fournisseur'], 'date' => $l['date'], 'quantite' => (int) $l['quantite']];
+        }
+
+        return $achats;
     }
 }

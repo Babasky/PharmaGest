@@ -22,6 +22,8 @@ class ParametrePharmacie implements TenantAwareInterface
     public const PLAFOND_REMISE_PAR_DEFAUT = 10;
     public const DELAI_PEREMPTION_PAR_DEFAUT = 90;
     public const INACTIVITE_CAISSE_PAR_DEFAUT = 30;
+    public const JOURS_ANALYSE_VENTES_PAR_DEFAUT = 30;
+    public const JOURS_COUVERTURE_PAR_DEFAUT = 15;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -53,6 +55,23 @@ class ParametrePharmacie implements TenantAwareInterface
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Assert\Length(max: 500)]
     private ?string $mentionsTicket = null;
+
+    /** Les suggestions de commande se calculent sur les ventes de ce nombre de derniers jours (ventes moyennes, rotation). */
+    #[ORM\Column(options: ['default' => self::JOURS_ANALYSE_VENTES_PAR_DEFAUT])]
+    #[Assert\Range(min: 7, max: 365)]
+    private int $joursAnalyseVentes = self::JOURS_ANALYSE_VENTES_PAR_DEFAUT;
+
+    /** Une commande doit couvrir les ventes de ce nombre de jours après la livraison du grossiste. */
+    #[ORM\Column(options: ['default' => self::JOURS_COUVERTURE_PAR_DEFAUT])]
+    #[Assert\Range(min: 1, max: 180)]
+    private int $joursCouverture = self::JOURS_COUVERTURE_PAR_DEFAUT;
+
+    /**
+     * Chaque soir, les commandes suggérées partent d'elles-mêmes aux grossistes qui ont une adresse email.
+     * Désactivé par défaut : un responsable valide l'envoi (une commande envoyée ne se reprend pas).
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $envoiAutomatiqueCommandes = false;
 
     public function getId(): ?int
     {
@@ -115,6 +134,42 @@ class ParametrePharmacie implements TenantAwareInterface
     public function setMentionsTicket(?string $mentionsTicket): static
     {
         $this->mentionsTicket = null !== $mentionsTicket && '' !== trim($mentionsTicket) ? trim($mentionsTicket) : null;
+
+        return $this;
+    }
+
+    public function getJoursAnalyseVentes(): int
+    {
+        return $this->joursAnalyseVentes;
+    }
+
+    public function setJoursAnalyseVentes(int $jours): static
+    {
+        $this->joursAnalyseVentes = $jours;
+
+        return $this;
+    }
+
+    public function getJoursCouverture(): int
+    {
+        return $this->joursCouverture;
+    }
+
+    public function setJoursCouverture(int $jours): static
+    {
+        $this->joursCouverture = $jours;
+
+        return $this;
+    }
+
+    public function isEnvoiAutomatiqueCommandes(): bool
+    {
+        return $this->envoiAutomatiqueCommandes;
+    }
+
+    public function setEnvoiAutomatiqueCommandes(bool $envoiAutomatique): static
+    {
+        $this->envoiAutomatiqueCommandes = $envoiAutomatique;
 
         return $this;
     }

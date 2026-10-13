@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\ParametrePharmacie;
 use App\Enum\PolitiqueSansOrdonnance;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -43,6 +44,21 @@ final class ParametresType extends AbstractType
                 'label' => 'Mentions en bas du ticket',
                 'required' => false,
                 'attr' => ['rows' => 3, 'maxlength' => 500, 'placeholder' => 'Ex. : Merci de votre visite. Pharmacie de garde le dimanche.'],
+            ])
+            ->add('joursAnalyseVentes', IntegerType::class, [
+                'label' => 'Commandes : ventes analysées (derniers jours)',
+                'help' => 'Les ventes moyennes par jour et la rotation des produits se calculent sur cette période.',
+                'attr' => ['min' => 7, 'max' => 365],
+            ])
+            ->add('joursCouverture', IntegerType::class, [
+                'label' => 'Commandes : jours de ventes à couvrir après la livraison',
+                'help' => 'La quantité suggérée couvre le délai de livraison du grossiste, puis ce nombre de jours de ventes.',
+                'attr' => ['min' => 1, 'max' => 180],
+            ])
+            ->add('envoiAutomatiqueCommandes', CheckboxType::class, [
+                'label' => 'Envoyer automatiquement les commandes suggérées aux grossistes, chaque soir à 21 h',
+                'help' => 'Sans cette case, un responsable vérifie les commandes préparées avant de les envoyer. Seuls les grossistes qui ont une adresse email reçoivent une commande automatique.',
+                'required' => false,
             ]);
     }
 
