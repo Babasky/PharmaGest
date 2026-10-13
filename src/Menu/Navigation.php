@@ -68,6 +68,7 @@ final class Navigation
                 ['libelle' => 'Paramètres', 'icone' => 'gear', 'route' => 'app_parametres', 'role' => 'ROLE_PROPRIETAIRE'],
                 ['libelle' => 'Abonnement', 'icone' => 'patch-check', 'route' => 'app_mon_abonnement', 'role' => 'ROLE_PROPRIETAIRE'],
                 ['libelle' => "Journal d'audit", 'icone' => 'journal-text', 'route' => 'app_audit_index', 'role' => 'ROLE_PROPRIETAIRE'],
+                ['libelle' => 'Support', 'icone' => 'headset', 'route' => 'app_support', 'role' => 'ROLE_CAISSIER'],
             ],
         ],
         [

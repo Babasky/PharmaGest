@@ -731,3 +731,13 @@ uniquement si les officines appartiennent au même pharmacien ».
 - **Import** : colonne `code_barres` de nouveau dans le modèle. Un produit existant est reconnu par son code-barres,
   sinon par nom commercial + dosage. Un fichier **sans** cette colonne garde le code déjà saisi.
 - Le bon de commande (Excel et PDF) garde la DCI : il n'est pas modifié par ce changement.
+## Décisions — Service support client (demande de Modibo, 13/10/2026)
+
+- Le super admin règle le support dans l'espace plateforme › **Support client** : numéro **WhatsApp**, numéro à
+  **appeler**, adresse **email** et **horaires**. Chaque canal s'active ou se désactive à part ; au moins un reste
+  actif, et un canal actif exige sa coordonnée. Les numéros sont maliens (+223), comme ailleurs dans l'application.
+- Tant que rien n'est enregistré, le téléphone et l'email de l'éditeur (`app.editeur`) sont proposés.
+- Côté pharmacie, tous les rôles (caissier compris) voient les canaux actifs : menu Pharmacie › **Support**, bouton
+  casque de la barre du haut et page « Accès suspendu ». WhatsApp ouvre la conversation (lien wa.me) avec un premier
+  message au nom de l'officine ; l'email part avec un objet qui nomme l'officine ; l'appel passe par un lien `tel:`.
+- Chaque modification est tracée dans le journal de la plateforme (« Support client modifié », valeurs avant et après).

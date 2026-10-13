@@ -10,11 +10,7 @@
             L'accès de <strong>{{ pharmacie.nom }}</strong> à SoftPharm est suspendu.
         {% endif %}
     </p>
-    <p class="mb-3">Pour le rétablir, contactez l'éditeur :</p>
-    <ul class="list-unstyled d-grid gap-1 mb-4">
-        <li><i class="bi bi-building"></i> {{ editeur.nom }}, {{ editeur.adresse }}</li>
-        <li><i class="bi bi-telephone"></i> <span class="user-select-all">{{ editeur.telephone }}</span></li>
-        <li><i class="bi bi-envelope"></i> <span class="user-select-all">{{ editeur.email }}</span></li>
-    </ul>
+    <p class="mb-2">Pour le rétablir, contactez l'éditeur, {{ editeur.nom }} :</p>
+    <div class="mb-4">{{ include('support/_canaux.html.twig', {support: support_client(), pharmacie: pharmacie}) }}</div>
     <a class="btn btn-outline-secondary w-100" href="{{ logout_path() }}"><i class="bi bi-box-arrow-right"></i> Se déconnecter</a>
 {% endblock %}
