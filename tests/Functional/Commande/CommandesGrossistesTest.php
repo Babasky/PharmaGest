@@ -139,7 +139,7 @@ final class CommandesGrossistesTest extends CommandeTestCase
         $this->commandeRecue($this->laborex, $this->smecta, 5, '-10 days');
         // Brouillon en cours de l'adjoint chez PPM : l'envoi automatique n'y touche pas.
         $this->connecter($this->officine->adjoint);
-        $brouillon = $this->creerBrouillon($this->ppm, [[$this->ibuprofene, 4]]);
+        $brouillon = $this->creerBrouillon($this->ppm, [[$this->doliprane, 4]]);
 
         // Horaire de commande sur la fiche du fournisseur : PPM à 21 h, tous les jours (aucun jour coché).
         $this->connecter($this->officine->proprietaire)->request('GET', '/fournisseurs/'.$this->ppm->getId().'/modifier');
@@ -174,7 +174,7 @@ final class CommandesGrossistesTest extends CommandeTestCase
         self::assertStringContainsString('1 commande(s) envoyée(s)', $this->executer(21));
         $commandes = $this->commandesDe($this->ppm);
         self::assertCount(2, $commandes);
-        self::assertSame([$brouillon, StatutCommande::Brouillon, ['Ibuprofène' => 4]], [$commandes[0]->getId(), $commandes[0]->getStatut(), $this->quantites($commandes[0])]);
+        self::assertSame([$brouillon, StatutCommande::Brouillon, ['Doliprane' => 4]], [$commandes[0]->getId(), $commandes[0]->getStatut(), $this->quantites($commandes[0])]);
         self::assertSame(StatutCommande::Envoyee, $commandes[1]->getStatut());
         self::assertSame(['Coartem' => 10, 'Doliprane' => 56], $this->quantites($commandes[1]));
         $laborex = $this->commandesDe($this->laborex);
