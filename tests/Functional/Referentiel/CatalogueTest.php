@@ -12,6 +12,7 @@ use App\Service\ParametresPharmacie;
 use App\Tenant\TenantContext;
 use App\Tests\Factory\CategorieFactory;
 use App\Tests\Factory\EtagereFactory;
+use App\Tests\Factory\ProduitFactory;
 use App\Tests\Support\AppWebTestCase;
 use App\Tests\Support\Officine;
 use Doctrine\ORM\EntityManagerInterface;
@@ -70,11 +71,37 @@ final class CatalogueTest extends AppWebTestCase
         self::assertSelectorTextContains('tbody a', 'Doliprane');
     }
 
-    public function testLeFormulaireProduitNaPlusDeCodeBarres(): void
+    public function testCodeBarresFacultatifEtUniqueDansLaPharmacie(): void
     {
-        $crawler = $this->connecter($this->officine->adjoint)->request('GET', '/produits/nouveau');
-        self::assertCount(0, $crawler->filter('[name="produit[codeBarres]"]'));
-        self::assertSelectorTextNotContains('main', 'Code-barres');
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Existant', 'codeBarres' => '111222']);
+        // Le même code-barres dans une autre pharmacie ne gêne pas.
+        ProduitFactory::createOne(['codeBarres' => '999888']);
+
+        $this->connecter($this->officine->adjoint)->request('GET', '/produits/nouveau');
+        $this->client->submitForm('Enregistrer', ['produit[nomCommercial]' => 'Doublon', 'produit[prixVente]' => '100', 'produit[codeBarres]' => '111222']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('main', 'Un produit porte déjà ce code-barres');
+
+        $this->client->submitForm('Enregistrer', ['produit[codeBarres]' => 'abc/123']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('main', 'Le code-barres ne contient que des chiffres');
+
+        // Les espaces saisis sont retirés.
+        $this->client->submitForm('Enregistrer', ['produit[codeBarres]' => '999 888']);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('main', '999888');
+
+        // Sans code-barres : accepté, plusieurs produits peuvent ne pas en avoir.
+        foreach (['Sans code 1', 'Sans code 2'] as $nom) {
+            $this->client->request('GET', '/produits/nouveau');
+            $this->client->submitForm('Enregistrer', ['produit[nomCommercial]' => $nom, 'produit[prixVente]' => '100']);
+            self::assertResponseRedirects();
+        }
+
+        // Recherche par code-barres exact dans le catalogue.
+        $this->client->request('GET', '/produits?q=111222');
+        self::assertSelectorTextContains('tbody', 'Existant');
     }
 
     public function testValidationDesPrixEtDuStock(): void

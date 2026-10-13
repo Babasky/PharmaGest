@@ -35,9 +35,9 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Écran de caisse (VE-01) : recherche produit (nom, DCI), panier, type de vente, client,
+ * Écran de caisse (VE-01) : recherche produit (nom, DCI, code-barres), panier, type de vente, client,
  * remises, encaissement ou envoi à la caisse, et mise en attente. Chaque action est un formulaire classique suivi d'une
- * redirection : l'écran reste utilisable au clavier, même sans JavaScript.
+ * redirection : l'écran reste utilisable au clavier et à la douchette, même sans JavaScript.
  */
 #[Route('/caisse')]
 #[IsGranted(Utilisateur::ROLE_VENDEUR)]
@@ -100,6 +100,27 @@ final class CaisseController extends AbstractAppController
                 static fn (Utilisateur $u) => self::peutPrendreLaCaisseParPin($u) && $u->aUnCodePin() && $u->isActif() && $u->getId() !== $utilisateur->getId(),
             ),
         ]);
+    }
+
+    /**
+     * Saisie de la zone de recherche : un code-barres exact (douchette) ajoute directement le produit,
+     * sinon on affiche les résultats.
+     */
+    #[Route('/scanner', name: 'app_caisse_scanner', methods: ['POST'])]
+    #[IsCsrfTokenValid(self::CSRF)]
+    public function scanner(Request $requete, ProduitRepository $produits): Response
+    {
+        $saisie = trim((string) $requete->getPayload()->get('q'));
+        if ('' === $saisie) {
+            return $this->redirectToRoute('app_caisse');
+        }
+        $produit = 1 === preg_match('/^[0-9A-Za-z\-\s]{4,}$/', $saisie) ? $produits->parCodeBarres($saisie) : null;
+        if (null === $produit || !$produit->isActif()) {
+            return $this->redirectToRoute('app_caisse', ['q' => $saisie]);
+        }
+        $this->ajouterAuPanier($produit, 1);
+
+        return $this->redirectToRoute('app_caisse');
     }
 
     #[Route('/ajouter/{id}', name: 'app_caisse_ajouter', requirements: ['id' => '\d+'], methods: ['POST'])]

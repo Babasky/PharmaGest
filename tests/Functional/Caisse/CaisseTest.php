@@ -38,8 +38,9 @@ final class CaisseTest extends CaisseTestCase
         self::assertSelectorTextContains('.alert-success', 'Caisse ouverte');
 
         // Recherche par nom, puis ajout depuis la liste des résultats.
-        $this->client->submitForm('Chercher', ['q' => 'Dolip'], 'GET');
-        self::assertResponseIsSuccessful();
+        $this->client->submitForm('Chercher', ['q' => 'Dolip']);
+        self::assertResponseRedirects('/caisse?q=Dolip');
+        $this->client->followRedirect();
         self::assertSelectorTextContains('#resultats', 'Doliprane');
         $this->client->submitForm('Ajouter Doliprane');
         self::assertResponseRedirects('/caisse');
@@ -77,6 +78,37 @@ final class CaisseTest extends CaisseTestCase
             // RG-17 : prix d'achat des lots consommés conservés pour la marge.
             self::assertSame(22500 - (10 * 1100 + 5 * 1000), $vente->getMarge());
         });
+    }
+
+    public function testCodeBarresScanneAjouteDirectementLeProduit(): void
+    {
+        $doliprane = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Doliprane', 'codeBarres' => '3400930000011', 'prixVente' => 1500]);
+        LotFactory::createOne(['produit' => $doliprane, 'quantiteInitiale' => 10]);
+        // Même code-barres dans une autre pharmacie : jamais trouvé ici.
+        $ailleurs = ProduitFactory::createOne(['nomCommercial' => 'Produit ailleurs', 'codeBarres' => '3400930000028']);
+        LotFactory::createOne(['produit' => $ailleurs]);
+
+        $this->ouvrirCaisse($this->officine->vendeur);
+
+        // Douchette : le code-barres exact ajoute le produit sans passer par la liste ; deux scans = quantité 2.
+        $this->client->submitForm('Chercher', ['q' => '3400930000011']);
+        self::assertResponseRedirects('/caisse');
+        $this->client->followRedirect();
+        $this->client->submitForm('Chercher', ['q' => '3400 9300 0001 1']);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#panier', 'Doliprane');
+        self::assertSelectorTextContains('#totaux', "3\u{00A0}000\u{00A0}FCFA");
+
+        // Code inconnu (ou d'une autre pharmacie) : on retombe sur la recherche, sans rien ajouter.
+        $this->client->submitForm('Chercher', ['q' => '3400930000028']);
+        self::assertResponseRedirects('/caisse?q=3400930000028');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#resultats', 'Aucun');
+        self::assertSelectorTextNotContains('#panier', 'Produit ailleurs');
+
+        // La recherche par code-barres fonctionne aussi dans la liste des produits.
+        $this->client->request('GET', '/caisse?q=3400930000011');
+        self::assertSelectorTextContains('#resultats', 'Doliprane');
     }
 
     public function testR03VenteRefuseeQuandSeulUnLotPerimeReste(): void

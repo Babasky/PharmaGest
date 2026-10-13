@@ -98,11 +98,32 @@ final class ImportTest extends AppWebTestCase
         self::assertSame(1, $this->compter(Produit::class));
     }
 
-    public function testLeModeleDImportNaPlusDeColonneCodeBarres(): void
+    public function testUnProduitExistantEstMisAJourParSonCodeBarres(): void
     {
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Ancien nom', 'codeBarres' => '555', 'prixVente' => 1000]);
+
         $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
-        self::assertResponseIsSuccessful();
-        self::assertSelectorTextNotContains('main', 'Code-barres');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'code_barres', 'prix_vente'], ['Nouveau nom', '555', 1250], ['Autre', '555', 900]])]);
+        self::assertSelectorTextContains('main', 'Ce code-barres');
+        $this->client->submitForm('Importer les 1 ligne valide');
+
+        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['codeBarres' => '555']));
+        self::assertSame('Nouveau nom', $produit?->getNomCommercial());
+        self::assertSame(1250, $produit->getPrixVente());
+        self::assertSame(1, $this->compter(Produit::class));
+    }
+
+    public function testFichierSansColonneCodeBarresConserveLeCodeDejaSaisi(): void
+    {
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Smecta', 'dosage' => null, 'codeBarres' => '777', 'prixVente' => 3000]);
+
+        $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'prix_vente'], ['Smecta', 3100]])]);
+        $this->client->submitForm('Importer les 1 ligne valide');
+
+        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['nomCommercial' => 'Smecta']));
+        self::assertSame('777', $produit?->getCodeBarres());
+        self::assertSame(3100, $produit->getPrixVente());
     }
 
     public function testPrixDeVenteAmoImporteOuConserve(): void

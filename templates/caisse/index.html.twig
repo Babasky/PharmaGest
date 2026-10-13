@@ -54,14 +54,15 @@
     {% endif %}
     <div class="row g-3" {{ stimulus_controller('caisse') }}>
         <div class="col-12 col-xl-7">
-            {# --- Recherche produit (nom, DCI) --- #}
-            <form method="get" action="{{ path('app_caisse') }}" class="mb-3" role="search">
+            {# --- Recherche produit (nom, DCI, code-barres) --- #}
+            <form method="post" action="{{ path('app_caisse_scanner') }}" class="mb-3" role="search" id="recherche-produit">
+                <input type="hidden" name="_token" value="{{ token }}">
                 <div class="input-group input-group-lg">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Nom, DCI" aria-label="Rechercher un produit" autofocus autocomplete="off" data-caisse-target="recherche">
+                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Nom, DCI ou code-barres" aria-label="Rechercher un produit" autofocus autocomplete="off" data-caisse-target="recherche">
                     <button class="btn btn-success" type="submit">Chercher</button>
                 </div>
-                <div class="form-text mt-3">Raccourcis : <kbd>F2</kbd> recherche · <kbd>F9</kbd> encaissement.</div>
+                <div class="form-text mt-3">Raccourcis : <kbd>F2</kbd> recherche · <kbd>F9</kbd> encaissement. Un code-barres scanné ajoute directement le produit au panier.</div>
             </form>
 
             {% if q %}
@@ -184,7 +185,7 @@
                                     </td>
                                 </tr>
                             {% else %}
-                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Le panier est vide. Cherchez un produit pour l'ajouter.</td></tr>
+                                <tr><td colspan="6" class="text-center text-body-secondary py-4">Le panier est vide. Scannez un code-barres ou cherchez un produit.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>

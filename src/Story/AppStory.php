@@ -191,11 +191,18 @@ final class AppStory extends Story
         ];
         // Prix de vente fixés par l'AMO, différents du prix de la pharmacie : le taux AMO s'applique sur ces prix.
         $prixAmo = ['Doliprane' => 1350, 'Amoxicilline' => 2100, 'Coartem' => 3500];
+        // Codes-barres de démonstration, pour essayer la douchette en caisse.
+        $codesBarres = [
+            'Doliprane' => '3400930000011', 'Efferalgan' => '3400930000028', 'Ibuprofène Biogaran' => '3400930000035',
+            'Amoxicilline' => '3400930000042', 'Augmentin' => '3400930000059', 'Coartem' => '3400930000066',
+            'Smecta' => '3400930000073', 'Oméprazole' => '3400930000080', 'Insuline Actrapid' => '3400930000097',
+            'Crème solaire SPF 50' => '3400930000103',
+        ];
         $catalogue = [];
         foreach ($produits as [$nom, $dci, $dosage, $nomForme, $conditionnement, $categorie, $etagere, $fournisseur, $achat, $vente, $ordonnance, $amo]) {
             $catalogue[$nom] = ProduitFactory::createOne([
                 'pharmacie' => $pharmacie, 'nomCommercial' => $nom, 'dci' => $dci, 'dosage' => $dosage, 'forme' => $forme($nomForme),
-                'conditionnement' => $conditionnement, 'categorie' => $categories[$categorie], 'etagere' => $etageres[$etagere],
+                'conditionnement' => $conditionnement, 'codeBarres' => $codesBarres[$nom], 'categorie' => $categories[$categorie], 'etagere' => $etageres[$etagere],
                 'fournisseurHabituel' => $fournisseur, 'prixAchat' => $achat, 'prixVente' => $vente, 'seuilAlerte' => 10, 'stockMax' => 60,
                 'ordonnanceObligatoire' => $ordonnance, 'remboursableAmo' => $amo, 'prixVenteAmo' => $prixAmo[$nom] ?? null, 'tauxTva' => 'Parapharmacie' === $categorie ? 18 : 0,
             ]);
