@@ -71,18 +71,40 @@
                             <button class="btn btn-outline-success w-100"><i class="bi bi-unlock"></i> Réactiver l'accès</button>
                         </form>
                     {% else %}
-                        <form method="post" action="{{ path('admin_pharmacie_suspendre', {id: pharmacie.id}) }}" class="d-grid gap-2">
-                            <input type="hidden" name="_token" value="{{ jeton }}">
-                            <label for="motif" class="form-label small mb-0">Motif de suspension (impayé, fraude…)</label>
-                            <input type="text" id="motif" name="motif" class="form-control form-control-sm" required maxlength="255">
-                            <button class="btn btn-outline-danger"><i class="bi bi-slash-circle"></i> Suspendre l'accès</button>
-                        </form>
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#suspendre-pharmacie"><i class="bi bi-slash-circle"></i> Suspendre l'accès</button>
+                        {% embed 'layout/_confirmation.html.twig' with {
+                            id: 'suspendre-pharmacie',
+                            titre: 'Suspendre cette pharmacie ?',
+                            action: path('admin_pharmacie_suspendre', {id: pharmacie.id}),
+                            jeton: jeton,
+                            bouton: 'Oui, suspendre',
+                            icone: 'bi-slash-circle',
+                        } %}
+                            {% block message %}
+                                <p>Vous allez suspendre l'accès de <strong>{{ pharmacie.nom }}</strong>.</p>
+                                <p class="text-body-secondary">Plus aucun membre de son équipe ne pourra se connecter tant que l'accès n'est pas réactivé. Ses données sont conservées.</p>
+                                <label for="motif" class="form-label">Motif de suspension (impayé, fraude…)</label>
+                                <input type="text" id="motif" name="motif" class="form-control" required maxlength="255">
+                            {% endblock %}
+                        {% endembed %}
                     {% endif %}
                     {% if not pharmacie.archivee %}
-                        <form method="post" action="{{ path('admin_pharmacie_archiver', {id: pharmacie.id}) }}">
-                            <input type="hidden" name="_token" value="{{ jeton }}">
-                            <button class="btn btn-sm btn-link text-danger px-0"><i class="bi bi-archive"></i> Archiver la pharmacie</button>
-                        </form>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-link text-danger px-0" data-bs-toggle="modal" data-bs-target="#archiver-pharmacie"><i class="bi bi-archive"></i> Archiver la pharmacie</button>
+                        </div>
+                        {% embed 'layout/_confirmation.html.twig' with {
+                            id: 'archiver-pharmacie',
+                            titre: 'Archiver cette pharmacie ?',
+                            action: path('admin_pharmacie_archiver', {id: pharmacie.id}),
+                            jeton: jeton,
+                            bouton: 'Oui, archiver',
+                            icone: 'bi-archive',
+                        } %}
+                            {% block message %}
+                                <p>Vous allez archiver <strong>{{ pharmacie.nom }}</strong>.</p>
+                                <p class="mb-0 text-body-secondary">Plus aucun membre de son équipe ne pourra se connecter. Ses données sont conservées et l'accès pourra être réactivé.</p>
+                            {% endblock %}
+                        {% endembed %}
                     {% endif %}
                 </div>
             </div>
