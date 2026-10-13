@@ -1,0 +1,12 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Support{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 36rem">
+        <div class="card-body">
+            <p>Une question, un problème avec {{ app_name }} ? Contactez notre équipe de support :</p>
+            {{ include('support/_canaux.html.twig', {support: support, pharmacie: pharmacie_courante()}) }}
+        </div>
+    </div>
+{% endblock %}
