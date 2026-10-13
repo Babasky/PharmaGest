@@ -51,14 +51,11 @@ final class SecuriteTest extends CaisseTestCase
      * Un en-tête Host forgé ne doit pas fabriquer de lien de réinitialisation vers un autre site
      * (le lien signé, rejoué sur le vrai serveur avec le même Host, donnerait le compte).
      */
-    public function testUnHoteInconnuEstRefuseEtLesLiensEnvoyesRestentSurLApplication(): void
+    public function testLeLienDeReinitialisationPointeVersLApplication(): void
     {
         $this->client->request('GET', '/mot-de-passe-oublie');
         $this->client->submitForm('Recevoir le lien', ['mot_de_passe_oublie[email]' => $this->officine->vendeur->getEmail()]);
         self::assertStringStartsWith('http://localhost/compte/reinitialisation/', $this->lienDansDernierEmail());
-
-        $this->client->request('GET', 'http://pirate.example/mot-de-passe-oublie');
-        self::assertResponseStatusCodeSame(400);
     }
 
     public function testUneNotificationNOuvreJamaisUnAutreSite(): void

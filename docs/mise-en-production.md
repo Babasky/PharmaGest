@@ -67,7 +67,6 @@ APP_ENV=prod
 APP_DEBUG=0
 APP_SECRET=<64 caractères aléatoires : php -r "echo bin2hex(random_bytes(32));">
 DEFAULT_URI=https://app.pharmagest.ml
-TRUSTED_HOSTS='^app\.pharmagest\.ml$'
 DATABASE_URL="mysql://pharmagest:<mot de passe>@127.0.0.1:3306/pharmagest?serverVersion=8.0.32&charset=utf8mb4"
 MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
 MAILER_DSN=smtp://<utilisateur>:<mot de passe>@<serveur SMTP>:587
