@@ -30,8 +30,8 @@ class Schedule implements ScheduleProviderInterface
             ->add(RecurringMessage::cron('50 7 * * *', new RunCommandMessage('app:abonnements:rappels'), new \DateTimeZone(Kernel::TIMEZONE)))
             // Centre de notifications (NO-01) : alertes de stock, échéances, bordereaux impayés, à 7 h 30.
             ->add(RecurringMessage::cron('30 7 * * *', new RunCommandMessage('app:notifications:generer'), new \DateTimeZone(Kernel::TIMEZONE)))
-            // Commandes suggérées envoyées aux grossistes (pharmacies en envoi automatique), à 21 h, après la journée de ventes.
-            ->add(RecurringMessage::cron('0 21 * * *', new RunCommandMessage('app:commandes:automatiques'), new \DateTimeZone(Kernel::TIMEZONE)))
+            // Commandes suggérées envoyées aux grossistes (pharmacies en envoi automatique), aux heures choisies par fournisseur.
+            ->add(RecurringMessage::cron('0 * * * *', new RunCommandMessage('app:commandes:automatiques'), new \DateTimeZone(Kernel::TIMEZONE)))
             // Archivage 12 mois après l'expiration (annonce 30 jours avant, export complet envoyé), à 3 h.
             ->add(RecurringMessage::cron('0 3 * * *', new RunCommandMessage('app:pharmacies:archiver'), new \DateTimeZone(Kernel::TIMEZONE)))
         ;

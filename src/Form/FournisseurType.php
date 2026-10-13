@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Fournisseur;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
@@ -75,7 +76,23 @@ final class FournisseurType extends AbstractType
                     'placeholder' => 'Ex. : 15 jours',
                 ],
             ]
-            );
+            )
+            ->add('heureCommande', ChoiceType::class, [
+                'label' => 'Commande automatique à',
+                'required' => false,
+                'placeholder' => 'Pas de commande automatique',
+                'choices' => array_combine(array_map(static fn (int $h) => \sprintf('%d h', $h), range(0, 23)), range(0, 23)),
+                'help' => 'Si l\'envoi automatique est activé dans les paramètres, la commande suggérée part chez ce fournisseur à cette heure (il lui faut une adresse email).',
+            ])
+            ->add('joursCommande', ChoiceType::class, [
+                'label' => 'Jours de commande',
+                'required' => false,
+                'multiple' => true,
+                'expanded' => true,
+                'choices' => ['Lun' => 1, 'Mar' => 2, 'Mer' => 3, 'Jeu' => 4, 'Ven' => 5, 'Sam' => 6, 'Dim' => 7],
+                'help' => 'Aucun jour coché : tous les jours.',
+                'label_attr' => ['class' => 'checkbox-inline'],
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

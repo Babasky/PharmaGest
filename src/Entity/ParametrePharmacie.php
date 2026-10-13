@@ -67,7 +67,7 @@ class ParametrePharmacie implements TenantAwareInterface
     private int $joursCouverture = self::JOURS_COUVERTURE_PAR_DEFAUT;
 
     /**
-     * Chaque soir, les commandes suggérées partent d'elles-mêmes aux grossistes qui ont une adresse email.
+     * Les commandes suggérées partent d'elles-mêmes aux grossistes, à l'heure choisie sur la fiche de chacun.
      * Désactivé par défaut : un responsable valide l'envoi (une commande envoyée ne se reprend pas).
      */
     #[ORM\Column(options: ['default' => false])]

@@ -56,8 +56,8 @@ final class ParametresType extends AbstractType
                 'attr' => ['min' => 1, 'max' => 180],
             ])
             ->add('envoiAutomatiqueCommandes', CheckboxType::class, [
-                'label' => 'Envoyer automatiquement les commandes suggérées aux grossistes, chaque soir à 21 h',
-                'help' => 'Sans cette case, un responsable vérifie les commandes préparées avant de les envoyer. Seuls les grossistes qui ont une adresse email reçoivent une commande automatique.',
+                'label' => 'Envoyer automatiquement les commandes suggérées aux grossistes',
+                'help' => 'À l\'heure et aux jours choisis sur la fiche de chaque fournisseur (il lui faut une adresse email). Une commande avec une quantité inhabituelle (plus de trois fois le dernier achat) reste en brouillon, à vérifier. Sans cette case, un responsable vérifie les commandes préparées avant de les envoyer.',
                 'required' => false,
             ]);
     }

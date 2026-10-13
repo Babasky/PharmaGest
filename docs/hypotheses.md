@@ -747,8 +747,17 @@ uniquement si les officines appartiennent au même pharmacien ».
   chez ce fournisseur, les produits y sont ajoutés sans doubler ceux qui y sont déjà.
 - « **Envoyer aux grossistes** » (propriétaire, adjoint) : prépare puis envoie, après une **confirmation**. Un
   fournisseur sans email garde un brouillon, à transmettre par téléphone, WhatsApp ou bon imprimé.
-- **Envoi automatique** : désactivé par défaut (une commande envoyée ne se reprend pas). Le propriétaire peut l'activer
-  dans Paramètres › Règles de gestion : chaque soir à **21 h** (heure de Bamako), les commandes suggérées selon les
-  tendances partent aux grossistes qui ont un email, dans de nouvelles commandes (les brouillons en cours ne sont pas
-  touchés). Le propriétaire et l'adjoint reçoivent une notification avec le bilan. Une pharmacie en lecture seule
-  (abonnement expiré) n'envoie rien.
+- **Envoi automatique**, inspiré de winAutopilote (WinPharma) : désactivé par défaut (une commande envoyée ne se
+  reprend pas). Le propriétaire l'active dans Paramètres › Règles de gestion, puis choisit sur la fiche de chaque
+  fournisseur l'**heure** et les **jours** de sa commande (aucun jour coché : tous les jours ; pas d'heure : pas de
+  commande automatique chez lui). Toutes les heures, les commandes suggérées selon les tendances partent aux
+  fournisseurs dont c'est l'heure et qui ont un email, dans de nouvelles commandes (les brouillons en cours ne sont
+  pas touchés). Le propriétaire et l'adjoint reçoivent une notification avec le bilan. Une pharmacie en lecture
+  seule (abonnement expiré) n'envoie rien. `app:commandes:automatiques --heure=21` rattrape un passage manqué.
+- **Garde-fou** : une quantité suggérée de plus de **3 fois** le dernier achat du produit est signalée « quantité
+  inhabituelle ». Une commande automatique qui en contient une reste en brouillon, à vérifier, et la notification
+  le dit.
+- Repris de winAutopilote : commande générée et envoyée seule selon les règles de la pharmacie, horaire par
+  fournisseur, contrôle des commandes à vérifier. Pas repris pour l'instant, faute de données des grossistes
+  maliens : bascule automatique vers un autre grossiste ou un générique équivalent en cas de manquant, réception
+  automatique et rapprochement des factures.

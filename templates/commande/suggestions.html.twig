@@ -94,7 +94,12 @@
                 <input type="hidden" name="_token" value="{{ csrf_token(csrf_suggestions) }}">
                 <input type="hidden" name="fournisseur" value="{{ fournisseur.id }}">
                 {% for nom, valeur in parametres_base %}<input type="hidden" name="{{ nom }}" value="{{ valeur }}">{% endfor %}
-                <p class="small text-body-secondary mb-2">Délai de livraison de {{ fournisseur.nom }} : {{ fournisseur.delaiLivraison ?? constant('App\\Achat\\SuggestionsCommande::DELAI_LIVRAISON_PAR_DEFAUT') }} jour(s){{ fournisseur.delaiLivraison is null ? ' (par défaut, à préciser sur sa fiche)' }}.</p>
+                <p class="small text-body-secondary mb-2">Délai de livraison de {{ fournisseur.nom }} : {{ fournisseur.delaiLivraison ?? constant('App\\Achat\\SuggestionsCommande::DELAI_LIVRAISON_PAR_DEFAUT') }} jour(s){{ fournisseur.delaiLivraison is null ? ' (par défaut, à préciser sur sa fiche)' }}.
+                    {% if fournisseur.heureCommande is not null %}
+                        {% set noms_jours = {1: 'lun', 2: 'mar', 3: 'mer', 4: 'jeu', 5: 'ven', 6: 'sam', 7: 'dim'} %}
+                        Commande automatique à {{ fournisseur.heureCommande }} h, {{ fournisseur.joursCommande is empty ? 'tous les jours' : fournisseur.joursCommande|map(j => noms_jours[j])|join(', ') }}.
+                    {% endif %}
+                </p>
                 <div class="card shadow-sm mb-3">
                     <div class="table-responsive">
                         <table class="table align-middle mb-0" id="suggestions">
@@ -117,6 +122,7 @@
                                         <td>
                                             <label for="produit-{{ p.id }}">{{ p.designation }}</label>
                                             {% if s.stock == 0 %} <span class="badge text-bg-danger">rupture</span>{% elseif not selon_jour %} <span class="badge text-bg-light">{{ s.motif|lower }}</span>{% endif %}
+                                            {% if s.inhabituelle %} <span class="badge text-bg-warning" title="Plus de {{ constant('App\\Achat\\SuggestionsCommande::FACTEUR_INHABITUEL') }} fois le dernier achat : à vérifier. Une commande automatique qui la contient reste en brouillon.">quantité inhabituelle</span>{% endif %}
                                         </td>
                                         {% if selon_jour %}
                                             <td class="text-end">{{ s.vendu }}</td>

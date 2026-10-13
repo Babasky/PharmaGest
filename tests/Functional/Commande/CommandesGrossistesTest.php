@@ -134,16 +134,27 @@ final class CommandesGrossistesTest extends CommandeTestCase
         self::assertSame(['Ibuprofène' => 7], $this->quantites($this->commande()));
     }
 
-    public function testEnvoiAutomatiqueChaqueSoir(): void
+    public function testEnvoiAutomatiqueALHeureDeChaqueFournisseur(): void
     {
+        $this->commandeRecue($this->laborex, $this->smecta, 5, '-10 days');
         // Brouillon en cours de l'adjoint chez PPM : l'envoi automatique n'y touche pas.
         $this->connecter($this->officine->adjoint);
         $brouillon = $this->creerBrouillon($this->ppm, [[$this->ibuprofene, 4]]);
 
-        $this->executer();
+        // Horaire de commande sur la fiche du fournisseur : PPM à 21 h, tous les jours (aucun jour coché).
+        $this->connecter($this->officine->proprietaire)->request('GET', '/fournisseurs/'.$this->ppm->getId().'/modifier');
+        $this->client->submitForm('Enregistrer', ['fournisseur[heureCommande]' => '21']);
+        self::assertResponseRedirects();
+        // Laborex a maintenant un email, commande à 21 h ; son dernier achat de Smecta était de 5 : 28 est inhabituel.
+        $this->sansFiltre(function (EntityManagerInterface $em): void {
+            $em->find(Fournisseur::class, $this->laborex->getId())?->setEmail('commandes@laborex.example')->setHeureCommande(21)->setJoursCommande([]);
+            $em->flush();
+        });
+
+        $this->executer(21);
         self::assertCount(0, $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Commande::class)->findBy(['statut' => StatutCommande::Envoyee])), 'Envoi automatique désactivé par défaut.');
 
-        $this->connecter($this->officine->proprietaire)->request('GET', '/parametres?onglet=regles');
+        $this->client->request('GET', '/parametres?onglet=regles');
         $this->client->submitForm('Enregistrer les règles', [
             'parametres[envoiAutomatiqueCommandes]' => '1',
             'parametres[joursCouverture]' => '20',
@@ -154,26 +165,43 @@ final class CommandesGrossistesTest extends CommandeTestCase
         self::assertNotNull($parametres);
         self::assertSame([true, 20, 60], [$parametres->isEnvoiAutomatiqueCommandes(), $parametres->getJoursCouverture(), $parametres->getJoursAnalyseVentes()]);
 
-        $sortie = $this->executer();
-        self::assertStringContainsString('1 commande(s) envoyée(s)', $sortie);
+        self::assertStringContainsString('0 commande(s) envoyée(s)', $this->executer(7), 'Pas l\'heure des fournisseurs.');
+
+        $this->client->request('GET', '/commandes/suggestions?fournisseur='.$this->laborex->getId());
+        self::assertSelectorTextContains('#suggestions tr[data-produit="Smecta"]', 'quantité inhabituelle');
+        self::assertSelectorTextContains('#formulaire-suggestions', 'Commande automatique à 21 h, tous les jours');
+
+        self::assertStringContainsString('1 commande(s) envoyée(s)', $this->executer(21));
         $commandes = $this->commandesDe($this->ppm);
         self::assertCount(2, $commandes);
         self::assertSame([$brouillon, StatutCommande::Brouillon, ['Ibuprofène' => 4]], [$commandes[0]->getId(), $commandes[0]->getStatut(), $this->quantites($commandes[0])]);
         self::assertSame(StatutCommande::Envoyee, $commandes[1]->getStatut());
         self::assertSame(['Coartem' => 10, 'Doliprane' => 56], $this->quantites($commandes[1]));
+        $laborex = $this->commandesDe($this->laborex);
+        self::assertTrue(end($laborex)->estBrouillon(), 'Quantité inhabituelle : la commande attend une vérification.');
 
         $notifications = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Notification::class)->findBy(['type' => TypeNotification::Commande]));
         self::assertCount(2, $notifications, 'Propriétaire et adjoint prévenus.');
         self::assertStringContainsString('1 commande(s) envoyée(s) automatiquement', $notifications[0]->getMessage());
-        self::assertStringContainsString('Laborex Mali', $notifications[0]->getMessage(), 'Fournisseur sans email signalé.');
+        self::assertStringContainsString('À vérifier avant envoi, quantité inhabituelle chez Laborex Mali : Smecta', $notifications[0]->getMessage());
     }
 
-    private function executer(): string
+    public function testJoursDeCommandeDuFournisseur(): void
+    {
+        $fournisseur = (new Fournisseur())->setHeureCommande(9)->setJoursCommande([3, 1, 1]);
+        self::assertSame([1, 3], $fournisseur->getJoursCommande());
+        self::assertTrue($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-12 09:00')), 'Lundi 9 h.');
+        self::assertFalse($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-13 09:00')), 'Mardi.');
+        self::assertFalse($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-14 10:00')), 'Mercredi, mauvaise heure.');
+        self::assertSame([], $fournisseur->setJoursCommande(range(1, 7))->getJoursCommande(), 'Tous les jours.');
+    }
+
+    private function executer(int $heure): string
     {
         $this->viderGestionnaire();
         \assert(null !== self::$kernel);
         $commande = new CommandTester((new Application(self::$kernel))->find('app:commandes:automatiques'));
-        $commande->execute([]);
+        $commande->execute(['--heure' => (string) $heure]);
         $commande->assertCommandIsSuccessful();
 
         return $commande->getDisplay(true);

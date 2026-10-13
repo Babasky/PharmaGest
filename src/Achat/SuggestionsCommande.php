@@ -25,10 +25,12 @@ use App\Tenant\TenantContext;
  *
  * Le fournisseur est le fournisseur habituel du produit, à défaut celui de sa dernière commande (habitudes d'achat).
  *
- * @phpstan-type Suggestion array{produit: Produit, fournisseur: Fournisseur|null, stock: int, attendu: int, quantite: int, vendu: int, moyenne: float, rotation: Rotation, couverture: float|null, delai: int, motif: string, dernier_achat: array{fournisseur: int, date: \DateTimeImmutable, quantite: int}|null}
+ * @phpstan-type Suggestion array{produit: Produit, fournisseur: Fournisseur|null, stock: int, attendu: int, quantite: int, vendu: int, moyenne: float, rotation: Rotation, couverture: float|null, delai: int, motif: string, inhabituelle: bool, dernier_achat: array{fournisseur: int, date: \DateTimeImmutable, quantite: int}|null}
  */
 class SuggestionsCommande
 {
+    /** Une quantité qui dépasse ce multiple du dernier achat du produit est signalée « inhabituelle », à vérifier. */
+    public const FACTEUR_INHABITUEL = 3;
     /** Délai de livraison retenu pour un fournisseur dont la fiche ne le précise pas, en jours. */
     public const DELAI_LIVRAISON_PAR_DEFAUT = 2;
     /** Les habitudes d'achat se lisent sur les commandes de l'année écoulée. */
@@ -69,6 +71,15 @@ class SuggestionsCommande
         }
 
         return max(0, $quantite);
+    }
+
+    /**
+     * Garde-fou : quantité bien plus forte que celle de la dernière commande du produit (pic de ventes, erreur de saisie…).
+     * Une commande qui en contient une n'est pas envoyée automatiquement : elle attend la vérification d'un responsable.
+     */
+    public static function inhabituelle(int $quantite, ?int $dernierAchat): bool
+    {
+        return null !== $dernierAchat && $dernierAchat > 0 && $quantite > self::FACTEUR_INHABITUEL * $dernierAchat;
     }
 
     /**
@@ -115,6 +126,7 @@ class SuggestionsCommande
                 continue;
             }
             $s['quantite'] = self::quantiteProposee($s['produit'], $s['stock'], $s['attendu'], $s['moyenne'], $s['delai'] + $parametres->getJoursCouverture());
+            $s['inhabituelle'] = self::inhabituelle($s['quantite'], $s['dernier_achat']['quantite'] ?? null);
             $suggestions[] = $s;
         }
 
@@ -145,6 +157,7 @@ class SuggestionsCommande
                 $quantite = min($quantite, max(0, $max - $s['stock'] - $s['attendu']));
             }
             $s['quantite'] = $quantite;
+            $s['inhabituelle'] = self::inhabituelle($quantite, $s['dernier_achat']['quantite'] ?? null);
             $suggestions[] = $s;
         }
 
@@ -220,6 +233,7 @@ class SuggestionsCommande
                 'couverture' => null,
                 'delai' => $fournisseur?->getDelaiLivraison() ?? self::DELAI_LIVRAISON_PAR_DEFAUT,
                 'motif' => '',
+                'inhabituelle' => false,
                 'dernier_achat' => $achats[$id] ?? null,
             ];
         }
