@@ -29,8 +29,9 @@
                             <button class="btn btn-success" type="submit">Créer le brouillon</button>
                         </form>
                         <p class="small text-body-secondary mt-3 mb-0">
-                            Ou partez des <a href="{{ path('app_commande_suggestions') }}">suggestions</a> : les produits sous le seuil d'alerte,
-                            avec la quantité qui ramène le stock au maximum.
+                            Ou partez des <a href="{{ path('app_commande_suggestions') }}">suggestions</a> : les besoins calculés sur les tendances
+                            de vente et la rotation des produits, ou sur les <a href="{{ path('app_commande_suggestions', {base: 'jour'}) }}">ventes du jour</a>,
+                            préparés et envoyés aux grossistes en une fois.
                         </p>
                     {% endif %}
                 </div>

@@ -58,6 +58,18 @@ class Fournisseur implements TenantAwareInterface
     #[Assert\Length(max: 255)]
     private ?string $conditionsPaiement = null;
 
+    /**
+     * Heure (0 à 23, heure de Bamako) à laquelle la commande suggérée part d'elle-même chez ce fournisseur,
+     * quand la pharmacie a activé l'envoi automatique. Vide : pas de commande automatique chez lui.
+     */
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(min: 0, max: 23)]
+    private ?int $heureCommande = null;
+
+    /** Jours de la commande automatique (1 = lundi … 7 = dimanche, séparés par des virgules) ; vide : tous les jours. */
+    #[ORM\Column(length: 13, nullable: true)]
+    private ?string $joursCommande = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -155,6 +167,49 @@ class Fournisseur implements TenantAwareInterface
         $this->conditionsPaiement = self::nettoyer($conditionsPaiement);
 
         return $this;
+    }
+
+    public function getHeureCommande(): ?int
+    {
+        return $this->heureCommande;
+    }
+
+    public function setHeureCommande(?int $heure): static
+    {
+        $this->heureCommande = $heure;
+
+        return $this;
+    }
+
+    /**
+     * @return list<int> jours de 1 (lundi) à 7 (dimanche) ; vide : tous les jours
+     */
+    public function getJoursCommande(): array
+    {
+        return null === $this->joursCommande ? [] : array_map('intval', explode(',', $this->joursCommande));
+    }
+
+    /**
+     * @param array<int> $jours
+     */
+    public function setJoursCommande(array $jours): static
+    {
+        $jours = array_values(array_unique(array_filter(array_map('intval', $jours), static fn (int $j) => $j >= 1 && $j <= 7)));
+        sort($jours);
+        $this->joursCommande = [] === $jours || 7 === \count($jours) ? null : implode(',', $jours);
+
+        return $this;
+    }
+
+    /** La commande automatique part-elle chez ce fournisseur à cet instant (même heure, jour prévu) ? */
+    public function commandeAutomatiquePrevue(\DateTimeImmutable $instant): bool
+    {
+        if (null === $this->heureCommande || $this->heureCommande !== (int) $instant->format('G')) {
+            return false;
+        }
+        $jours = $this->getJoursCommande();
+
+        return [] === $jours || \in_array((int) $instant->format('N'), $jours, true);
     }
 
     public function __toString(): string

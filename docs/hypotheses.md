@@ -583,6 +583,8 @@ vente, et son taux s'applique sur ce prix.
 
 ### Code-barres retiré du produit
 
+> Annulé le 13/10/2026 : le code-barres est de retour (voir « Retour du code-barres » plus bas).
+
 - Le champ code-barres est supprimé de la fiche produit, du formulaire, de l'import (colonne `code_barres` retirée du
   modèle, une colonne de ce nom dans un ancien fichier est simplement ignorée) et des données de démonstration.
   La migration supprime la colonne et son index d'unicité : les codes déjà saisis sont perdus.
@@ -715,3 +717,72 @@ uniquement si les officines appartiennent au même pharmacien ».
 ### Carte bancaire
 
 - Voir « Moyens de paiement » ci-dessus : la carte est de nouveau proposée, saisie à la main.
+
+## Décisions — Commandes aux grossistes selon les ventes (demande de Modibo, 13/10/2026)
+
+### Suggestion selon les tendances de vente (CO-02 enrichi)
+
+- **Ventes analysées** : ventes moins annulations et retours clients des *N* derniers jours (paramètre de la
+  pharmacie, 30 par défaut, de 7 à 365). Ventes moyennes par jour = ventes de la période ÷ *N*.
+- **Rotation** affichée pour chaque produit : rapide (au moins 1 par jour), moyenne (au moins 1 par semaine), lente
+  (moins), aucune vente.
+- **Produits suggérés** : ceux au seuil d'alerte ou en dessous (comme avant), et ceux dont le stock disponible plus
+  ce qui est déjà commandé tombera au seuil avant la livraison : stock + attendu ≤ seuil + ventes/jour × délai.
+- **Délai de livraison** : celui de la fiche du fournisseur, **2 jours** quand elle ne le précise pas.
+- **Quantité** : seuil + ventes/jour × (délai + jours de couverture), moins stock et attendu, **plafonnée au stock
+  maximum** du produit (règle du pharmacien). Jours de couverture : paramètre, 15 par défaut. Sans vente sur la
+  période, la règle du Lot 6 reste : stock maximum (ou double du seuil) − stock − attendu.
+- **Habitudes d'achat** : un produit sans fournisseur habituel actif est rangé chez le fournisseur de sa dernière
+  commande passée dans l'année. La dernière commande (quantité, date) est affichée.
+
+### Suggestion selon les ventes du jour
+
+- Onglet « Selon les ventes du jour », pour aujourd'hui ou un jour passé : chaque produit vendu ce jour-là est
+  recommandé dans la quantité vendue (ventes moins annulations et retours), sans dépasser le stock maximum en
+  comptant stock et commandes en cours.
+
+### Transmission directe aux grossistes
+
+- Aucun grossiste n'offre d'interface de commande : la « transmission directe » est l'**email du bon de commande**
+  (Excel en pièce jointe, comme au Lot 6), une commande par fournisseur, en une seule action.
+- « **Préparer toutes les commandes** » (tout le monde) : un brouillon par fournisseur ; s'il existe déjà un brouillon
+  chez ce fournisseur, les produits y sont ajoutés sans doubler ceux qui y sont déjà.
+- « **Envoyer aux grossistes** » (propriétaire, adjoint) : prépare puis envoie, après une **confirmation**. Un
+  fournisseur sans email garde un brouillon, à transmettre par téléphone, WhatsApp ou bon imprimé.
+- **Envoi automatique**, inspiré de winAutopilote (WinPharma) : désactivé par défaut (une commande envoyée ne se
+  reprend pas). Le propriétaire l'active dans Paramètres › Règles de gestion, puis choisit sur la fiche de chaque
+  fournisseur l'**heure** et les **jours** de sa commande (aucun jour coché : tous les jours ; pas d'heure : pas de
+  commande automatique chez lui). Toutes les heures, les commandes suggérées selon les tendances partent aux
+  fournisseurs dont c'est l'heure et qui ont un email, dans de nouvelles commandes (les brouillons en cours ne sont
+  pas touchés). Le propriétaire et l'adjoint reçoivent une notification avec le bilan. Une pharmacie en lecture
+  seule (abonnement expiré) n'envoie rien. `app:commandes:automatiques --heure=21` rattrape un passage manqué.
+- **Garde-fou** : une quantité suggérée de plus de **3 fois** le dernier achat du produit est signalée « quantité
+  inhabituelle ». Une commande automatique qui en contient une reste en brouillon, à vérifier, et la notification
+  le dit.
+- Repris de winAutopilote : commande générée et envoyée seule selon les règles de la pharmacie, horaire par
+  fournisseur, contrôle des commandes à vérifier. Pas repris pour l'instant, faute de données des grossistes
+  maliens : bascule automatique vers un autre grossiste ou un générique équivalent en cas de manquant, réception
+  automatique et rapprochement des factures.
+## Décisions — Retour du code-barres (demande de Modibo, 13/10/2026)
+
+- Le **code-barres** revient sur le produit : **facultatif**, **unique dans une pharmacie** (deux pharmacies peuvent
+  avoir le même produit avec le même code). Chiffres, lettres et tirets ; les espaces saisis sont retirés.
+  Les codes supprimés le 08/10/2026 ne sont pas récupérés : ils sont à ressaisir (fiche produit ou import).
+- **Fiche et formulaire produit** : champ « Code-barres (facultatif) ».
+- **Recherche** : le code-barres exact est reconnu partout où l'on cherche un produit (catalogue, caisse, stock,
+  commande, transfert), en plus du nom et de la DCI.
+- **Caisse (douchette)** : un code-barres scanné à l'identique ajoute directement le produit au panier (un second
+  scan augmente la quantité) ; un code inconnu affiche la recherche habituelle.
+- **Import** : colonne `code_barres` de nouveau dans le modèle. Un produit existant est reconnu par son code-barres,
+  sinon par nom commercial + dosage. Un fichier **sans** cette colonne garde le code déjà saisi.
+- Le bon de commande (Excel et PDF) garde la DCI : il n'est pas modifié par ce changement.
+## Décisions — Service support client (demande de Modibo, 13/10/2026)
+
+- Le super admin règle le support dans l'espace plateforme › **Support client** : numéro **WhatsApp**, numéro à
+  **appeler**, adresse **email** et **horaires**. Chaque canal s'active ou se désactive à part ; au moins un reste
+  actif, et un canal actif exige sa coordonnée. Les numéros sont maliens (+223), comme ailleurs dans l'application.
+- Tant que rien n'est enregistré, le téléphone et l'email de l'éditeur (`app.editeur`) sont proposés.
+- Côté pharmacie, tous les rôles (caissier compris) voient les canaux actifs : menu Pharmacie › **Support**, bouton
+  casque de la barre du haut et page « Accès suspendu ». WhatsApp ouvre la conversation (lien wa.me) avec un premier
+  message au nom de l'officine ; l'email part avec un objet qui nomme l'officine ; l'appel passe par un lien `tel:`.
+- Chaque modification est tracée dans le journal de la plateforme (« Support client modifié », valeurs avant et après).

@@ -10,6 +10,7 @@ use App\Service\AuditLogger;
 use App\Tests\Factory\PharmacieFactory;
 use App\Tests\Support\AppWebTestCase;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DomCrawler\Crawler;
 
 /**
  * PH-03 : le propriétaire gère ses adjoints et vendeurs, dans la limite de son offre.
@@ -78,6 +79,39 @@ final class EquipeTest extends AppWebTestCase
         self::assertSelectorTextContains('main', '1 place disponible');
     }
 
+    public function testLaDesactivationDemandeUneConfirmation(): void
+    {
+        $officine = $this->creerOfficine();
+        $id = $officine->affectationVendeur->getId();
+
+        $crawler = $this->connecter($officine->proprietaire)->request('GET', '/equipe');
+
+        // Le bouton de la ligne ouvre seulement la fenêtre : il n'est dans aucun formulaire.
+        $bouton = $crawler->filter(\sprintf('button[data-bs-target="#desactiver-%d"]', $id));
+        self::assertCount(1, $bouton);
+        self::assertSame('button', $bouton->attr('type'));
+        self::assertCount(0, $bouton->ancestors()->reduce(static fn (Crawler $noeud) => 'form' === $noeud->nodeName()));
+
+        // La fenêtre nomme le compte, dit la conséquence et porte le formulaire.
+        $fenetre = $crawler->filter(\sprintf('#desactiver-%d', $id));
+        self::assertStringContainsString('Désactiver ce compte ?', $fenetre->filter('.modal-title')->text());
+        self::assertStringContainsString($officine->vendeur->getNom(), $fenetre->filter('.modal-body')->text());
+        self::assertStringContainsString('ne pourra plus se connecter', $fenetre->filter('.modal-body')->text());
+        self::assertCount(1, $fenetre->filter(\sprintf('form[action="/equipe/%d/desactiver"][method="post"] button[type="submit"]:contains("Oui, désactiver")', $id)));
+        self::assertCount(1, $fenetre->filter('button[data-bs-dismiss="modal"]:contains("Annuler")'));
+
+        // Rien n'est désactivé tant que la confirmation n'est pas envoyée.
+        $actif = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Affectation::class, $id)?->isActif());
+        self::assertTrue($actif);
+        self::assertSame(0, $this->compterAudit(AuditLogger::UTILISATEUR_DESACTIVE));
+
+        // Sans jeton CSRF valide, la désactivation est refusée.
+        $this->client->request('POST', \sprintf('/equipe/%d/desactiver', $id), ['_token' => 'invalide']);
+        self::assertFalse($this->client->getResponse()->isRedirect('/equipe'));
+        $actif = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Affectation::class, $id)?->isActif());
+        self::assertTrue($actif);
+    }
+
     public function testDesactivationPuisReactivation(): void
     {
         $officine = $this->creerOfficine();
@@ -135,7 +169,7 @@ final class EquipeTest extends AppWebTestCase
     private function desactiver(int $affectationId): void
     {
         $crawler = $this->client->request('GET', '/equipe');
-        $formulaire = $crawler->filter(\sprintf('form[action="/equipe/%d/desactiver"]', $affectationId))->form();
+        $formulaire = $crawler->filter(\sprintf('#desactiver-%d', $affectationId))->selectButton('Oui, désactiver')->form();
         $this->client->submit($formulaire);
     }
 

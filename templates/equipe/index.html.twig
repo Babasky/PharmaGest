@@ -64,10 +64,7 @@
                                                 <button class="btn btn-sm btn-outline-secondary" title="Renvoyer le lien d'activation"><i class="bi bi-envelope"></i><span class="visually-hidden">Renvoyer le lien</span></button>
                                             </form>
                                         {% endif %}
-                                        <form method="post" action="{{ path('app_equipe_desactiver', {id: affectation.id}) }}" class="d-inline">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('equipe-' ~ affectation.id) }}">
-                                            <button class="btn btn-sm btn-outline-danger">Désactiver</button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#desactiver-{{ affectation.id }}">Désactiver</button>
                                     {% else %}
                                         <form method="post" action="{{ path('app_equipe_reactiver', {id: affectation.id}) }}" class="d-inline">
                                             <input type="hidden" name="_token" value="{{ csrf_token('equipe-' ~ affectation.id) }}">
@@ -82,4 +79,22 @@
             </table>
         </div>
     </div>
+
+    {% if ecriture_autorisee() %}
+        {% for affectation in membres|filter(a => a.actif and is_granted('EQUIPE_GERER', a)) %}
+            {% embed 'layout/_confirmation.html.twig' with {
+                id: 'desactiver-' ~ affectation.id,
+                titre: 'Désactiver ce compte ?',
+                action: path('app_equipe_desactiver', {id: affectation.id}),
+                jeton: csrf_token('equipe-' ~ affectation.id),
+                bouton: 'Oui, désactiver',
+                icone: 'bi-person-x',
+            } %}
+                {% block message %}
+                    <p>Vous allez désactiver le compte de <strong>{{ affectation.utilisateur.nom }}</strong> ({{ affectation.utilisateur.email }}).</p>
+                    <p class="mb-0 text-body-secondary">Il ne pourra plus se connecter à la pharmacie. Son historique (ventes, mouvements) est conservé et vous pourrez le réactiver plus tard.</p>
+                {% endblock %}
+            {% endembed %}
+        {% endfor %}
+    {% endif %}
 {% endblock %}
