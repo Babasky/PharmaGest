@@ -1,0 +1,40 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block page_title %}Support client{% endblock %}
+{% block content_title %}Support client{% endblock %}
+
+{% block main %}
+    <p class="text-body-secondary">
+        Les pharmacies voient les canaux activés dans leur menu « Support », sur la barre du haut et sur la page d'accès suspendu.
+        {% if support.modifieLe %}Dernière modification le {{ support.modifieLe|date('d/m/Y à H:i') }}.{% else %}Pas encore enregistré : les coordonnées de l'éditeur sont proposées par défaut.{% endif %}
+    </p>
+
+    {{ form_start(formulaire) }}
+    {{ form_errors(formulaire) }}
+    <div class="row g-3">
+        {% for canal in [
+            {titre: 'WhatsApp', icone: 'bi-whatsapp', actif: 'whatsappActif', champ: 'whatsapp'},
+            {titre: 'Appel téléphonique', icone: 'bi-telephone', actif: 'telephoneActif', champ: 'telephone'},
+            {titre: 'Email', icone: 'bi-envelope', actif: 'emailActif', champ: 'email'},
+        ] %}
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-body fw-semibold"><i class="bi {{ canal.icone }}"></i> {{ canal.titre }}</div>
+                    <div class="card-body">
+                        {{ form_row(formulaire[canal.actif]) }}
+                        {{ form_row(formulaire[canal.champ]) }}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">{{ form_row(formulaire.horaires) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+    </div>
+    {{ form_end(formulaire) }}
+{% endblock %}
