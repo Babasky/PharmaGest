@@ -760,3 +760,50 @@ body {
     right: -0.2rem;
     font-size: 0.65rem;
 }
+
+/* ---------- Pages d'erreur (403, 404, 500…) ---------- */
+
+.pg-erreur {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.pg-erreur-carte {
+    width: 100%;
+    max-width: 32rem;
+    padding: 2.5rem 2rem;
+    border-radius: var(--pg-radius);
+    background: var(--pg-surface);
+    border: 1px solid var(--pg-border);
+    box-shadow: var(--pg-shadow-lg);
+}
+
+.pg-erreur-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 50%;
+    font-size: 2rem;
+    color: var(--pg-primary);
+    background: rgba(var(--pg-primary-rgb), 0.12);
+    margin-bottom: 0.75rem;
+}
+
+.pg-erreur-code {
+    font-size: 4.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, #20c997, var(--pg-primary) 60%, #0f5132);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
