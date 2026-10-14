@@ -1,0 +1,75 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Ventes hors ligne{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_caisse_hors_ligne') }}" data-turbo="false"><i class="bi bi-wifi-off"></i> Caisse hors ligne</a>
+{% endblock %}
+
+{% block content %}
+    <p class="small text-body-secondary">
+        Ventes faites pendant une coupure d'internet, reçues au retour du réseau.
+        Une vente « en anomalie » n'a pas pu devenir une vente normale (caisse du vendeur fermée, stock insuffisant, produit archivé…) :
+        elle est réessayée à chaque envoi et à l'ouverture de la caisse du vendeur. Corrigez la cause puis réessayez{% if adjoint %}, ou rejetez-la avec un motif : l'argent encaissé apparaîtra alors en écart à la clôture de caisse{% endif %}.
+        {% if not adjoint %}Le propriétaire et l'adjoint voient celles de toute l'équipe.{% endif %}
+    </p>
+    {% set jeton = csrf_token(csrf) %}
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th class="ps-3">Ticket</th><th>Vendeur</th><th>Vendue le</th><th class="text-end">Montant</th><th>État</th><th>Vente</th><th class="pe-3"></th></tr>
+                </thead>
+                <tbody>
+                    {% for vente in ventes %}
+                        <tr>
+                            <td class="ps-3 font-monospace text-nowrap">{{ vente.numeroProvisoire }}</td>
+                            <td>{{ vente.vendeur.nom }}</td>
+                            <td class="small text-nowrap">{{ vente.venduLe|date('d/m/Y H:i') }}<br><span class="text-body-secondary">reçue le {{ vente.recueLe|date('d/m/Y H:i') }}</span></td>
+                            <td class="montant">{{ vente.montant|fcfa }}</td>
+                            <td>
+                                <span class="badge text-bg-{{ vente.statut.couleur }}">{{ vente.statut.libelle }}</span>
+                                {% if vente.message %}<div class="small{{ vente.estEnAnomalie ? ' text-danger' }}">{{ vente.message }}</div>{% endif %}
+                                {% if vente.ecart != 0 %}<div class="small text-warning-emphasis">Écart de {{ vente.ecart|fcfa }} avec le ticket.</div>{% endif %}
+                                {% if vente.rejeteePar %}<div class="small text-body-secondary">par {{ vente.rejeteePar.nom }}, le {{ vente.traiteeLe|date('d/m/Y H:i') }}</div>{% endif %}
+                            </td>
+                            <td class="text-nowrap">
+                                {% if vente.vente %}
+                                    <a class="font-monospace text-decoration-none" href="{{ path('app_vente_voir', {id: vente.vente.id}) }}">{{ vente.vente.numero }}</a>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="pe-3 text-end text-nowrap">
+                                {% if vente.estEnAnomalie and ecriture_autorisee() %}
+                                    <form method="post" action="{{ path('app_hors_ligne_reessayer', {id: vente.id}) }}" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ jeton }}">
+                                        <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-arrow-repeat"></i> Réessayer</button>
+                                    </form>
+                                    {% if adjoint %}
+                                        <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#rejeter-{{ vente.id }}"><i class="bi bi-x-circle"></i> Rejeter</button>
+                                        {% embed 'layout/_confirmation.html.twig' with {
+                                            id: 'rejeter-' ~ vente.id,
+                                            titre: 'Rejeter le ticket ' ~ vente.numeroProvisoire ~ ' ?',
+                                            action: path('app_hors_ligne_rejeter', {id: vente.id}),
+                                            jeton: jeton,
+                                            bouton: 'Rejeter',
+                                            icone: 'bi-x-circle',
+                                        } %}
+                                            {% block message %}
+                                                <p>La vente ne sera jamais enregistrée : ni sortie de stock, ni recette. Les {{ vente.montant|fcfa }} encaissés apparaîtront en écart à la clôture de la caisse de {{ vente.vendeur.nom }}.</p>
+                                                <label class="form-label" for="motif-{{ vente.id }}">Motif (obligatoire)</label>
+                                                <textarea class="form-control" id="motif-{{ vente.id }}" name="motif" rows="2" required maxlength="255"></textarea>
+                                            {% endblock %}
+                                        {% endembed %}
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="7" class="text-center text-body-secondary py-4">Aucune vente hors ligne reçue.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% include 'layout/_pagination.html.twig' with {page: ventes, route: 'app_hors_ligne_index'} %}
+{% endblock %}

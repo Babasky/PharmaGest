@@ -354,6 +354,64 @@ class VenteService
     }
 
     /**
+     * Encaisse, dans la session ouverte du vendeur et à sa date, une vente faite hors ligne pendant une coupure
+     * d'internet : mêmes contrôles qu'en ligne, sauf le code PIN du propriétaire, impossible hors ligne (la vente
+     * est alors refusée), puis sortie FEFO du stock et numéro définitif. Le client a payé le montant de son ticket
+     * hors ligne : si le montant recalculé diffère (prix ou taux AMO modifié entre-temps), les espèces s'ajustent
+     * et l'écart est retourné pour être tracé.
+     *
+     * La vente n'est enregistrée qu'une fois tout vérifié : un refus n'écrit rien.
+     *
+     * @param array<array-key, mixed> $saisie paiements saisis hors ligne, au format de {@see self::encaisser()}
+     *
+     * @return int écart entre le montant recalculé et celui du ticket hors ligne
+     *
+     * @throws VenteException
+     */
+    public function encaisserHorsLigne(Vente $vente, Utilisateur $vendeur, SessionCaisse $session, array $saisie, \DateTimeImmutable $le, int $montantTicket): int
+    {
+        $this->exigerModifiable($vente);
+        $this->exigerSessionDe($session, $vendeur);
+        $pharmacie = $this->tenantContext->exigerPharmacie();
+        $this->actualiserAmo($vente, $vente->getOrganismeAmo(), $vente->getNumeroAssure(), $le);
+        $controle = $this->controler($vente, $vendeur, $pharmacie);
+        if ($controle->estBloquee()) {
+            throw new VenteException($controle->blocages[0]);
+        }
+        if ($controle->exigeCodePin()) {
+            throw new VenteException($controle->autorisations[0].' Le code PIN ne peut pas être saisi hors ligne.');
+        }
+        $autorisePar = $controle->remiseHorsPlafond || [] !== $controle->sansOrdonnance ? $vendeur : null;
+
+        $du = $vente->calculer()->aEncaisser();
+        $ecart = $du - $montantTicket;
+        if (0 !== $ecart && \is_array($saisie[ModePaiement::Especes->value] ?? null)) {
+            // Les espèces remises correspondaient à l'ancien montant : elles suivent le montant recalculé.
+            unset($saisie[ModePaiement::Especes->value]['remis']);
+        }
+        $paiements = $this->analyserPaiements($saisie, $du);
+        $this->verifierStock($vente);
+
+        try {
+            $this->stock->transaction(function () use ($vente, $vendeur, $session, $pharmacie, $paiements, $autorisePar, $controle, $le): void {
+                $totaux = $vente->calculer();
+                $this->em->persist($vente);
+                $numero = $this->numeroteur->suivant('V', $pharmacie);
+                $this->preleverStock($vente, $numero);
+                $vente->valider($numero, $session, $le, $autorisePar);
+                $this->enregistrerPaiements($vente, $paiements);
+                $this->em->flush();
+                $this->journaliserControles($vente, $vendeur, $pharmacie, $controle, $totaux, $autorisePar);
+                $this->em->flush();
+            });
+        } catch (StockException $e) {
+            throw new VenteException($e->getMessage(), 0, $e);
+        }
+
+        return $ecart;
+    }
+
+    /**
      * Le vendeur valide la vente sans l'encaisser et l'envoie à la caisse : mêmes contrôles et autorisations
      * qu'à l'encaissement, numéro, sortie FEFO du stock et montants figés. Le caissier n'a plus qu'à encaisser.
      *
@@ -629,19 +687,19 @@ class VenteService
         return rtrim(rtrim(number_format($taux, 1, ',', ''), '0'), ',');
     }
 
-    /** Organisme, n° d'assuré et taux AMO du jour, repris du client (AM-02, H1). */
-    private function actualiserAmo(Vente $vente, ?OrganismeAmo $organisme, ?string $numeroAssure): void
+    /** Organisme, n° d'assuré et taux AMO du jour (ou de la date donnée), repris du client (AM-02, H1). */
+    private function actualiserAmo(Vente $vente, ?OrganismeAmo $organisme, ?string $numeroAssure, ?\DateTimeImmutable $le = null): void
     {
         $client = $vente->getClient();
         if (TypeVente::Amo !== $vente->getType()) {
             $vente->definirAmo(null, null, null);
         } elseif (null !== $client && $client->isAssureAmo()) {
             $organisme = $client->getOrganismeAmo() ?? throw new \LogicException('Assuré sans organisme.');
-            $vente->definirAmo($organisme, $client->getNumeroAssure(), $this->parametres->tauxAmo($organisme));
+            $vente->definirAmo($organisme, $client->getNumeroAssure(), $this->parametres->tauxAmo($organisme, $le));
         } elseif (null !== $organisme) {
             // Sans client assuré : organisme et n° d'assuré (facultatif) saisis sur la vente.
             $numeroAssure = null === $numeroAssure || '' === trim($numeroAssure) ? null : mb_substr(trim($numeroAssure), 0, 40);
-            $vente->definirAmo($organisme, $numeroAssure, $this->parametres->tauxAmo($organisme));
+            $vente->definirAmo($organisme, $numeroAssure, $this->parametres->tauxAmo($organisme, $le));
         } else {
             $vente->definirAmo(null, null, null);
         }

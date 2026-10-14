@@ -26,6 +26,9 @@
         <span class="small text-body-secondary" id="intervenants">{{ vente.valideeLe|date('d/m/Y H:i') }} · {{ vente.vendeur.nom }}
             {%- if vente.session %} · session {{ vente.session.numero }}{% if vente.session.utilisateur.id != vente.vendeur.id %}, encaissée par {{ vente.session.utilisateur.nom }}{% endif %}
             {%- elseif vente.statut.value == 'a_encaisser' %} · envoyée à la caisse{% endif %}</span>
+        {% if vente.numeroHorsLigne %}
+            <span class="badge text-bg-light border" id="hors-ligne" title="Vente faite pendant une coupure d'internet"><i class="bi bi-wifi-off"></i> Ticket hors ligne {{ vente.numeroHorsLigne }}</span>
+        {% endif %}
     </div>
 
     {% if vente.statut.value == 'annulee' %}

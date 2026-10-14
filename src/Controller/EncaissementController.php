@@ -7,6 +7,7 @@ use App\Entity\Vente;
 use App\Repository\VenteRepository;
 use App\Util\Fcfa;
 use App\Vente\GestionCaisse;
+use App\Vente\HorsLigneService;
 use App\Vente\VenteException;
 use App\Vente\VenteService;
 use Symfony\Component\HttpFoundation\Request;
@@ -117,12 +118,17 @@ final class EncaissementController extends AbstractAppController
      */
     #[Route('/caisse/ouvrir', name: 'app_caisse_ouvrir', methods: ['POST'])]
     #[IsCsrfTokenValid(self::CSRF)]
-    public function ouvrir(Request $requete): Response
+    public function ouvrir(Request $requete, HorsLigneService $horsLigne): Response
     {
         try {
             $fond = $this->montant($requete->getPayload()->get('fond'));
             $session = $this->caisse->ouvrir($this->pharmacie(), $this->utilisateur(), $fond);
             $this->addFlash('success', \sprintf('Caisse ouverte (session %s, fond de caisse %s).', $session->getNumero(), Fcfa::format($fond)));
+            // Ventes faites hors ligne qui attendaient l'ouverture de cette caisse.
+            $importees = $horsLigne->importerEnAttente($this->utilisateur());
+            if ($importees > 0) {
+                $this->addFlash('info', \sprintf('%d vente(s) faite(s) hors ligne rattachée(s) à cette caisse.', $importees));
+            }
         } catch (VenteException $e) {
             $this->addFlash('error', $e->getMessage());
         }

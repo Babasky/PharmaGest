@@ -1,0 +1,154 @@
+{#
+    Caisse hors ligne : la page ne contient aucune donnée de la pharmacie. Elle est gardée sur le poste par le
+    service worker et lit la copie du catalogue rangée dans le navigateur (assets/caisse_hors_ligne.js).
+#}
+{% extends 'base.html.twig' %}
+
+{% block title %}Caisse hors ligne{% endblock %}
+
+{% block javascripts %}
+    <meta name="turbo-visit-control" content="reload">
+    {{ importmap('caisse-hors-ligne') }}
+{% endblock %}
+
+{% block body_class %}pg-hors-ligne{% endblock %}
+
+{% block body %}
+    <header class="pg-hl-entete d-flex flex-wrap align-items-center gap-2 px-3 py-2">
+        <span class="pg-logo-icon"><i class="bi bi-capsule-pill"></i></span>
+        <div class="me-auto min-w-0">
+            <div class="fw-semibold">Caisse hors ligne <span class="badge" id="hl-etat"></span></div>
+            <div class="small text-body-secondary text-truncate" id="hl-identite"></div>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_caisse') }}" id="hl-retour"><i class="bi bi-arrow-left"></i> Caisse en ligne</a>
+    </header>
+
+    <main class="container-fluid py-3">
+        <div class="alert alert-danger d-none" id="hl-indisponible"></div>
+
+        <div id="hl-caisse" class="d-none">
+            <details class="alert alert-warning small mb-3" id="hl-limites">
+                <summary class="fw-semibold">Vente sans internet : ce qu'il faut savoir</summary>
+                <ul class="mb-0 mt-2">
+                    <li>Les ventes restent sur ce poste et partent toutes seules au retour du réseau : elles reçoivent alors leur numéro définitif et sortent du stock.</li>
+                    <li>Le ticket porte un numéro provisoire (HL-…). Le stock affiché est celui de la dernière copie du catalogue, moins les ventes faites sur ce poste.</li>
+                    <li>Pas de client, de remise ni de code PIN hors ligne. La copie de l'ordonnance se joint ensuite, depuis la vente.</li>
+                    <li>Les ventes sont rattachées à votre caisse : ouvrez-la au retour du réseau si elle ne l'est pas, et clôturez seulement une fois tout envoyé.</li>
+                </ul>
+            </details>
+            <div class="alert alert-info small d-none" id="hl-session"><i class="bi bi-safe"></i> Votre caisse n'était pas ouverte : au retour du réseau, ouvrez-la pour que ces ventes y soient rattachées.</div>
+
+            <div class="row g-3">
+                <div class="col-12 col-xl-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <form id="hl-recherche" autocomplete="off">
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                                    <input class="form-control" type="search" id="hl-q" placeholder="Nom, DCI ou code-barres (F2)" aria-label="Rechercher un produit" autofocus>
+                                </div>
+                            </form>
+                            <div class="small text-body-secondary mt-2" id="hl-catalogue"></div>
+                            <div class="list-group list-group-flush mt-2" id="hl-resultats"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h6"><i class="bi bi-cart"></i> Panier</h2>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-2">
+                                    <thead><tr><th>Produit</th><th class="text-end" style="width: 6rem">Qté</th><th class="text-end">Montant</th><th></th></tr></thead>
+                                    <tbody id="hl-panier"></tbody>
+                                </table>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-sm-6">
+                                    <label class="form-label small mb-1" for="hl-type">Type de vente</label>
+                                    <select class="form-select form-select-sm" id="hl-type">
+                                        <option value="sans_ordonnance">Sans ordonnance</option>
+                                        <option value="ordonnance">Ordonnance classique</option>
+                                        <option value="amo">Ordonnance AMO / assurance</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-6 hl-amo d-none">
+                                    <label class="form-label small mb-1" for="hl-organisme">Organisme</label>
+                                    <select class="form-select form-select-sm" id="hl-organisme"></select>
+                                </div>
+                                <div class="col-sm-6 hl-amo d-none">
+                                    <label class="form-label small mb-1" for="hl-assure">N° d'assuré</label>
+                                    <input class="form-control form-control-sm" id="hl-assure" maxlength="40">
+                                </div>
+                                <div class="col-sm-4 hl-ordonnance d-none">
+                                    <label class="form-label small mb-1" for="hl-ord-date">Date de l'ordonnance</label>
+                                    <input class="form-control form-control-sm" type="date" id="hl-ord-date">
+                                </div>
+                                <div class="col-sm-4 hl-ordonnance d-none">
+                                    <label class="form-label small mb-1" for="hl-ord-numero">N° d'ordonnance</label>
+                                    <input class="form-control form-control-sm" id="hl-ord-numero" maxlength="50">
+                                </div>
+                                <div class="col-sm-4 hl-ordonnance d-none">
+                                    <label class="form-label small mb-1" for="hl-ord-prescripteur">Prescripteur</label>
+                                    <input class="form-control form-control-sm" id="hl-ord-prescripteur" maxlength="100">
+                                </div>
+                            </div>
+
+                            <dl class="row small mb-2" id="hl-totaux"></dl>
+
+                            <form id="hl-paiement" autocomplete="off">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-sm-6">
+                                        <label class="form-label small mb-1" for="hl-remis">Espèces remises (F9)</label>
+                                        <input class="form-control form-control-lg text-end" type="text" inputmode="numeric" id="hl-remis" placeholder="Montant exact">
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="small text-body-secondary">Monnaie à rendre</div>
+                                        <div class="fs-4 fw-semibold" id="hl-monnaie">0 FCFA</div>
+                                    </div>
+                                </div>
+                                <details class="mt-2">
+                                    <summary class="small">Paiement mobile ou carte</summary>
+                                    <div class="row g-2 mt-1" id="hl-modes"></div>
+                                </details>
+                                <div class="alert alert-danger small py-2 mt-2 d-none" id="hl-erreur"></div>
+                                <div class="d-flex gap-2 mt-3">
+                                    <button class="btn btn-success btn-lg flex-grow-1" type="submit" id="hl-encaisser"><i class="bi bi-cash-coin"></i> Encaisser</button>
+                                    <button class="btn btn-outline-secondary" type="button" id="hl-vider" title="Vider le panier"><i class="bi bi-trash"></i></button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success mt-3 d-none" id="hl-faite" role="status">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="flex-grow-1"><i class="bi bi-check-circle"></i> <span id="hl-faite-texte"></span></span>
+                            <button class="btn btn-sm btn-success" type="button" id="hl-imprimer"><i class="bi bi-printer"></i> Imprimer le ticket</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h2 class="h6 mb-0 me-auto"><i class="bi bi-cloud-arrow-up"></i> Ventes de ce poste à envoyer</h2>
+                        <span class="small text-body-secondary" id="hl-envoi-etat"></span>
+                        <button class="btn btn-sm btn-outline-success" type="button" id="hl-envoyer"><i class="bi bi-cloud-upload"></i> Envoyer maintenant</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Ticket</th><th>Heure</th><th class="text-end">Montant</th><th>État</th><th></th></tr></thead>
+                            <tbody id="hl-ventes"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {# Ticket provisoire, seul visible à l'impression. #}
+    <div id="hl-ticket" class="pg-hl-ticket"></div>
+{% endblock %}

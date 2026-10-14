@@ -3,6 +3,7 @@
 {% block title %}Caisse{% endblock %}
 
 {% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_caisse_hors_ligne') }}" data-turbo="false" title="Vendre pendant une coupure d'internet"><i class="bi bi-wifi-off"></i> Caisse hors ligne</a>
     {% if session %}
         <span class="align-self-center small text-body-secondary">
             <i class="bi bi-safe"></i> Session {{ session.numero }} · {{ app.user.nom }} · ouverte à {{ session.ouverteLe|date('H:i') }}
