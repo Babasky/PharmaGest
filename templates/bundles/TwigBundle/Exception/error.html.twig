@@ -1,0 +1,29 @@
+{#
+    Toutes les autres erreurs (400, 405, 429, 503…). Les erreurs 5xx proposent le support.
+#}
+{% extends 'layout/erreur.html.twig' %}
+
+{% set erreurs = {
+    400: ['Requête invalide', 'x-octagon', "La demande envoyée n'a pas pu être comprise. Revenez en arrière et réessayez."],
+    401: ['Connexion requise', 'person-lock', 'Connectez-vous pour accéder à cette page.'],
+    405: ['Action non autorisée', 'slash-circle', "Cette page ne peut pas être ouverte de cette façon. Revenez en arrière et utilisez les boutons de l'application."],
+    408: ['Délai dépassé', 'hourglass-split', 'La demande a pris trop de temps. Vérifiez votre connexion et réessayez.'],
+    413: ['Fichier trop volumineux', 'file-earmark-x', 'Le fichier envoyé dépasse la taille autorisée. Réduisez-le puis réessayez.'],
+    429: ['Trop de tentatives', 'hourglass-split', 'Trop de demandes ont été envoyées en peu de temps. Patientez quelques minutes avant de réessayer.'],
+    503: ['Service momentanément indisponible', 'cone-striped', "L'application est en maintenance ou surchargée. Réessayez dans quelques minutes."],
+} %}
+{% set erreur = erreurs[status_code] ?? (status_code >= 500
+    ? ['Une erreur est survenue', 'tools', "Un problème technique a empêché d'afficher cette page. Réessayez dans un instant."]
+    : ['Demande impossible', 'exclamation-triangle', "Cette demande n'a pas pu aboutir. Revenez en arrière et réessayez."]) %}
+
+{% block title %}{{ erreur[0] }}{% endblock %}
+{% block icone %}{{ erreur[1] }}{% endblock %}
+{% block message %}{{ erreur[2] }}{% endblock %}
+
+{% block aide %}
+    {% if status_code >= 500 %}
+        {{ include('bundles/TwigBundle/Exception/_support.html.twig') }}
+    {% else %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}

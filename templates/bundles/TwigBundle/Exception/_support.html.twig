@@ -1,0 +1,8 @@
+{# Canaux du support, sans dépendre de la base : si elle est en panne, support_client_secours() renvoie null. #}
+{% set support = support_client_secours() %}
+{% if support %}
+    <div class="text-start mt-4" id="erreur-canaux">
+        <p class="small fw-semibold mb-2">Contacter le support</p>
+        {{ include('support/_canaux.html.twig', {support: support, pharmacie: null}) }}
+    </div>
+{% endif %}

@@ -1,0 +1,13 @@
+{% extends 'layout/erreur.html.twig' %}
+
+{% block title %}Une erreur est survenue{% endblock %}
+{% block icone %}tools{% endblock %}
+
+{% block message %}
+    Un problème technique a empêché d'afficher cette page. Il a été enregistré. Réessayez dans un instant ;
+    si cela se reproduit, prévenez le support en indiquant ce que vous faisiez.
+{% endblock %}
+
+{% block aide %}
+    {{ include('bundles/TwigBundle/Exception/_support.html.twig') }}
+{% endblock %}
