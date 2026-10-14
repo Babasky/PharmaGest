@@ -1,0 +1,42 @@
+{#
+    Pages d'erreur (403, 404, 500…) : carte centrée aux couleurs de l'application, sans menu latéral.
+    Elles s'affichent aussi quand la page n'existe pas (avant le pare-feu, app.user est alors vide)
+    ou quand la base est en panne : rien ici ne doit dépendre de la pharmacie courante.
+    Blocs : icone, titre (block title), message, actions, aide.
+#}
+{% extends 'base.html.twig' %}
+
+{% block body_class %}layout-erreur{% endblock %}
+
+{% block body %}
+    <main class="pg-erreur">
+        <div class="pg-erreur-carte">
+            <div class="d-flex align-items-center justify-content-center gap-2 mb-4">
+                <span class="pg-logo-icon"><i class="bi bi-capsule-pill"></i></span>
+                <span class="fs-5 fw-bold">{{ app_name }}</span>
+            </div>
+            <div class="pg-erreur-icone"><i class="bi bi-{% block icone %}exclamation-triangle{% endblock %}"></i></div>
+            <div class="pg-erreur-code" id="erreur-code">{{ status_code }}</div>
+            <h1 class="h4 fw-semibold mb-2">{{ block('title') }}</h1>
+            <p class="text-body-secondary mb-4" id="erreur-message">{% block message %}{% endblock %}</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2" id="erreur-actions">
+                {% block actions %}
+                    {% if app.user %}
+                        <a class="btn btn-success" href="{{ path('app_tableau_de_bord') }}" id="erreur-accueil"><i class="bi bi-house-door"></i> Retour à l'accueil</a>
+                    {% else %}
+                        <a class="btn btn-success" href="{{ path('app_connexion') }}" id="erreur-accueil"><i class="bi bi-box-arrow-in-right"></i> Se connecter</a>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> Page précédente</button>
+                {% endblock %}
+            </div>
+            {% block aide %}
+                {% if is_granted('ROLE_CAISSIER') %}
+                    <p class="small text-body-secondary mt-4 mb-0">
+                        Le problème persiste ? <a href="{{ path('app_support') }}" id="erreur-support">Contactez le support</a>.
+                    </p>
+                {% endif %}
+            {% endblock %}
+        </div>
+        <p class="small text-body-secondary mt-3 mb-0">© {{ 'now'|date('Y') }} {{ app_name }}</p>
+    </main>
+{% endblock %}
