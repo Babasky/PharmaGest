@@ -22,7 +22,7 @@ final class TableauDeBordController extends AbstractAppController
      * encours AMO et valeur du stock, comparés au même nombre de jours du mois précédent ; graphiques des
      * recettes et dépenses sur 12 mois (RA-03) et des dépenses par catégorie (RA-04). Chacun ne voit que ce que
      * la matrice des droits lui ouvre : le vendeur le nombre de ventes du jour et les alertes (pas le chiffre d'affaires), l'adjoint les ventes et
-     * le stock, le propriétaire en plus les finances.
+     * le stock, le propriétaire en plus les finances (recettes, dépenses et résultat du mois).
      */
     #[Route('/', name: 'app_tableau_de_bord', methods: ['GET'])]
     public function index(AlertesStock $alertes, VenteRepository $ventes, Indicateurs $indicateurs, DepenseRepository $depenses, ClockInterface $horloge): Response
@@ -61,6 +61,7 @@ final class TableauDeBordController extends AbstractAppController
                 $finances = $indicateurs->finances($mois);
                 $financesPrecedent = $indicateurs->finances($precedent);
                 $indicateursAffiches = array_merge($indicateursAffiches, [
+                    ['libelle' => 'Recettes du mois', 'icone' => 'piggy-bank', 'valeur' => $finances['recettes'], 'montant' => true, 'id' => 'recettes-mois', 'evolution' => Indicateurs::evolution($finances['recettes'], $financesPrecedent['recettes']), 'route' => 'app_recette_index'],
                     ['libelle' => 'Dépenses du mois', 'icone' => 'wallet2', 'valeur' => $finances['depenses'], 'montant' => true, 'id' => 'depenses-mois', 'evolution' => Indicateurs::evolution($finances['depenses'], $financesPrecedent['depenses']), 'inverse' => true],
                     ['libelle' => 'Résultat du mois', 'icone' => 'calculator', 'valeur' => $finances['resultat'], 'montant' => true, 'id' => 'resultat-mois', 'evolution' => Indicateurs::evolution($finances['resultat'], $financesPrecedent['resultat'])],
                 ]);
