@@ -24,9 +24,16 @@
             </form>
             <div class="card shadow-sm">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="depenses">
+                    <table class="table table-hover table-bordered align-middle mb-0" id="depenses">
                         <thead class="table-light">
-                            <tr><th class="ps-3">Date</th><th>N°</th><th>Catégorie</th><th>Libellé</th><th>Mode</th><th class="text-end pe-3">Montant</th></tr>
+                            <tr>
+                                <th class="ps-3">Date</th>
+                                <th>N°</th>
+                                <th>Catégorie</th>
+                                <th>Libellé</th>
+                                <th>Mode</th>
+                                <th class="text-end pe-3">Montant</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for depense in depenses %}

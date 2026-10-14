@@ -22,9 +22,14 @@
 
     <div class="card shadow-sm">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover table-bordered align-middle mb-0">
                 <thead class="table-light">
-                    <tr><th class="ps-3">Produit</th><th class="d-none d-md-table-cell">Catégorie</th><th>Étagère</th><th class="text-end pe-3">Prix de vente</th></tr>
+                    <tr>
+                        <th class="ps-3">Produit</th>
+                        <th class="d-none d-md-table-cell text-center">Catégorie</th>
+                        <th class="text-center">Étagère</th>
+                        <th class="pe-3 text-center">Prix de vente</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for produit in produits %}
@@ -35,9 +40,9 @@
                                 {% if produit.remboursableAmo %}<span class="badge text-bg-info ms-1" title="Remboursable AMO">AMO</span>{% endif %}
                                 <div class="small text-body-secondary">{{ [produit.dci, produit.dosage, produit.forme ? produit.forme.nom|lower : null]|filter(v => v)|join(' · ') }}</div>
                             </td>
-                            <td class="d-none d-md-table-cell small">{{ produit.categorie ? produit.categorie.nomComplet : '—' }}</td>
-                            <td class="text-nowrap">{{ produit.etagere ? produit.etagere.code : '—' }}</td>
-                            <td class="montant pe-3">{{ produit.prixVente|fcfa }}</td>
+                            <td class="d-none d-md-table-cell small text-center">{{ produit.categorie ? produit.categorie.nomComplet : '—' }}</td>
+                            <td class="text-nowrap text-center">{{ produit.etagere ? produit.etagere.code : '—' }}</td>
+                            <td class="montant pe-3 text-center">{{ produit.prixVente|fcfa }}</td>
                         </tr>
                     {% else %}
                         <tr><td colspan="4" class="text-center text-body-secondary py-4">

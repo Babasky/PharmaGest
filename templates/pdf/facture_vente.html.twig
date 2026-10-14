@@ -12,7 +12,7 @@
         table.lignes { width: 100%; border-collapse: collapse; margin-top: 6mm; }
         table.lignes th { background: #e9f3ee; text-align: left; padding: 2mm; border-bottom: 1px solid #198754; font-size: 8.5pt; }
         table.lignes td { padding: 2mm; border-bottom: 1px solid #ddd; }
-        .droite { text-align: right; }
+        .droite { text-align: center; }
         table.totaux { width: 45%; margin-left: 55%; border-collapse: collapse; margin-top: 4mm; }
         table.totaux td { padding: 1.5mm 2mm; }
         .total td { font-weight: bold; font-size: 11pt; border-top: 1px solid #198754; }
@@ -24,7 +24,9 @@
     <table class="entete" width="100%">
         <tr>
             <td width="55%">
-                {% if logo %}<img src="{{ logo }}" style="max-height: 18mm; max-width: 50mm; margin-bottom: 2mm;"><br>{% endif %}
+                {% if logo %}
+                    <img src="{{ logo }}" style="max-height: 18mm; max-width: 50mm; margin-bottom: 2mm;"><br>
+                {% endif %}
                 <h1>{{ pharmacie.nom }}</h1>
                 <div class="petit">
                     {{ [pharmacie.adresse, pharmacie.ville]|filter(v => v)|join(', ') }}<br>
@@ -61,7 +63,12 @@
 
     <table class="lignes">
         <thead>
-            <tr><th>Désignation</th><th class="droite">Qté</th><th class="droite">Prix unitaire</th><th class="droite">Remise</th><th class="droite">Montant</th></tr>
+            <tr>
+                <th>Désignation</th>
+                <th class="droite">Qté</th>
+                <th class="droite">Prix unitaire</th>
+                <th class="droite">Remise</th>
+                <th class="droite">Montant</th></tr>
         </thead>
         <tbody>
             {% for ligne in vente.lignes %}
@@ -69,7 +76,7 @@
                     <td>{{ ligne.produit.designation }}{% if vente.type.value == 'amo' %}<br><span class="petit">{{ ligne.remboursable ? 'Remboursable' ~ (vente.tarifAmo and ligne.prixUnitaireAmo is not null ? ', prix AMO ' ~ ligne.prixUnitaireAmo|fcfa) : 'Non remboursable : à la charge de l\'assuré' }}</span>{% endif %}</td>
                     <td class="droite">{{ ligne.quantite }}</td>
                     <td class="droite">{{ ligne.prixUnitaire|fcfa }}</td>
-                    <td class="droite">{{ ligne.remise > 0 ? ligne.remise|fcfa : '—' }}</td>
+                    <td class="droite">{{ ligne.remise > 0 ? ligne.remise|fcfa : '-' }}</td>
                     <td class="droite">{{ (ligne.montantBrut - ligne.remise)|fcfa }}</td>
                 </tr>
             {% endfor %}
@@ -77,15 +84,26 @@
     </table>
 
     <table class="totaux">
-        <tr><td>Total</td><td class="droite">{{ vente.totalBrut|fcfa }}</td></tr>
+        <tr>
+            <td>Total</td><td class="droite">{{ vente.totalBrut|fcfa }}</td>
+        </tr>
         {% if vente.type.value == 'amo' %}
-            <tr><td>Part {{ vente.organismeAmo.code }} ({{ vente.tauxAmo }} % de {{ vente.baseAmo|fcfa }})</td><td class="droite">{{ vente.partAmo|fcfa }}</td></tr>
-            <tr><td>Part assuré</td><td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td></tr>
+            <tr>
+                <td>Part {{ vente.organismeAmo.code }} ({{ vente.tauxAmo }} % de {{ vente.baseAmo|fcfa }})</td>
+                <td class="droite">{{ vente.partAmo|fcfa }}</td>
+            </tr>
+            <tr>
+                <td>Part assuré</td>
+                <td class="droite">{{ (vente.totalBrut - vente.partAmo)|fcfa }}</td>
+            </tr>
         {% endif %}
         {% if vente.remise > 0 %}<tr><td>Remise</td><td class="droite">− {{ vente.remise|fcfa }}</td></tr>{% endif %}
         <tr class="total"><td>Payé par le client</td><td class="droite">{{ vente.montantEncaisse|fcfa }}</td></tr>
         {% for paiement in vente.paiements %}
-            <tr><td class="petit">{{ paiement.mode.libelle }}{{ paiement.reference ? ' (' ~ paiement.reference ~ ')' }}</td><td class="droite petit">{{ paiement.montant|fcfa }}</td></tr>
+            <tr>
+                <td class="petit">{{ paiement.mode.libelle }}{{ paiement.reference ? ' (' ~ paiement.reference ~ ')' }}</td>
+                <td class="droite petit">{{ paiement.montant|fcfa }}</td>
+            </tr>
         {% endfor %}
     </table>
 
