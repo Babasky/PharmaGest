@@ -576,8 +576,8 @@ vente, et son taux s'applique sur ce prix.
   pharmacie (RG-06) ; la nature de l'organisme est figée sur la vente.
 - La caisse affiche le prix AMO sous le prix de la ligne quand il diffère, et « Part INPS (70 % de … , prix AMO) » ;
   la facture indique le prix AMO de chaque ligne remboursable, le bordereau reprend la base AMO calculée sur ces prix.
-- Point ouvert : faut-il vendre au prix AMO (la pharmacie s'aligne) plutôt que facturer la différence à l'assuré ?
-  Le choix inverse ne demande qu'une règle de calcul à changer.
+- ~~Point ouvert : faut-il vendre au prix AMO plutôt que facturer la différence à l'assuré ?~~ Tranché le 15/10/2026,
+  voir « Plusieurs assurances par client et prix le plus bas » : on prend toujours le prix le moins élevé.
 
 ## Décisions — Corrections du 08/10/2026 (demande de Modibo)
 
@@ -831,3 +831,32 @@ donc plus signalé tout de suite comme une rupture.
   badge « Rupture ».
 - La fiche produit indique « à zéro depuis le … ». Les alertes « Rupture ou sous le seuil » et les notifications du
   matin listent toujours les produits à zéro, comme avant.
+## Décisions — Plusieurs assurances par client et prix le plus bas (retours de pharmacies, Modibo, 15/10/2026)
+
+### Plusieurs assurances par client (AM-02)
+
+- Un client peut avoir **plusieurs assurances** (AMO ou autres), chacune avec son n° d'assuré, sur sa fiche (bouton
+  « Ajouter une assurance »). Une même assurance ne peut figurer qu'une fois par client. Les clients existants
+  gardent leur assurance, reprise telle quelle.
+- À la caisse, une vente « Ordonnance AMO / assurance » pour un client assuré propose la liste de ses assurances : on
+  choisit celle qui s'applique à la vente (la première de sa fiche par défaut) ; son n° d'assuré est repris de la
+  fiche. **Une seule assurance par vente** : la créance et le bordereau vont à cet organisme.
+- Point ouvert : certaines ventes doivent-elles cumuler deux assurances (AMO puis complémentaire sur le reste à
+  charge) ? Ce n'est pas géré.
+- Import clients : une assurance par ligne (colonnes `organisme_amo` et `numero_assure`) ; elle s'ajoute aux
+  assurances que le client a déjà (reconnu par son téléphone) ou met à jour son n° d'assuré. Un n° d'assuré sans
+  organisme, ou l'inverse, est une erreur.
+- La recherche de clients trouve un client par n'importe lequel de ses n° d'assuré.
+
+### Prix le plus bas (RG-07, AM-13)
+
+- Sur une vente AMO avec un organisme de nature AMO, chaque médicament remboursable qui a un prix de vente AMO est
+  **vendu au plus bas** du prix AMO et du prix de la pharmacie, et le taux s'applique sur ce prix :
+  prix AMO plus bas → la ligne est facturée au prix AMO (l'assuré ne paie plus la différence) ; prix de la pharmacie
+  plus bas → la ligne reste au prix de la pharmacie et le taux s'applique dessus.
+- Sans prix AMO, ou pour une autre assurance, le prix de la pharmacie s'applique comme avant.
+- Le prix de la pharmacie et le prix AMO restent figés sur la ligne (RG-06) ; le prix facturé suit l'assurance
+  choisie jusqu'à la validation. La caisse, le détail de la vente et la facture indiquent « prix AMO, au lieu de … »
+  quand le prix AMO est retenu. Le chiffre d'affaires et les rapports comptent le prix facturé.
+- Les ventes validées avant ce changement gardent leurs montants et leur base AMO d'origine.
+- La caisse hors ligne applique la même règle.

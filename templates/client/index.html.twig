@@ -33,7 +33,7 @@
                                 {% if client.entreprise %}<div class="small text-body-secondary">{{ client.entreprise }}</div>{% endif %}
                             </td>
                             <td class="text-nowrap">{{ client.telephone ? client.telephone|telephone : '—' }}</td>
-                            <td class="d-none d-md-table-cell small">{{ client.assureAmo ? client.organismeAmo.code ~ ' · ' ~ client.numeroAssure : '—' }}</td>
+                            <td class="d-none d-md-table-cell small">{{ client.assureAmo ? client.assurances|map(a => a.organisme.code ~ ' · ' ~ a.numeroAssure)|join(', ') : '—' }}</td>
                             <td class="pe-3 text-end">
                                 {% if ecriture_autorisee() %}
                                     <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_client_modifier', {id: client.id}) }}" title="Modifier"><i class="bi bi-pencil"></i><span class="visually-hidden">Modifier {{ client.nom }}</span></a>

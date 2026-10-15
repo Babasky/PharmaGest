@@ -1,6 +1,6 @@
 twig:
     file_name_pattern: '*.twig'
-    form_themes: ['bootstrap_5_layout.html.twig']
+    form_themes: ['bootstrap_5_layout.html.twig', 'form/assurances_client.html.twig']
     date:
         format: 'd/m/Y H:i'
         interval_format: '%%d jours'

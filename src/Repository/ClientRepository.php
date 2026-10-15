@@ -26,14 +26,12 @@ class ClientRepository extends ServiceEntityRepository
     public function rechercher(?string $recherche, bool $privilegiesSeulement, bool $archives, int $page): Page
     {
         $qb = $this->createQueryBuilder('c')
-            ->addSelect('o')
-            ->leftJoin('c.organismeAmo', 'o')
             ->andWhere('c.actif = :actif')->setParameter('actif', !$archives)
             ->orderBy('c.nom', 'ASC');
 
         if (null !== $recherche && '' !== trim($recherche)) {
             $q = trim($recherche);
-            $qb->andWhere('c.nom LIKE :q OR c.numeroAssure LIKE :q OR c.telephone = :tel')
+            $qb->andWhere('c.nom LIKE :q OR c.telephone = :tel OR EXISTS (SELECT ca.id FROM App\Entity\ClientAssurance ca WHERE ca.client = c AND ca.numeroAssure LIKE :q)')
                 ->setParameter('q', '%'.addcslashes($q, '%_').'%')
                 ->setParameter('tel', Telephone::normaliser($q) ?? $q);
         }
