@@ -25,7 +25,7 @@ use App\Tenant\TenantContext;
  *
  * Le fournisseur est le fournisseur habituel du produit, à défaut celui de sa dernière commande (habitudes d'achat).
  *
- * @phpstan-type Suggestion array{produit: Produit, fournisseur: Fournisseur|null, stock: int, attendu: int, quantite: int, vendu: int, moyenne: float, rotation: Rotation, couverture: float|null, delai: int, motif: string, inhabituelle: bool, dernier_achat: array{fournisseur: int, date: \DateTimeImmutable, quantite: int}|null}
+ * @phpstan-type Suggestion array{produit: Produit, fournisseur: Fournisseur|null, stock: int, rupture: bool, attendu: int, quantite: int, vendu: int, moyenne: float, rotation: Rotation, couverture: float|null, delai: int, motif: string, inhabituelle: bool, dernier_achat: array{fournisseur: int, date: \DateTimeImmutable, quantite: int}|null}
  */
 class SuggestionsCommande
 {
@@ -119,7 +119,7 @@ class SuggestionsCommande
             }
             $pointDeCommande = $seuil + (int) ceil($s['moyenne'] * $s['delai']);
             if ($s['stock'] <= $seuil) {
-                $s['motif'] = 0 === $s['stock'] ? 'Rupture' : 'Sous le seuil d\'alerte';
+                $s['motif'] = 0 === $s['stock'] ? ($s['rupture'] ? 'Rupture' : 'Stock à zéro') : 'Sous le seuil d\'alerte';
             } elseif ($disponible <= $pointDeCommande) {
                 $s['motif'] = 'Seuil atteint avant la livraison';
             } else {
@@ -225,6 +225,7 @@ class SuggestionsCommande
                 'produit' => $produit,
                 'fournisseur' => $fournisseur,
                 'stock' => $synthese[$id]['stock'] ?? 0,
+                'rupture' => $synthese[$id]['rupture'] ?? false,
                 'attendu' => $attendus[$id] ?? 0,
                 'quantite' => 0,
                 'vendu' => 0,

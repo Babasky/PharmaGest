@@ -45,9 +45,10 @@
                         {% endif %}
                         <dt class="col-6 fw-normal text-body-secondary">TVA</dt><dd class="col-6 text-end">{{ produit.tauxTva }} %</dd>
                         <dt class="col-6 fw-normal text-body-secondary">Stock disponible</dt>
-                        <dd class="col-6 text-end fs-5 fw-semibold" id="stock-disponible">
+                        <dd class="col-6 text-end fs-5 fw-semibold{{ synthese.stock == 0 ? ' pg-stock-nul-bloc px-2' }}" id="stock-disponible">
                             {{ synthese.stock|number_format }}
-                            {% if synthese.stock == 0 %}<span class="badge text-bg-danger fs-6 align-middle">Rupture</span>{% elseif synthese.stock <= produit.seuilAlerte %}<span class="badge text-bg-warning fs-6 align-middle">Sous le seuil</span>{% endif %}
+                            {% if synthese.rupture %}<span class="badge text-bg-danger fs-6 align-middle">Rupture</span>{% elseif synthese.stock > 0 and synthese.stock <= produit.seuilAlerte %}<span class="badge text-bg-warning fs-6 align-middle">Sous le seuil</span>{% endif %}
+                            {% if synthese.aZeroDepuis %}<div class="fw-normal text-danger-emphasis" style="font-size: .8125rem">à zéro depuis le {{ synthese.aZeroDepuis|date('d/m/Y') }}</div>{% endif %}
                         </dd>
                         {% if is_granted('ROLE_ADJOINT') %}
                             <dt class="col-6 fw-normal text-body-secondary">Valeur du stock</dt><dd class="col-6 montant">{{ synthese.valeur|fcfa }}</dd>

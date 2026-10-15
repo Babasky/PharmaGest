@@ -812,3 +812,22 @@ uniquement si les officines appartiennent au même pharmacien ».
   alors en écart à la clôture.
 - Limites : deux postes hors ligne ne voient pas les ventes l'un de l'autre (le stock peut alors manquer à l'import) ;
   le rapport Z n'est juste qu'une fois les ventes du poste envoyées. Le service worker exige HTTPS (ou localhost).
+
+## Décisions — Stock à zéro et rupture (retour des pharmacies, demande de Modibo, 15/10/2026)
+
+Dans les officines du Mali, « rupture » veut dire que même le fournisseur n'a plus le produit. Un stock à zéro n'est
+donc plus signalé tout de suite comme une rupture.
+
+- **Stock à zéro** : la ligne du produit a un fond légèrement rouge, dès que le stock disponible est à 0, quelle que
+  soit la durée (état du stock, alertes, caisse, suggestions de commande ; sur la fiche produit, le bloc du stock).
+  Le badge « Seuil » n'est plus affiché pour un stock à zéro : le fond rouge le remplace.
+- **Rupture** : le badge « Rupture » s'ajoute quand le stock est à 0 depuis **5 jours ou plus**
+  (`LotRepository::JOURS_RUPTURE`). En caisse, le produit affiche « 0 en stock » puis « Rupture ».
+- **Depuis quand** : calculé à partir des mouvements de stock existants, sans nouvelle donnée. C'est le dernier
+  mouvement sur un lot tant qu'il comptait dans le stock, ou la date de péremption d'un lot qui avait encore des
+  unités à cette date (le stock tombe à zéro le jour de la péremption, RG-03). La destruction ou le retour d'un lot
+  déjà périmé ne remet pas le compteur à zéro. Les jours se comptent en dates : à zéro le 10, rupture le 15.
+- **Produit jamais reçu** : sans aucun lot, on ne sait pas depuis quand il manque. Il a le fond rouge mais pas de
+  badge « Rupture ».
+- La fiche produit indique « à zéro depuis le … ». Les alertes « Rupture ou sous le seuil » et les notifications du
+  matin listent toujours les produits à zéro, comme avant.
