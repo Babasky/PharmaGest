@@ -18,6 +18,10 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
+    'caisse-hors-ligne' => [
+        'path' => './assets/caisse_hors_ligne.js',
+        'entrypoint' => true,
+    ],
     'admin' => [
         'path' => './assets/admin.js',
         'entrypoint' => true,

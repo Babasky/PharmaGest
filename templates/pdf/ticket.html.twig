@@ -28,6 +28,7 @@
     <hr>
     <div>
         Ticket <span class="gras">{{ vente.numero }}</span>
+        {% if vente.numeroHorsLigne %}<span class="petit">(hors ligne {{ vente.numeroHorsLigne }})</span>{% endif %}
     </div>
     <div>{{ vente.valideeLe|date('d/m/Y H:i') }} · {{ vente.vendeur.nom }}</div>
     {% if vente.client %}<div>Client : {{ vente.client.nom }}</div>{% endif %}

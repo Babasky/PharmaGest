@@ -32,6 +32,8 @@ class AuditLogger
     public const VENTE_ANNULEE = 'vente.annulee';
     public const VENTE_REMISE_HORS_PLAFOND = 'vente.remise_hors_plafond';
     public const VENTE_SANS_ORDONNANCE = 'vente.sans_ordonnance';
+    public const VENTE_HORS_LIGNE_ECART = 'vente.hors_ligne_ecart';
+    public const VENTE_HORS_LIGNE_REJETEE = 'vente.hors_ligne_rejetee';
     public const CAISSE_ECART = 'caisse.ecart';
     public const AMO_BORDEREAU_TRANSMIS = 'amo.bordereau_transmis';
     public const AMO_REGLEMENT = 'amo.reglement';
@@ -75,6 +77,8 @@ class AuditLogger
         self::VENTE_ANNULEE => 'Vente annulée',
         self::VENTE_REMISE_HORS_PLAFOND => 'Remise au-delà du plafond',
         self::VENTE_SANS_ORDONNANCE => 'Vente sans ordonnance autorisée',
+        self::VENTE_HORS_LIGNE_ECART => 'Écart sur une vente hors ligne',
+        self::VENTE_HORS_LIGNE_REJETEE => 'Vente hors ligne rejetée',
         self::CAISSE_ECART => 'Écart de caisse',
         self::AMO_BORDEREAU_TRANSMIS => 'Bordereau AMO transmis',
         self::AMO_REGLEMENT => 'Règlement AMO',

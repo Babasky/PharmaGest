@@ -32,6 +32,7 @@ final class Navigation
                 ['libelle' => 'Caisse', 'icone' => 'cart-plus', 'route' => 'app_caisse', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Encaissement', 'icone' => 'cash-stack', 'route' => 'app_encaissement_index', 'role' => 'ROLE_CAISSIER'],
                 ['libelle' => 'Ventes', 'icone' => 'receipt', 'route' => 'app_vente_index', 'role' => 'ROLE_CAISSIER'],
+                ['libelle' => 'Ventes hors ligne', 'icone' => 'wifi-off', 'route' => 'app_hors_ligne_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Sessions de caisse', 'icone' => 'safe', 'route' => 'app_session_caisse_index', 'role' => 'ROLE_CAISSIER'],
                 ['libelle' => 'Clients', 'icone' => 'people', 'route' => 'app_client_index', 'role' => 'ROLE_VENDEUR'],
             ],

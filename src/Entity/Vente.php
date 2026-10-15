@@ -116,6 +116,10 @@ class Vente implements TenantAwareInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $motifAnnulation = null;
 
+    /** Numéro provisoire du ticket remis au client quand la vente a été faite hors ligne (HL-…). */
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $numeroHorsLigne = null;
+
     /** @var Collection<int, LigneVente> */
     #[ORM\OneToMany(targetEntity: LigneVente::class, mappedBy: 'vente', cascade: ['persist'], orphanRemoval: true)]
     #[ORM\OrderBy(['id' => 'ASC'])]
@@ -562,6 +566,18 @@ class Vente implements TenantAwareInterface
     public function getAnnuleePar(): ?Utilisateur
     {
         return $this->annuleePar;
+    }
+
+    public function getNumeroHorsLigne(): ?string
+    {
+        return $this->numeroHorsLigne;
+    }
+
+    public function setNumeroHorsLigne(?string $numero): static
+    {
+        $this->numeroHorsLigne = $numero;
+
+        return $this;
     }
 
     public function getMotifAnnulation(): ?string
