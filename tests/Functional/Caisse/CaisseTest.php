@@ -118,7 +118,7 @@ final class CaisseTest extends CaisseTestCase
 
         $this->ouvrirCaisse($this->officine->vendeur);
         $this->client->request('GET', '/caisse?q=Perimol');
-        self::assertSelectorTextContains('#resultats', 'Rupture');
+        self::assertSelectorTextContains('#resultats', '0 en stock', 'Périmé hier : à zéro depuis un jour, pas encore en rupture.');
         self::assertSelectorNotExists('#resultats form');
 
         $this->poster('/caisse/ajouter/'.$produit->getId());

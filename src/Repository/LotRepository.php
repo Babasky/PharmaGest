@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Categorie;
 use App\Entity\Etagere;
 use App\Entity\Lot;
+use App\Entity\MouvementStock;
 use App\Entity\Produit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\LockMode;
@@ -20,6 +21,12 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class LotRepository extends ServiceEntityRepository
 {
+    /**
+     * Au Mali, « rupture » veut dire que même le fournisseur n'en a plus : un stock à zéro
+     * n'est signalé en rupture qu'après ce nombre de jours sans réapprovisionnement.
+     */
+    public const JOURS_RUPTURE = 5;
+
     /** Tri FEFO : les lots sans date de péremption passent après tous les autres. */
     private const SANS_DATE = 'CASE WHEN l.datePeremption IS NULL THEN 1 ELSE 0 END AS HIDDEN sansDate';
 
@@ -151,10 +158,12 @@ class LotRepository extends ServiceEntityRepository
 
     /**
      * Stock disponible, quantité périmée et valeur au prix d'achat de chaque produit donné.
+     * Pour un produit dont le stock est à zéro, « aZeroDepuis » donne le moment où il y est tombé
+     * (null s'il n'a jamais été reçu) et « rupture » s'il y est depuis JOURS_RUPTURE jours ou plus.
      *
      * @param iterable<Produit> $produits
      *
-     * @return array<int, array{stock: int, perime: int, valeur: int}> indexé par id de produit
+     * @return array<int, array{stock: int, perime: int, valeur: int, aZeroDepuis: ?\DateTimeImmutable, rupture: bool}> indexé par id de produit
      */
     public function syntheseParProduit(iterable $produits, \DateTimeImmutable $jour): array
     {
@@ -162,7 +171,7 @@ class LotRepository extends ServiceEntityRepository
         $synthese = [];
         foreach ($produits as $produit) {
             $ids[] = $produit->getId();
-            $synthese[(int) $produit->getId()] = ['stock' => 0, 'perime' => 0, 'valeur' => 0];
+            $synthese[(int) $produit->getId()] = ['stock' => 0, 'perime' => 0, 'valeur' => 0, 'aZeroDepuis' => null, 'rupture' => false];
         }
         if ([] === $ids) {
             return [];
@@ -180,10 +189,73 @@ class LotRepository extends ServiceEntityRepository
             ->getQuery()->getArrayResult();
 
         foreach ($lignes as $l) {
-            $synthese[(int) $l['produit']] = ['stock' => (int) $l['stock'], 'perime' => (int) $l['perime'], 'valeur' => (int) $l['valeur']];
+            $synthese[(int) $l['produit']] = ['stock' => (int) $l['stock'], 'perime' => (int) $l['perime'], 'valeur' => (int) $l['valeur']] + $synthese[(int) $l['produit']];
+        }
+
+        $aZero = array_keys(array_filter($synthese, static fn (array $s) => 0 === $s['stock']));
+        $limite = $jour->modify(\sprintf('-%d days', self::JOURS_RUPTURE - 1));
+        foreach ($this->aZeroDepuis($aZero, $jour) as $id => $depuis) {
+            $synthese[$id]['aZeroDepuis'] = $depuis;
+            $synthese[$id]['rupture'] = $depuis < $limite;
         }
 
         return $synthese;
+    }
+
+    /**
+     * Moment où le stock disponible de chaque produit donné (supposé à zéro) est tombé à zéro :
+     * dernier mouvement sur un lot encore valable, ou péremption d'un lot qui avait encore du stock.
+     *
+     * @param list<int> $produits
+     *
+     * @return array<int, \DateTimeImmutable> indexé par id de produit ; absent si le produit n'a jamais été reçu
+     */
+    private function aZeroDepuis(array $produits, \DateTimeImmutable $jour): array
+    {
+        if ([] === $produits) {
+            return [];
+        }
+
+        $lots = $this->createQueryBuilder('l')
+            ->select('l.id', 'IDENTITY(l.produit) AS produit', 'l.datePeremption', 'l.quantiteRestante', 'l.dateReception')
+            ->andWhere('l.produit IN (:produits)')->setParameter('produits', $produits)
+            ->getQuery()->getArrayResult();
+        if ([] === $lots) {
+            return [];
+        }
+        $ids = array_column($lots, 'id');
+
+        // Dernier mouvement tant que le lot comptait dans le stock (pas après sa péremption).
+        $derniers = [];
+        foreach ($this->getEntityManager()->createQueryBuilder()
+            ->select('IDENTITY(m.lot) AS lot', 'MAX(m.date) AS date')
+            ->from(MouvementStock::class, 'm')->join('m.lot', 'l')
+            ->andWhere('m.lot IN (:lots)')->setParameter('lots', $ids)
+            ->andWhere('l.datePeremption IS NULL OR m.date < l.datePeremption')
+            ->groupBy('m.lot')
+            ->getQuery()->getArrayResult() as $m) {
+            $derniers[(int) $m['lot']] = new \DateTimeImmutable($m['date']);
+        }
+        // Lots sortis du stock (destruction, retour) après leur péremption : ils en avaient encore à cette date.
+        $sortisApres = array_flip(array_map('intval', $this->getEntityManager()->createQueryBuilder()
+            ->select('DISTINCT IDENTITY(m.lot)')
+            ->from(MouvementStock::class, 'm')->join('m.lot', 'l')
+            ->andWhere('m.lot IN (:lots)')->setParameter('lots', $ids)
+            ->andWhere('m.date >= l.datePeremption')
+            ->getQuery()->getSingleColumnResult()));
+
+        $depuis = [];
+        foreach ($lots as $lot) {
+            $date = $derniers[$lot['id']] ?? $lot['dateReception'];
+            $perime = $lot['datePeremption'];
+            if (null !== $perime && $perime <= $jour && ($lot['quantiteRestante'] > 0 || isset($sortisApres[$lot['id']]))) {
+                $date = max($date, $perime);
+            }
+            $produit = (int) $lot['produit'];
+            $depuis[$produit] = isset($depuis[$produit]) ? max($depuis[$produit], $date) : $date;
+        }
+
+        return $depuis;
     }
 
     /**

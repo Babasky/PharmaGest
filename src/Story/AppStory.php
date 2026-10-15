@@ -208,7 +208,7 @@ final class AppStory extends Story
             ]);
         }
 
-        // Stock (Lot 3) : de quoi voir chaque alerte. Augmentin reste en rupture.
+        // Stock (Lot 3) : de quoi voir chaque alerte.
         foreach ([
             ['Doliprane', 'DP24A', '+60 days', 30], ['Doliprane', 'DP24B', '+20 months', 20],
             ['Efferalgan', 'EF311', '+14 months', 8], ['Ibuprofène Biogaran', 'IB772', '+2 years', 40],
@@ -219,6 +219,11 @@ final class AppStory extends Story
             $produit = $catalogue[$nom];
             $this->stock->entrer($produit, $numero, new \DateTimeImmutable('today '.$peremption), $quantite, (int) $produit->getPrixAchat(), $produit->getFournisseurHabituel(), motif: 'Stock initial');
         }
+        // Augmentin : dernières boîtes vendues il y a 8 jours, toujours à zéro, donc en rupture (5 jours ou plus).
+        $augmentin = $this->stock->entrer($catalogue['Augmentin'], 'AG190', new \DateTimeImmutable('today +1 year'), 6, (int) $catalogue['Augmentin']->getPrixAchat(), $laborex, motif: 'Stock initial');
+        $this->stock->prelever($catalogue['Augmentin'], 6);
+        $this->em->getConnection()->executeStatement('UPDATE mouvement_stock SET date = ? WHERE lot_id = ?', [(new \DateTimeImmutable('today -8 days 11:00'))->format('Y-m-d H:i:s'), $augmentin->getId()]);
+        $this->em->getConnection()->executeStatement('UPDATE lot SET date_reception = ? WHERE id = ?', [(new \DateTimeImmutable('today -40 days'))->format('Y-m-d'), $augmentin->getId()]);
         // Lot périmé à détruire, et produit dormant (reçu il y a 4 mois, jamais vendu).
         LotFactory::createOne(['produit' => $catalogue['Amoxicilline'], 'numero' => 'AX601', 'datePeremption' => new \DateTimeImmutable('today -15 days'), 'quantiteInitiale' => 6, 'prixAchat' => 1750, 'fournisseur' => $ppm]);
         LotFactory::createOne(['produit' => $catalogue['Smecta'], 'numero' => 'SM118', 'datePeremption' => new \DateTimeImmutable('today +1 year'), 'quantiteInitiale' => 20, 'prixAchat' => 2300, 'dateReception' => new \DateTimeImmutable('today -4 months'), 'fournisseur' => $laborex]);
