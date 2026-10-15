@@ -512,6 +512,17 @@ body {
     padding: 0.4rem 0.5rem;
 }
 
+/* Stock à zéro : fond légèrement rouge (le badge « Rupture » n'arrive qu'après quelques jours). */
+.table > tbody > tr.pg-stock-nul > * {
+    --bs-table-bg: rgba(var(--bs-danger-rgb), 0.08);
+    --bs-table-hover-bg: rgba(var(--bs-danger-rgb), 0.13);
+}
+
+.pg-stock-nul-bloc {
+    background-color: rgba(var(--bs-danger-rgb), 0.08);
+    border-radius: 0.375rem;
+}
+
 .btn {
     --bs-btn-font-size: 0.875rem;
     --bs-btn-font-weight: 500;
