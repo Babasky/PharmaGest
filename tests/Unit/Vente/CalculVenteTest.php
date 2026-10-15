@@ -122,7 +122,7 @@ final class CalculVenteTest extends TestCase
         self::assertSame(0, $vente->calculer()->remiseLignes);
     }
 
-    public function testLeTauxAmoSAppliqueAuPrixDeVenteAmo(): void
+    public function testUnMedicamentRemboursableEstVenduAuPrixAmoQuandIlEstPlusBas(): void
     {
         $vente = $this->vente();
         $vente->ajouterLigne($this->produit(2400, remboursable: true)->setPrixVenteAmo(2100), 1);
@@ -134,8 +134,26 @@ final class CalculVenteTest extends TestCase
 
         self::assertSame(2100, $totaux->baseAmo, 'Base AMO au prix AMO, lignes remboursables seulement.');
         self::assertSame(1470, $totaux->partAmo, '2 100 × 70 %.');
-        self::assertSame(2930, $totaux->aEncaisser(), 'L\'assuré paie le prix de la pharmacie moins la part AMO.');
+        self::assertSame(4100, $totaux->totalBrut, 'Ligne remboursable vendue au prix AMO (2 100), l\'autre au prix de la pharmacie.');
+        self::assertSame(2630, $totaux->aEncaisser());
         self::assertSame(2100, $vente->getBaseAmo());
+
+        // Repasser en vente sans ordonnance rend le prix de la pharmacie.
+        $vente->setType(TypeVente::SansOrdonnance);
+        self::assertSame(4400, $vente->calculer()->totalBrut);
+    }
+
+    public function testLePrixDeLaPharmacieSertDeBaseQuandIlEstPlusBasQueLePrixAmo(): void
+    {
+        $vente = $this->vente();
+        $ligne = $vente->ajouterLigne($this->produit(2000, remboursable: true)->setPrixVenteAmo(2500), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
+
+        $totaux = $vente->calculer();
+
+        self::assertSame([2000, 2000, 1400, 600], [$totaux->totalBrut, $totaux->baseAmo, $totaux->partAmo, $totaux->aEncaisser()], '70 % de 2 000, pas de 2 500.');
+        self::assertFalse($ligne->isAuPrixAmo());
     }
 
     public function testUneAutreAssuranceAppliqueSonTauxAuPrixDeLaPharmacie(): void

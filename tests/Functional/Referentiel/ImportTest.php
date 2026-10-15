@@ -166,7 +166,7 @@ final class ImportTest extends AppWebTestCase
         $this->connecter($this->officine->proprietaire)->request('GET', '/imports/clients');
         $this->client->submitForm('Vérifier le fichier', ['fichier' => new UploadedFile($csv, 'clients.csv', 'text/csv', test: true)]);
         self::assertSelectorTextContains('main', 'Importer les 2 lignes valides');
-        self::assertSelectorTextContains('main', 'renseignez à la fois le numéro d\'assuré et l\'organisme');
+        self::assertSelectorTextContains('main', 'Le n° d\'assuré est obligatoire quand un organisme est indiqué');
 
         $this->client->submitForm('Importer les 2 lignes valides');
         $mariam = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Client::class)->findOneBy(['telephone' => '+22376123456']));

@@ -40,7 +40,7 @@ final class ImportClients extends AbstractDefinitionImport
             new Colonne('nom', 'Nom', true, 'Nom et prénom.', 'Mariam Diallo'),
             new Colonne('telephone', 'Téléphone', false, 'Sert à reconnaître un client déjà présent.', '76 12 34 56'),
             new Colonne('privilegie', 'Privilégié', false, 'oui ou non. Seuls les clients privilégiés ont droit aux remises.', 'non'),
-            new Colonne('organisme_amo', 'Organisme AMO', false, 'Code ou nom de l\'organisme.', 'INPS'),
+            new Colonne('organisme_amo', 'Organisme AMO', false, 'Code ou nom de l\'organisme (AMO ou autre assurance). Elle s\'ajoute aux assurances que le client a déjà ; les autres se saisissent sur sa fiche.', 'INPS'),
             new Colonne('numero_assure', 'N° d\'assuré', false, 'Obligatoire si un organisme est indiqué.', 'INPS-0045871'),
             new Colonne('entreprise', 'Entreprise', false, 'Entreprise ou mutuelle de rattachement.', ''),
         ];
@@ -68,17 +68,21 @@ final class ImportClients extends AbstractDefinitionImport
         $client->setNom((string) $nom)
             ->setTelephone($telephone)
             ->setPrivilegie(Valeurs::booleen($valeurs, 'privilegie', 'Privilégié', $erreurs))
-            ->setNumeroAssure(Valeurs::texte($valeurs, 'numero_assure'))
             ->setEntreprise(Valeurs::texte($valeurs, 'entreprise'));
 
+        // Une assurance par ligne : elle s'ajoute à celles que le client a déjà (ou met à jour son n° d'assuré).
+        $numeroAssure = Valeurs::texte($valeurs, 'numero_assure');
         if (null !== ($organisme = Valeurs::texte($valeurs, 'organisme_amo'))) {
             $trouve = $this->organisme($organisme);
             if (null === $trouve) {
                 $erreurs[] = \sprintf('Organisme AMO inconnu : « %s ».', $organisme);
+            } elseif (null === $numeroAssure) {
+                $erreurs[] = 'Le n° d\'assuré est obligatoire quand un organisme est indiqué.';
+            } else {
+                $client->definirAssurance($trouve, $numeroAssure);
             }
-            $client->setOrganismeAmo($trouve);
-        } else {
-            $client->setOrganismeAmo(null);
+        } elseif (null !== $numeroAssure) {
+            $erreurs[] = 'Indiquez l\'organisme de ce n° d\'assuré.';
         }
 
         $this->valider($client, $erreurs);

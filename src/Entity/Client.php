@@ -7,6 +7,8 @@ use App\Repository\ClientRepository;
 use App\Tenant\TenantAwareInterface;
 use App\Tenant\TenantAwareTrait;
 use App\Util\Telephone;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -40,13 +42,15 @@ class Client implements TenantAwareInterface
     #[ORM\Column]
     private bool $privilegie = false;
 
-    #[ORM\Column(length: 40, nullable: true)]
-    #[Assert\Length(max: 40)]
-    private ?string $numeroAssure = null;
-
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?OrganismeAmo $organismeAmo = null;
+    /**
+     * Assurances du client (AMO ou autres), chacune avec son n° d'assuré ; la première est proposée par défaut à la caisse.
+     *
+     * @var Collection<int, ClientAssurance>
+     */
+    #[ORM\OneToMany(targetEntity: ClientAssurance::class, mappedBy: 'client', cascade: ['persist'], orphanRemoval: true)]
+    #[ORM\OrderBy(['id' => 'ASC'])]
+    #[Assert\Valid]
+    private Collection $assurances;
 
     /** Entreprise ou mutuelle de rattachement (clients conventionnés, gérés en V2). */
     #[ORM\Column(length: 120, nullable: true)]
@@ -59,6 +63,7 @@ class Client implements TenantAwareInterface
     public function __construct()
     {
         $this->creeLe = new \DateTimeImmutable();
+        $this->assurances = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -103,28 +108,64 @@ class Client implements TenantAwareInterface
         return $this;
     }
 
-    public function getNumeroAssure(): ?string
+    /**
+     * @return Collection<int, ClientAssurance>
+     */
+    public function getAssurances(): Collection
     {
-        return $this->numeroAssure;
+        return $this->assurances;
     }
 
-    public function setNumeroAssure(?string $numeroAssure): static
+    /** Nommée en anglais pour le formulaire (CollectionType, by_reference: false). */
+    public function addAssurance(ClientAssurance $assurance): static
     {
-        $this->numeroAssure = null === $numeroAssure || '' === trim($numeroAssure) ? null : mb_strtoupper(trim($numeroAssure));
+        if (!$this->assurances->contains($assurance)) {
+            $assurance->setClient($this);
+            $this->assurances->add($assurance);
+        }
 
         return $this;
     }
 
-    public function getOrganismeAmo(): ?OrganismeAmo
+    public function removeAssurance(ClientAssurance $assurance): static
     {
-        return $this->organismeAmo;
-    }
-
-    public function setOrganismeAmo(?OrganismeAmo $organismeAmo): static
-    {
-        $this->organismeAmo = $organismeAmo;
+        $this->assurances->removeElement($assurance);
 
         return $this;
+    }
+
+    /** Ajoute l'assurance, ou met à jour le n° d'assuré si le client l'a déjà. */
+    public function definirAssurance(OrganismeAmo $organisme, ?string $numeroAssure): ClientAssurance
+    {
+        $assurance = $this->assurancePour($organisme);
+        if (null === $assurance) {
+            $this->addAssurance($assurance = new ClientAssurance($organisme));
+        }
+
+        return $assurance->setNumeroAssure($numeroAssure);
+    }
+
+    public function assurancePour(?OrganismeAmo $organisme): ?ClientAssurance
+    {
+        foreach ($this->assurances as $assurance) {
+            if (null !== $organisme && $assurance->getOrganisme() === $organisme) {
+                return $assurance;
+            }
+        }
+
+        return null;
+    }
+
+    /** Assurance proposée par défaut à la caisse : la première enregistrée encore active. */
+    public function assurancePrincipale(): ?ClientAssurance
+    {
+        foreach ($this->assurances as $assurance) {
+            if (true === $assurance->getOrganisme()?->isActif()) {
+                return $assurance;
+            }
+        }
+
+        return null;
     }
 
     public function getEntreprise(): ?string
@@ -144,10 +185,10 @@ class Client implements TenantAwareInterface
         return $this->creeLe;
     }
 
-    /** Assuré AMO : numéro et organisme renseignés (AM-02). */
+    /** Assuré : au moins une assurance (AMO ou autre) avec son n° d'assuré (AM-02). */
     public function isAssureAmo(): bool
     {
-        return null !== $this->numeroAssure && null !== $this->organismeAmo;
+        return !$this->assurances->isEmpty();
     }
 
     #[Assert\Callback]
@@ -156,10 +197,18 @@ class Client implements TenantAwareInterface
         if (null !== $this->telephone && null === Telephone::normaliser($this->telephone)) {
             $contexte->buildViolation('Numéro de téléphone malien attendu : +223 XX XX XX XX.')->atPath('telephone')->addViolation();
         }
-        if ((null === $this->numeroAssure) !== (null === $this->organismeAmo)) {
-            $contexte->buildViolation('Pour un assuré AMO, renseignez à la fois le numéro d\'assuré et l\'organisme.')
-                ->atPath(null === $this->numeroAssure ? 'numeroAssure' : 'organismeAmo')
-                ->addViolation();
+        $vus = [];
+        foreach ($this->assurances as $cle => $assurance) {
+            $organisme = $assurance->getOrganisme();
+            if (null === $organisme) {
+                continue;
+            }
+            if (\in_array($organisme, $vus, true)) {
+                $contexte->buildViolation(\sprintf('L\'assurance %s est indiquée deux fois.', $organisme->getCode()))
+                    ->atPath(\sprintf('assurances[%s].organisme', $cle))
+                    ->addViolation();
+            }
+            $vus[] = $organisme;
         }
     }
 

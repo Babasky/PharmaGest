@@ -79,7 +79,8 @@ final class ReferentielAdminTest extends AppWebTestCase
 
         // Proposée aux pharmacies pour leurs clients et pour le taux, à côté des organismes AMO.
         $crawler = $this->connecter($officine->proprietaire)->request('GET', '/clients/nouveau');
-        self::assertCount(1, $crawler->filter('#client_organismeAmo optgroup[label="Autre assurance"] option:contains("Assurance des ONG")'));
+        $prototype = (string) $crawler->filter('#assurances-client')->attr('data-collection-prototype-value');
+        self::assertMatchesRegularExpression('#<optgroup label="Autre assurance">.*Assurance des ONG#s', $prototype);
         $crawler = $this->client->request('GET', '/parametres?onglet=amo');
         self::assertCount(1, $crawler->filter('#taux_amo_organisme optgroup[label="Autre assurance"] option:contains("Assurance des ONG")'));
         self::assertCount(1, $crawler->filter('#taux_amo_organisme optgroup[label="AMO"] option:contains("INPS")'));
