@@ -232,7 +232,7 @@ final class AppStory extends Story
         $this->em->persist($mutuelle);
         $this->em->persist((new \App\Entity\TauxAmo())->setOrganisme($mutuelle)->setTaux(80)->setDateEffet(new \DateTimeImmutable('first day of january this year'))->setPharmacie($pharmacie));
         $this->em->flush();
-        ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Fatoumata Keïta', 'telephone' => '+22370334455', 'organismeAmo' => $mutuelle, 'numeroAssure' => 'MSS-2041', 'entreprise' => 'ONG Santé pour tous']);
+        ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Fatoumata Keïta', 'telephone' => '+22370334455', 'assurances' => [[$mutuelle, 'MSS-2041'], [$inps, 'INPS-0078812']], 'entreprise' => 'ONG Santé pour tous']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Sékou Traoré', 'telephone' => '+22366112233']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Aïssata Cissé', 'telephone' => '+22379887766', 'privilegie' => true]);
 
@@ -335,7 +335,7 @@ final class AppStory extends Story
 
         $envoyer(['Doliprane' => 1, 'Efferalgan' => 1]);
 
-        $inps = $mariam->getOrganismeAmo();
+        $inps = $mariam->assurancePrincipale()?->getOrganisme();
         \assert($inps instanceof \App\Entity\OrganismeAmo);
         $bordereau = $this->bordereaux->creer($inps, new \DateTimeImmutable('first day of this month'), new \DateTimeImmutable('today'));
         $this->bordereaux->transmettre($bordereau);

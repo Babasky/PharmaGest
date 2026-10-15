@@ -8,7 +8,7 @@ import 'bootstrap-icons/font/bootstrap-icons.min.css';
 import './styles/app.css';
 import './styles/hors_ligne.css';
 import {
-    calculer, donnees, enregistrerVente, formatFcfa, numeroProvisoire, quantitesNonEnvoyees, rafraichirDonnees,
+    calculer, donnees, prixFacture, enregistrerVente, formatFcfa, numeroProvisoire, quantitesNonEnvoyees, rafraichirDonnees,
     supprimerVente, synchroniser, uuid, ventes,
 } from './hors_ligne.js';
 
@@ -131,9 +131,11 @@ const afficherPanier = () => {
         : etat.panier.map((l) => {
             const p = etat.produits.get(l.produit);
             const nonRembourse = type === 'amo' && !p.remboursable ? ' <span class="badge text-bg-secondary">NR</span>' : '';
-            return `<tr><td>${echapper(p.nom)}${nonRembourse}<br><span class="small text-body-secondary">${formatFcfa(p.prix)}</span></td>
+            const prix = prixFacture(p, type, organismeChoisi());
+            const auPrixAmo = prix < p.prix ? ` (prix AMO, au lieu de <s>${formatFcfa(p.prix)}</s>)` : '';
+            return `<tr><td>${echapper(p.nom)}${nonRembourse}<br><span class="small text-body-secondary">${formatFcfa(prix)}${auPrixAmo}</span></td>
                 <td><input class="form-control form-control-sm text-end" inputmode="numeric" value="${l.quantite}" data-quantite="${p.id}" aria-label="Quantité"></td>
-                <td class="text-end">${formatFcfa(p.prix * l.quantite)}</td>
+                <td class="text-end">${formatFcfa(prix * l.quantite)}</td>
                 <td class="text-end"><button type="button" class="btn btn-sm btn-link text-danger" data-retirer="${p.id}" aria-label="Retirer"><i class="bi bi-x-lg"></i></button></td></tr>`;
         }).join('');
     const totaux = calculer(lignesPanier(), type, organismeChoisi());
@@ -240,7 +242,8 @@ const encaisser = (event) => {
         organisme: type === 'amo' ? organisme.id : null,
         organismeNom: type === 'amo' ? organisme.nom : null,
         numeroAssure: type === 'amo' ? $('hl-assure').value.trim() : null,
-        lignes,
+        // Prix facturé (prix AMO s'il est plus bas) : c'est lui qui figure sur le ticket provisoire.
+        lignes: lignes.map((l) => ({ ...l, prix: prixFacture(l, type, organisme) })),
         total: totaux.total,
         partAmo: totaux.partAmo,
         montant: totaux.aPayer,

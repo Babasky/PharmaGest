@@ -197,21 +197,28 @@ export const synchroniser = () => {
 export const formatFcfa = (valeur) => `${Math.round(valeur).toLocaleString('fr-FR').replace(/\s/g, ' ')} FCFA`;
 
 /**
- * Montants d'un panier hors ligne. La part AMO se calcule sur le prix de vente AMO des médicaments remboursables
- * pour un organisme AMO (sur le prix de la pharmacie pour une autre assurance) et ne dépasse jamais leur prix.
+ * Prix facturé d'une ligne : sur une vente AMO avec un organisme AMO, un médicament remboursable qui a un prix AMO
+ * est vendu au plus bas de ce prix et du prix de la pharmacie (LigneVente::appliquerPrix).
+ */
+export const prixFacture = (ligne, type, organisme) => (type === 'amo' && organisme?.tarifAmo && ligne.remboursable && ligne.prixAmo !== null && ligne.prixAmo !== undefined
+    ? Math.min(ligne.prix, ligne.prixAmo)
+    : ligne.prix);
+
+/**
+ * Montants d'un panier hors ligne. La part AMO se calcule sur le prix facturé des médicaments remboursables
+ * et ne dépasse jamais ce prix.
  */
 export const calculer = (lignes, type, organisme) => {
     let total = 0;
     let base = 0;
-    let brutRemboursable = 0;
     for (const ligne of lignes) {
-        const brut = ligne.prix * ligne.quantite;
+        const brut = prixFacture(ligne, type, organisme) * ligne.quantite;
         total += brut;
         if (type === 'amo' && organisme && ligne.remboursable) {
-            base += (organisme.tarifAmo ? (ligne.prixAmo ?? ligne.prix) : ligne.prix) * ligne.quantite;
-            brutRemboursable += brut;
+            base += brut;
         }
     }
+    const brutRemboursable = base;
     const partAmo = type === 'amo' && organisme ? Math.min(brutRemboursable, Math.round((base * organisme.taux) / 100)) : 0;
     return { total, partAmo, aPayer: total - partAmo };
 };

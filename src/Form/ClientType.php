@@ -3,11 +3,10 @@
 namespace App\Form;
 
 use App\Entity\Client;
-use App\Entity\OrganismeAmo;
-use App\Repository\OrganismeAmoRepository;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use App\Entity\ClientAssurance;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -39,12 +38,19 @@ final class ClientType extends AbstractType
                 ],
             ]
             )
-            ->add('organismeAmo', EntityType::class, [
-                'label' => 'Assurance (AMO ou autre)', 'class' => OrganismeAmo::class, 'required' => false, 'placeholder' => '— Non assuré —',
-                'query_builder' => static fn (OrganismeAmoRepository $r) => $r->createQueryBuilder('o')->andWhere('o.actif = true')->orderBy('o.nom'),
-                'group_by' => static fn (OrganismeAmo $o) => $o->getType()->libelle(),
+            ->add('assurances', CollectionType::class, [
+                'label' => 'Assurances (AMO ou autres)',
+                'entry_type' => ClientAssuranceType::class,
+                'entry_options' => ['label' => false],
+                'allow_add' => true,
+                'allow_delete' => true,
+                'by_reference' => false,
+                // Une ligne ajoutée puis laissée vide est ignorée.
+                'delete_empty' => static fn (?ClientAssurance $a = null): bool => null === $a || (null === $a->getOrganisme() && '' === $a->getNumeroAssure()),
+                'required' => false,
+                'block_prefix' => 'assurances_client',
+                'help' => 'Un client peut avoir plusieurs assurances ; à la caisse, on choisit celle qui s\'applique à la vente.',
             ])
-            ->add('numeroAssure', TextType::class, ['label' => 'N° d\'assuré', 'required' => false])
             ->add('entreprise', TextType::class, ['label' => 'Entreprise ou mutuelle', 'required' => false]);
 
         if ($options['peut_privilegier']) {

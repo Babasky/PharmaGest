@@ -35,6 +35,14 @@ class LigneVente implements TenantAwareInterface
     #[ORM\Column]
     private int $remise = 0;
 
+    /**
+     * Prix de vente de la pharmacie au moment de la vente. Sur une vente AMO, {@see self::$prixUnitaire} est le plus
+     * bas de ce prix et du prix de vente AMO. Null sur les lignes antérieures à cette règle (prix unitaire = prix
+     * de la pharmacie, part AMO calculée sur le prix AMO).
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $prixPharmacie = null;
+
     /** @var Collection<int, LigneVenteLot> */
     #[ORM\OneToMany(targetEntity: LigneVenteLot::class, mappedBy: 'ligne', cascade: ['persist'])]
     #[ORM\OrderBy(['id' => 'ASC'])]
@@ -49,7 +57,7 @@ class LigneVente implements TenantAwareInterface
         private Produit $produit,
         #[ORM\Column]
         private int $quantite,
-        /** Prix de vente unitaire au moment de la vente (RG-06). */
+        /** Prix unitaire facturé, figé à la vente (RG-06) : le plus bas du prix de la pharmacie et du prix AMO sur une vente AMO. */
         #[ORM\Column]
         private int $prixUnitaire,
         /** Remboursable AMO au moment de la vente (RG-06). */
@@ -60,6 +68,7 @@ class LigneVente implements TenantAwareInterface
         private ?int $prixUnitaireAmo = null,
     ) {
         $this->lots = new ArrayCollection();
+        $this->prixPharmacie = $prixUnitaire;
         if (null !== $vente->getPharmacie()) {
             $this->setPharmacie($vente->getPharmacie());
         }
@@ -97,6 +106,34 @@ class LigneVente implements TenantAwareInterface
         return $this->prixUnitaire;
     }
 
+    /** Prix de vente de la pharmacie (avant application éventuelle du prix AMO). */
+    public function getPrixPharmacie(): int
+    {
+        return $this->prixPharmacie ?? $this->prixUnitaire;
+    }
+
+    /** La ligne est facturée au prix AMO, plus bas que le prix de la pharmacie. */
+    public function isAuPrixAmo(): bool
+    {
+        return $this->prixUnitaire < $this->getPrixPharmacie();
+    }
+
+    /**
+     * Prix facturé : sur une vente AMO (organisme AMO), un médicament remboursable qui a un prix de vente AMO est
+     * vendu au plus bas de ce prix et du prix de la pharmacie ; sinon au prix de la pharmacie.
+     *
+     * @internal réservé à {@see Vente}
+     */
+    public function appliquerPrix(bool $tarifAmo): void
+    {
+        if (null === $this->prixPharmacie) {
+            return;
+        }
+        $this->prixUnitaire = $tarifAmo && $this->remboursable && null !== $this->prixUnitaireAmo
+            ? min($this->prixPharmacie, $this->prixUnitaireAmo)
+            : $this->prixPharmacie;
+    }
+
     public function isRemboursable(): bool
     {
         return $this->remboursable;
@@ -114,12 +151,17 @@ class LigneVente implements TenantAwareInterface
     }
 
     /**
-     * Prix unitaire sur lequel s'applique le taux de prise en charge : le prix de vente AMO du médicament pour un
-     * organisme AMO, sinon le prix de vente de la pharmacie.
+     * Prix unitaire sur lequel s'applique le taux de prise en charge : le prix facturé, soit pour un organisme AMO
+     * le plus bas du prix AMO et du prix de la pharmacie. Les lignes antérieures à cette règle gardent leur calcul
+     * d'origine (prix AMO, même plus élevé).
      */
     public function prixPriseEnCharge(bool $tarifAmo): int
     {
-        return $tarifAmo ? $this->prixUnitaireAmo ?? $this->prixUnitaire : $this->prixUnitaire;
+        if (null === $this->prixPharmacie) {
+            return $tarifAmo ? $this->prixUnitaireAmo ?? $this->prixUnitaire : $this->prixUnitaire;
+        }
+
+        return $this->prixUnitaire;
     }
 
     /** Base de prise en charge de la ligne (0 si le produit n'est pas remboursable). */
