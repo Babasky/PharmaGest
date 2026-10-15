@@ -70,6 +70,7 @@
                                     </td>
                                     <td class="montant">
                                         {{ ligne.prixUnitaire|fcfa }}
+                                        {% if ligne.auPrixAmo %}<div class="small text-body-secondary">prix AMO, au lieu de <s>{{ ligne.prixPharmacie|fcfa }}</s></div>{% endif %}
                                     </td>
                                     <td class="montant">
                                         {{ ligne.remise > 0 ? '− ' ~ ligne.remise|fcfa : '0' }}

@@ -315,6 +315,15 @@ class Vente implements TenantAwareInterface
         $this->numeroAssure = $numeroAssure;
         $this->tauxAmo = $taux;
         $this->tarifAmo = $organisme?->appliqueTarifAmo() ?? false;
+        foreach ($this->lignes as $ligne) {
+            $ligne->appliquerPrix($this->prixAmoApplicable());
+        }
+    }
+
+    /** Vente AMO avec un organisme AMO : les médicaments sont vendus au plus bas du prix AMO et du prix de la pharmacie. */
+    private function prixAmoApplicable(): bool
+    {
+        return TypeVente::Amo === $this->type && $this->tarifAmo;
     }
 
     /**
@@ -339,6 +348,7 @@ class Vente implements TenantAwareInterface
     public function ajouterLigne(Produit $produit, int $quantite): LigneVente
     {
         $ligne = new LigneVente($this, $produit, $quantite, (int) $produit->getPrixVente(), $produit->isRemboursableAmo(), $produit->getPrixVenteAmo());
+        $ligne->appliquerPrix($this->prixAmoApplicable());
         $this->lignes->add($ligne);
 
         return $ligne;
@@ -506,8 +516,8 @@ class Vente implements TenantAwareInterface
     }
 
     /**
-     * Base de prise en charge : total des lignes remboursables, au prix de vente AMO pour un organisme AMO,
-     * au prix plein de la pharmacie pour une autre assurance (RG-07).
+     * Base de prise en charge : total des lignes remboursables, au plus bas du prix AMO et du prix de la pharmacie
+     * pour un organisme AMO, au prix de la pharmacie pour une autre assurance (RG-07).
      */
     public function getBaseAmo(): int
     {
@@ -523,7 +533,7 @@ class Vente implements TenantAwareInterface
         return $base;
     }
 
-    /** Le taux s'applique au prix de vente AMO des médicaments (organisme AMO), ou au prix de la pharmacie. */
+    /** Organisme AMO : le prix AMO des médicaments s'applique quand il est plus bas que celui de la pharmacie. */
     public function tarifAmo(): bool
     {
         return $this->tarifAmo;

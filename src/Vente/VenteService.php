@@ -134,7 +134,8 @@ class VenteService
     /**
      * Type de vente, client et ordonnance avec sa copie éventuelle (VE-02, AM-01, AM-02).
      * Le client est facultatif, même pour une vente AMO : l'organisme et le n° d'assuré se saisissent
-     * alors sur la vente. Un client assuré impose son organisme et son n° d'assuré.
+     * alors sur la vente. Un client assuré choisit l'une de ses assurances (la première par défaut) :
+     * son n° d'assuré est repris de sa fiche.
      *
      * @param array{numero?: ?string, date?: ?\DateTimeImmutable, prescripteur?: ?string, structure?: ?string} $ordonnance
      *
@@ -687,15 +688,18 @@ class VenteService
         return rtrim(rtrim(number_format($taux, 1, ',', ''), '0'), ',');
     }
 
-    /** Organisme, n° d'assuré et taux AMO du jour (ou de la date donnée), repris du client (AM-02, H1). */
+    /**
+     * Organisme, n° d'assuré et taux AMO du jour (ou de la date donnée) (AM-02, H1). Pour un client assuré,
+     * l'assurance choisie doit être l'une des siennes, sinon c'est sa première assurance qui s'applique.
+     */
     private function actualiserAmo(Vente $vente, ?OrganismeAmo $organisme, ?string $numeroAssure, ?\DateTimeImmutable $le = null): void
     {
         $client = $vente->getClient();
         if (TypeVente::Amo !== $vente->getType()) {
             $vente->definirAmo(null, null, null);
-        } elseif (null !== $client && $client->isAssureAmo()) {
-            $organisme = $client->getOrganismeAmo() ?? throw new \LogicException('Assuré sans organisme.');
-            $vente->definirAmo($organisme, $client->getNumeroAssure(), $this->parametres->tauxAmo($organisme, $le));
+        } elseif (null !== ($assurance = $client?->assurancePour($organisme) ?? $client?->assurancePrincipale())) {
+            $organisme = $assurance->getOrganisme() ?? throw new \LogicException('Assurance sans organisme.');
+            $vente->definirAmo($organisme, $assurance->getNumeroAssure(), $this->parametres->tauxAmo($organisme, $le));
         } elseif (null !== $organisme) {
             // Sans client assuré : organisme et n° d'assuré (facultatif) saisis sur la vente.
             $numeroAssure = null === $numeroAssure || '' === trim($numeroAssure) ? null : mb_substr(trim($numeroAssure), 0, 40);

@@ -1,0 +1,22 @@
+{# Liste des assurances d'un client : une ligne par assurance, « Ajouter une assurance » copie le prototype. #}
+{% block assurances_client_row %}
+    <fieldset class="mb-3" id="assurances-client" data-controller="collection" data-collection-index-value="{{ form|length > 0 ? max(form|keys) + 1 : 0 }}" data-collection-prototype-value="{{ form_row(form.vars.prototype)|e('html_attr') }}">
+        <legend class="form-label fs-6 mb-1">{{ form.vars.label }}</legend>
+        {{ form_errors(form) }}
+        <div data-collection-target="liste">
+            {% for assurance in form %}
+                {{ form_row(assurance) }}
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-success" data-action="collection#ajouter"><i class="bi bi-plus-lg"></i> Ajouter une assurance</button>
+        {% if form.vars.help %}<div class="form-text">{{ form.vars.help }}</div>{% endif %}
+    </fieldset>
+{% endblock %}
+
+{% block assurance_client_row %}
+    <div class="row g-2 align-items-start mb-2" data-collection-target="ligne">
+        <div class="col-12 col-sm-6">{{ form_widget(form.organisme, {attr: {'aria-label': 'Assurance'}}) }}{{ form_errors(form.organisme) }}</div>
+        <div class="col">{{ form_widget(form.numeroAssure, {attr: {placeholder: 'N° d\'assuré', 'aria-label': 'N° d\'assuré'}}) }}{{ form_errors(form.numeroAssure) }}</div>
+        <div class="col-auto"><button type="button" class="btn btn-sm btn-outline-danger" data-action="collection#retirer" aria-label="Retirer cette assurance"><i class="bi bi-trash"></i></button></div>
+    </div>
+{% endblock %}
