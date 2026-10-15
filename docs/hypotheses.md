@@ -786,3 +786,29 @@ uniquement si les officines appartiennent au même pharmacien ».
   casque de la barre du haut et page « Accès suspendu ». WhatsApp ouvre la conversation (lien wa.me) avec un premier
   message au nom de l'officine ; l'email part avec un objet qui nomme l'officine ; l'appel passe par un lien `tel:`.
 - Chaque modification est tracée dans le journal de la plateforme (« Support client modifié », valeurs avant et après).
+## Décisions — Caisse hors ligne (VE-14, demande de Modibo, 14/10/2026)
+
+- Option retenue par Modibo : une **caisse hors ligne dans le navigateur**, avec envoi des ventes au retour du réseau
+  (pas de serveur installé dans la pharmacie). Une connexion 4G de secours reste conseillée à côté.
+- Le poste d'un vendeur garde, dans son navigateur, l'écran **Caisse hors ligne** (service worker `public/sw.js`) et
+  une **copie du catalogue** : produits vendables, prix, stock non périmé, organismes AMO et leur taux. La copie est
+  reprise toutes les 10 minutes quand le réseau est là, et quand la caisse vient d'être ouverte ou clôturée. La
+  déconnexion efface l'accès à la caisse hors ligne (les ventes non envoyées restent sur le poste).
+- Pendant une coupure, toute page de SoftPharm renvoie vers la caisse hors ligne ; un bandeau la signale sur les
+  pages déjà ouvertes. On y vend sans client, sans remise et sans code PIN (impossibles hors ligne) ; ordonnance
+  classique ou AMO / assurance (organisme et n° d'assuré saisis) possibles, mêmes contrôles qu'en ligne. Le stock
+  affiché est celui de la copie, moins les ventes du poste pas encore envoyées.
+- Le ticket imprimé porte un **numéro provisoire** HL-<code du poste>-<compteur> et la mention « Vente faite sans
+  connexion internet ». Le numéro définitif V-… est donné à l'envoi ; la vente garde les deux numéros.
+- **Au retour du réseau**, les ventes partent seules. Le serveur les garde d'abord telles quelles, puis les importe
+  comme une vente normale, **à la date où elles ont été faites**, dans la **session ouverte du vendeur** : sortie FEFO
+  du stock, paiements, recettes, créance AMO. Le taux AMO est celui du jour de la vente.
+- Si le montant recalculé diffère du ticket (prix ou taux changé entre-temps), la vente est importée au montant
+  recalculé, les espèces suivent, et l'écart est tracé (journal « Écart sur une vente hors ligne »).
+- Une vente qui ne peut pas être importée (caisse du vendeur fermée, stock insuffisant, produit archivé, ordonnance
+  obligatoire sans code PIN…) reste **en anomalie** dans Comptoir › **Ventes hors ligne**. Elle est réessayée à
+  chaque envoi et à l'ouverture de la caisse du vendeur, ou à la main (bouton « Réessayer »). L'adjoint ou le
+  propriétaire peut la **rejeter** avec un motif (journal « Vente hors ligne rejetée ») : l'argent encaissé apparaît
+  alors en écart à la clôture.
+- Limites : deux postes hors ligne ne voient pas les ventes l'un de l'autre (le stock peut alors manquer à l'import) ;
+  le rapport Z n'est juste qu'une fois les ventes du poste envoyées. Le service worker exige HTTPS (ou localhost).

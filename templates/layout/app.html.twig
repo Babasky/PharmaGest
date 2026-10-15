@@ -140,7 +140,7 @@
                                 {% if is_granted('ROLE_PROPRIETAIRE') %}
                                     <li><a class="dropdown-item" href="{{ path('app_mon_abonnement') }}"><i class="bi bi-patch-check"></i> Mon abonnement</a></li>
                                 {% endif %}
-                                <li><a class="dropdown-item" href="{{ logout_path() }}"><i class="bi bi-box-arrow-right"></i> Se déconnecter</a></li>
+                                <li><a class="dropdown-item" href="{{ logout_path() }}" data-pg-deconnexion><i class="bi bi-box-arrow-right"></i> Se déconnecter</a></li>
                             </ul>
                         </div>
                     {% endif %}
@@ -149,6 +149,18 @@
 
             <main class="pg-main">
                 {% include 'layout/_bandeau_abonnement.html.twig' %}
+                {% if courante and is_granted('ROLE_VENDEUR') %}
+                    {# Caisse hors ligne : copie du catalogue, envoi des ventes faites hors ligne, bandeau de coupure. #}
+                    <div {{ stimulus_controller('hors-ligne', {utilisateur: app.user.id, pharmacie: courante.id, session: route_courante == 'app_caisse' ? ((session ?? null) ? 1 : 0) : -1}) }}>
+                        <div class="d-none flex-wrap align-items-center gap-2 py-2" role="status" data-hors-ligne-target="bandeau">
+                            <i class="bi bi-wifi-off"></i>
+                            <span data-hors-ligne-target="message"></span>
+                            <button type="button" class="btn btn-sm btn-outline-dark ms-auto" data-hors-ligne-target="envoyer" data-action="hors-ligne#envoyer" hidden>
+                                <i class="bi bi-cloud-upload"></i> Envoyer maintenant
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
                 {% include 'layout/_flashes.html.twig' %}
 
                 {% block page_header %}

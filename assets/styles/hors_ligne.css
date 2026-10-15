@@ -1,0 +1,37 @@
+/* Caisse hors ligne : page autonome (sans menu, inutilisable sans réseau) et ticket provisoire imprimé. */
+.pg-hl-entete {
+    background: var(--pg-surface);
+    border-bottom: 1px solid var(--pg-border);
+    box-shadow: var(--pg-shadow);
+}
+
+.pg-hl-ticket {
+    display: none;
+}
+
+@media print {
+    body.pg-hors-ligne > :not(.pg-hl-ticket) {
+        display: none !important;
+    }
+
+    body.pg-hors-ligne {
+        background: #fff;
+    }
+
+    .pg-hl-ticket {
+        display: block;
+        width: 72mm;
+        font-family: 'DejaVu Sans', sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+
+    .pg-hl-ticket .centre { text-align: center; }
+    .pg-hl-ticket .droite { text-align: right; }
+    .pg-hl-ticket .gras td { font-weight: bold; }
+    .pg-hl-ticket hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; opacity: 1; }
+    .pg-hl-ticket table { width: 100%; border-collapse: collapse; }
+    .pg-hl-ticket td { padding: 0.4mm 0; vertical-align: top; }
+
+    @page { margin: 4mm 3mm; }
+}

@@ -186,6 +186,29 @@ class LotRepository extends ServiceEntityRepository
         return $synthese;
     }
 
+    /**
+     * Stock vendable (lots non périmés) de chaque produit de la pharmacie, pour la caisse hors ligne.
+     *
+     * @return array<int, int> quantité indexée par id de produit (produits en stock seulement)
+     */
+    public function stockVendableParProduit(\DateTimeImmutable $jour): array
+    {
+        $lignes = $this->createQueryBuilder('l')
+            ->select('IDENTITY(l.produit) AS produit', 'SUM(l.quantiteRestante) AS stock')
+            ->andWhere('l.quantiteRestante > 0')
+            ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')
+            ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->groupBy('l.produit')
+            ->getQuery()->getArrayResult();
+
+        $stocks = [];
+        foreach ($lignes as $l) {
+            $stocks[(int) $l['produit']] = (int) $l['stock'];
+        }
+
+        return $stocks;
+    }
+
     private function enStockAvecProduit(): QueryBuilder
     {
         return $this->createQueryBuilder('l')

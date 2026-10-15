@@ -133,8 +133,10 @@ final class RapportTest extends AmoTestCase
         $this->client->request('GET', '/rapports/finances/pdf', ['periode' => 'mois']);
         self::assertStringStartsWith('%PDF', (string) $this->client->getResponse()->getContent());
 
-        // Tableau de bord du propriétaire : dépenses et résultat du mois, graphiques RA-03 et RA-04.
+        // Tableau de bord du propriétaire : recettes, dépenses et résultat du mois, graphiques RA-03 et RA-04.
         $this->client->request('GET', '/');
+        self::assertSelectorTextContains('#indicateur-recettes-mois', "2\u{00A0}000\u{00A0}FCFA");
+        self::assertSame('/recettes', $this->client->getCrawler()->filter('#indicateur-recettes-mois a')->attr('href'));
         self::assertSelectorTextContains('#indicateur-depenses-mois', "1\u{00A0}500\u{00A0}FCFA");
         self::assertSelectorTextContains('#indicateur-resultat-mois', "500\u{00A0}FCFA");
         self::assertSelectorTextContains('#indicateur-ca-mois', "2\u{00A0}000\u{00A0}FCFA");
@@ -146,7 +148,7 @@ final class RapportTest extends AmoTestCase
     {
         $this->connecter($this->officine->vendeur)->request('GET', '/');
         self::assertSelectorExists('#indicateur-ventes-jour');
-        foreach (['ca-jour', 'ca-mois', 'depenses-mois', 'encours-amo', 'valeur-stock'] as $absent) {
+        foreach (['ca-jour', 'ca-mois', 'recettes-mois', 'depenses-mois', 'encours-amo', 'valeur-stock'] as $absent) {
             self::assertSelectorNotExists('#indicateur-'.$absent);
         }
 
@@ -154,6 +156,7 @@ final class RapportTest extends AmoTestCase
         foreach (['ca-jour', 'ca-mois', 'panier', 'encours-amo', 'valeur-stock'] as $present) {
             self::assertSelectorExists('#indicateur-'.$present);
         }
+        self::assertSelectorNotExists('#indicateur-recettes-mois');
         self::assertSelectorNotExists('#indicateur-depenses-mois');
         self::assertSelectorNotExists('#graphique-mois');
     }
