@@ -83,7 +83,7 @@ final class PlusieursAssurancesTest extends AmoTestCase
         $this->poster('/caisse/vente', ['type' => 'amo', 'ordonnance_date' => (new \DateTimeImmutable('today'))->format('Y-m-d'), 'organisme' => $this->cmss->getId(), 'numero_assure' => 'AUTRE']);
         $this->client->request('GET', '/caisse');
         self::assertSelectorTextContains('#part-organisme', 'Part CMSS');
-        self::assertSame('selected', $this->client->getCrawler()->filter('#assurance-vente option[value="'.$this->cmss->getId().'"]')->attr('selected'));
+        self::assertSelectorExists('#assurance-vente option[value="'.$this->cmss->getId().'"][selected]');
 
         $this->encaisser(['especes' => ['remis' => '1000']]);
         self::assertResponseRedirects();
