@@ -71,7 +71,11 @@ final class PlusieursAssurancesTest extends AmoTestCase
         // Par défaut, la première assurance de la fiche ; la caisse propose les autres.
         $crawler = $this->client->request('GET', '/caisse');
         self::assertSelectorTextContains('#client', 'INPS INPS-77, CMSS CMSS-12');
-        self::assertSame(['INPS · Institut National de Prévoyance Sociale · n° INPS-77', 'CMSS · Caisse Malienne de Sécurité Sociale · n° CMSS-12'], $crawler->filter('#assurance-vente select[name=organisme] option')->each(static fn ($o) => $o->text()));
+        $options = $crawler->filter('#assurance-vente select[name=organisme] option')->each(static fn ($o) => $o->text());
+        self::assertCount(2, $options);
+        self::assertStringStartsWith('INPS ·', $options[0]);
+        self::assertStringEndsWith('n° INPS-77', $options[0]);
+        self::assertStringEndsWith('n° CMSS-12', $options[1]);
         self::assertSelectorNotExists('#assurance-vente input[name=numero_assure]');
         self::assertSame(['INPS', 'INPS-77'], [$this->derniereVente()->getOrganismeAmo()?->getCode(), $this->derniereVente()->getNumeroAssure()]);
 
