@@ -130,10 +130,10 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   Excel français). Limites : 2 Mo et 5 000 lignes par fichier.
 - Réservé au **propriétaire et à l'adjoint** (y compris l'import de clients, qui est une opération de masse).
 - **Fichiers modèles** (demande de Modibo du 2026-10-08) : ils contiennent des exemples réalistes qui s'importent
-  tels quels, **100 produits** (répartis dans **10 catégories** et chez **10 fournisseurs**, avec prix de vente AMO
-  pour les médicaments remboursables), **10 fournisseurs** et **30 clients** (dont des assurés INPS / CMSS). Il n'y a
-  pas d'import séparé des catégories : elles sont créées par l'import des produits. Noms de fournisseurs, emails
-  (domaine `.example`) et téléphones sont fictifs ; la pharmacie remplace ou supprime ces lignes avant l'import.
+  tels quels : la **liste AMO** pour les produits (depuis le 17/10/2026, voir « Modèle d'import produits : liste
+  AMO »), **10 fournisseurs** et **30 clients** (dont des assurés INPS / CMSS). Il n'y a pas d'import séparé des
+  catégories : elles sont créées par l'import des produits. Noms de fournisseurs, emails (domaine `.example`) et
+  téléphones sont fictifs ; la pharmacie remplace ou supprime ces lignes avant l'import.
 
 ## Décisions — Lot 3 (stock)
 
@@ -860,3 +860,25 @@ donc plus signalé tout de suite comme une rupture.
   quand le prix AMO est retenu. Le chiffre d'affaires et les rapports comptent le prix facturé.
 - Les ventes validées avant ce changement gardent leurs montants et leur base AMO d'origine.
 - La caisse hors ligne applique la même règle.
+
+## Décisions — Modèle d'import produits : liste AMO (demande de Modibo, 17/10/2026)
+
+- Source : fichier Excel « Liste des médicaments AMO, août 2021 » envoyé par Modibo (liste de la CANAM annexée à
+  l'arrêté n°2021-4622/MSDS-SG du 08/11/2021, en vigueur depuis le 01/03/2022 ; la révision validée en décembre 2023
+  n'a pas été trouvée publiée). 4 754 lignes, converties par `bin/liste-amo.py` dans
+  `src/Import/liste-amo-2021-08.csv`, qui remplace les 100 produits d'exemple du modèle d'import produits.
+- Correspondance : désignation découpée en **nom commercial**, **dosage** et **conditionnement** (le reste de la
+  désignation, forme comprise, ex. « Comprimé pelliculé, boîte de 30 ») ; **forme** PharmaGest déduite de ce texte
+  (vide pour 173 lignes sans forme de la liste : lotion, solution cutanée…) ; composition → **DCI** ; classe
+  pharmacothérapeutique (orthographes harmonisées) → catégorie « Médicaments › <classe> » (23 classes) ou
+  « Dispositifs médicaux » (forme « Dispositif médical ») ; **prix public → prix de vente** ; prix base de
+  remboursement (colonne « × 70 % » divisée par 0,7) → **prix de vente AMO** ; remboursable AMO : oui.
+- Non repris : sous-classe pharmacothérapeutique (927 libellés, trop fins pour le rangement), « accord préalable »
+  (89 produits marqués AP : PharmaGest n'a pas ce champ), code-barres, étagère, fournisseur, prix d'achat, seuils.
+  La pharmacie complète ou supprime les lignes avant l'import.
+- Écarts de la source : ligne 671 illisible (désignation « s ») et ligne 4353 en double de la ligne 2612 (MICONAZOLE
+  2 % crème, prix différent) ignorées ; OSMOGEL : prix public 32 635 et base de remboursement 12 400, repris tels
+  quels. Textes trop longs coupés à la taille des champs (nom et DCI 150, conditionnement 100 caractères).
+- **Reconnaissance d'un produit à l'import** (sans code-barres) : nom commercial + dosage + **conditionnement**, et
+  non plus nom + dosage seuls, pour que deux boîtes d'un même médicament (ex. LARITEM boîte de 6 et de 24) soient
+  deux produits. Un produit déjà saisi sans conditionnement n'est reconnu que par une ligne sans conditionnement.
