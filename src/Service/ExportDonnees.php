@@ -8,6 +8,7 @@ use App\Entity\OrganismeAmo;
 use App\Entity\Pharmacie;
 use App\Repository\AffectationRepository;
 use App\Tenant\TenantAwareInterface;
+use App\Tenant\TenantPartageInterface;
 use App\Tenant\TenantContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -101,14 +102,22 @@ class ExportDonnees
             if ($meta->isMappedSuperclass || \in_array($classe, self::EXCLUES, true)) {
                 continue;
             }
-            $tenant = $meta->getReflectionClass()->implementsInterface(TenantAwareInterface::class);
-            if (!$tenant && !\in_array($classe, self::REFERENTIELS, true)) {
+            $referentiel = \in_array($classe, self::REFERENTIELS, true);
+            $tenant = !$referentiel && $meta->getReflectionClass()->implementsInterface(TenantAwareInterface::class);
+            if (!$tenant && !$referentiel) {
                 continue;
             }
+            // Référentiel partagé : les valeurs communes et celles de la pharmacie, jamais celles des autres.
+            $partage = $meta->getReflectionClass()->implementsInterface(TenantPartageInterface::class);
             $table = $meta->getTableName();
             $nom = ($tenant ? '' : 'referentiel_').$table.'.csv';
-            $sql = \sprintf('SELECT * FROM %s%s ORDER BY id', $connexion->quoteSingleIdentifier($table), $tenant ? ' WHERE pharmacie_id = ?' : '');
-            $tables[$nom] = $this->csv($zip, $nom, $connexion->iterateAssociative($sql, $tenant ? [$id] : []));
+            $condition = match (true) {
+                $tenant => ' WHERE pharmacie_id = ?',
+                $partage => ' WHERE pharmacie_id = ? OR pharmacie_id IS NULL',
+                default => '',
+            };
+            $sql = \sprintf('SELECT * FROM %s%s ORDER BY id', $connexion->quoteSingleIdentifier($table), $condition);
+            $tables[$nom] = $this->csv($zip, $nom, $connexion->iterateAssociative($sql, '' === $condition ? [] : [$id]));
         }
         ksort($tables);
 

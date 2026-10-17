@@ -551,7 +551,9 @@ vente, et son taux s'applique sur ce prix.
 
 - L'organisme AMO existant est généralisé : chaque organisme a une **nature**, « AMO » (INPS, CMSS…) ou « Autre
   assurance » (assurance privée, ONG, mutuelle d'entreprise). Les organismes déjà créés restent « AMO ».
-- La liste reste un référentiel commun géré par l'éditeur dans l'espace plateforme (« Assurances (AMO et autres) ») :
+- ~~La liste reste un référentiel commun géré par l'éditeur.~~ Revu le 17/10/2026 : les pharmacies créent aussi leurs
+  assurances, voir « Assurances créées par les pharmacies ». Avant :
+  la liste reste un référentiel commun géré par l'éditeur dans l'espace plateforme (« Assurances (AMO et autres) ») :
   une assurance ajoutée une fois sert à toutes les pharmacies. Chaque pharmacie saisit ensuite son taux (Paramètres →
   « Taux AMO et assurances »), avec le même historique par date d'effet ; sans taux saisi, 70 % s'applique.
 - Une autre assurance suit exactement le parcours de l'AMO : client assuré (organisme + n° d'assuré), type de vente
@@ -860,3 +862,17 @@ donc plus signalé tout de suite comme une rupture.
   quand le prix AMO est retenu. Le chiffre d'affaires et les rapports comptent le prix facturé.
 - Les ventes validées avant ce changement gardent leurs montants et leur base AMO d'origine.
 - La caisse hors ligne applique la même règle.
+
+## Décisions — Assurances créées par les pharmacies (Modibo, 17/10/2026)
+
+- Le propriétaire ajoute lui-même une assurance (AMO ou autre) dans Paramètres → « Taux AMO et assurances » →
+  « Ajouter une assurance » : nom, code et nature. Elle n'est visible que dans sa pharmacie (fiche client, caisse,
+  taux, créances, bordereaux) et suit le même parcours que les organismes communs.
+- Les organismes créés par l'éditeur dans l'espace plateforme restent **communs** à toutes les pharmacies ; une
+  pharmacie ne peut ni les modifier ni les archiver. Le back-office indique pour chaque organisme qui l'a créé.
+- Nom et code sont uniques parmi les organismes que voit une pharmacie (les communs et les siens) : une pharmacie ne
+  peut pas reprendre le code « INPS » d'un organisme commun, mais deux pharmacies peuvent chacune créer « MUTEC ».
+- Une assurance de la pharmacie s'archive (et se réactive) depuis la même page ; elle n'est jamais supprimée (RG-15).
+- L'export des données de la pharmacie contient les organismes communs et les siens, jamais ceux des autres.
+- Point ouvert : un organisme créé par plusieurs pharmacies peut ensuite être rendu commun par l'éditeur ; ce n'est
+  pas automatisé.
