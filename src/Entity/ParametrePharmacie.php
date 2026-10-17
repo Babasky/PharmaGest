@@ -24,6 +24,7 @@ class ParametrePharmacie implements TenantAwareInterface
     public const INACTIVITE_CAISSE_PAR_DEFAUT = 30;
     public const JOURS_ANALYSE_VENTES_PAR_DEFAUT = 30;
     public const JOURS_COUVERTURE_PAR_DEFAUT = 15;
+    public const JOURS_AVANT_RUPTURE_PAR_DEFAUT = 5;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -39,6 +40,14 @@ class ParametrePharmacie implements TenantAwareInterface
     #[ORM\Column]
     #[Assert\Range(min: 1, max: 730)]
     private int $delaiAlertePeremption = self::DELAI_PEREMPTION_PAR_DEFAUT;
+
+    /**
+     * Un produit à zéro n'est signalé « Rupture » (même le fournisseur n'en a plus) qu'après ce nombre de jours
+     * à zéro. Avant, sa ligne a seulement un fond rouge. Un produit peut avoir son propre délai.
+     */
+    #[ORM\Column(options: ['default' => self::JOURS_AVANT_RUPTURE_PAR_DEFAUT])]
+    #[Assert\Range(min: 1, max: 365)]
+    private int $joursAvantRupture = self::JOURS_AVANT_RUPTURE_PAR_DEFAUT;
 
     #[ORM\Column(length: 20, enumType: PolitiqueSansOrdonnance::class)]
     private PolitiqueSansOrdonnance $politiqueSansOrdonnance = PolitiqueSansOrdonnance::Blocage;
@@ -86,6 +95,18 @@ class ParametrePharmacie implements TenantAwareInterface
     public function setPlafondRemise(int $plafondRemise): static
     {
         $this->plafondRemise = $plafondRemise;
+
+        return $this;
+    }
+
+    public function getJoursAvantRupture(): int
+    {
+        return $this->joursAvantRupture;
+    }
+
+    public function setJoursAvantRupture(int $joursAvantRupture): static
+    {
+        $this->joursAvantRupture = $joursAvantRupture;
 
         return $this;
     }

@@ -99,8 +99,12 @@ final class ProduitType extends AbstractType
             ->add('prixAchat', IntegerType::class, ['label' => 'Prix d\'achat (FCFA)', ...$montant])
             ->add('prixVente', IntegerType::class, ['label' => 'Prix de vente (FCFA)', ...$montant])
             ->add('tauxTva', ChoiceType::class, ['label' => 'TVA', 'choices' => Produit::TAUX_TVA])
-            ->add('seuilAlerte', IntegerType::class, ['label' => 'Seuil d\'alerte (unités)', 'help' => 'En dessous, le produit est signalé en rupture.', 'attr' => ['min' => 0]])
+            ->add('seuilAlerte', IntegerType::class, ['label' => 'Seuil d\'alerte (unités)', 'help' => 'Au seuil ou en dessous, le produit apparaît dans les alertes de stock.', 'attr' => ['min' => 0]])
             ->add('stockMax', IntegerType::class, ['label' => 'Stock maximum (unités)', 'required' => false, 'help' => 'Sert à proposer les quantités à commander.', 'attr' => ['min' => 0]])
+            ->add('joursAvantRupture', IntegerType::class, [
+                'label' => 'Badge « Rupture » après (jours à zéro)', 'required' => false, 'attr' => ['min' => 1, 'max' => 365],
+                'help' => 'Vide : délai de la pharmacie (paramètres).',
+            ])
             ->add('ordonnanceObligatoire', CheckboxType::class, ['label' => 'Ordonnance obligatoire', 'required' => false])
             ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable (AMO et assurances)', 'required' => false])
             ->add('prixVenteAmo', IntegerType::class, [

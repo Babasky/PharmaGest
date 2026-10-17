@@ -821,8 +821,8 @@ donc plus signalé tout de suite comme une rupture.
 - **Stock à zéro** : la ligne du produit a un fond légèrement rouge, dès que le stock disponible est à 0, quelle que
   soit la durée (état du stock, alertes, caisse, suggestions de commande ; sur la fiche produit, le bloc du stock).
   Le badge « Seuil » n'est plus affiché pour un stock à zéro : le fond rouge le remplace.
-- **Rupture** : le badge « Rupture » s'ajoute quand le stock est à 0 depuis **5 jours ou plus**
-  (`LotRepository::JOURS_RUPTURE`). En caisse, le produit affiche « 0 en stock » puis « Rupture ».
+- **Rupture** : le badge « Rupture » s'ajoute quand le stock est à 0 depuis **5 jours ou plus** par défaut
+  (délai réglable, voir ci-dessous). En caisse, le produit affiche « 0 en stock » puis « Rupture ».
 - **Depuis quand** : calculé à partir des mouvements de stock existants, sans nouvelle donnée. C'est le dernier
   mouvement sur un lot tant qu'il comptait dans le stock, ou la date de péremption d'un lot qui avait encore des
   unités à cette date (le stock tombe à zéro le jour de la péremption, RG-03). La destruction ou le retour d'un lot
@@ -831,6 +831,10 @@ donc plus signalé tout de suite comme une rupture.
   badge « Rupture ».
 - La fiche produit indique « à zéro depuis le … ». Les alertes « Rupture ou sous le seuil » et les notifications du
   matin listent toujours les produits à zéro, comme avant.
+- **Délai réglable** (demande de Modibo, 17/10/2026) : chaque pharmacie règle le délai dans ses paramètres
+  (onglet « Règles », 5 jours par défaut, de 1 à 365). Un produit peut avoir son propre délai sur sa fiche (champ
+  vide : délai de la pharmacie), par exemple un produit souvent manquant chez les grossistes.
+
 ## Décisions — Plusieurs assurances par client et prix le plus bas (retours de pharmacies, Modibo, 15/10/2026)
 
 ### Plusieurs assurances par client (AM-02)
