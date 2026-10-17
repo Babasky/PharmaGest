@@ -40,7 +40,10 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   quotidien ; sinon un lien d'activation est envoyé. Le propriétaire, lui, reçoit toujours un lien (§ 3.2).
 - **Liens d'activation et de réinitialisation** : URL signées (pas de table dédiée), valables 72 h (activation) ou
   1 h (réinitialisation), et à usage unique (le lien devient invalide dès que le mot de passe change).
-- **Le super admin est créé en ligne de commande** (`app:super-admin:creer`), jamais depuis l'interface.
+- **Le premier super admin est créé en ligne de commande** (`app:super-admin:creer`). Ensuite, un super admin connecté
+  peut en créer d'autres depuis l'espace plateforme (menu « Super admins », demande de Modibo du 17/10/2026) : confirmation
+  avant création, lien d'activation par email (pas de mot de passe saisi par le créateur), trace « Super admin créé »
+  dans le journal de la plateforme.
 
 ### Isolation multi-tenant
 
@@ -130,10 +133,10 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   Excel français). Limites : 2 Mo et 5 000 lignes par fichier.
 - Réservé au **propriétaire et à l'adjoint** (y compris l'import de clients, qui est une opération de masse).
 - **Fichiers modèles** (demande de Modibo du 2026-10-08) : ils contiennent des exemples réalistes qui s'importent
-  tels quels, **100 produits** (répartis dans **10 catégories** et chez **10 fournisseurs**, avec prix de vente AMO
-  pour les médicaments remboursables), **10 fournisseurs** et **30 clients** (dont des assurés INPS / CMSS). Il n'y a
-  pas d'import séparé des catégories : elles sont créées par l'import des produits. Noms de fournisseurs, emails
-  (domaine `.example`) et téléphones sont fictifs ; la pharmacie remplace ou supprime ces lignes avant l'import.
+  tels quels : la **liste AMO** pour les produits (depuis le 17/10/2026, voir « Modèle d'import produits : liste
+  AMO »), **10 fournisseurs** et **30 clients** (dont des assurés INPS / CMSS). Il n'y a pas d'import séparé des
+  catégories : elles sont créées par l'import des produits. Noms de fournisseurs, emails (domaine `.example`) et
+  téléphones sont fictifs ; la pharmacie remplace ou supprime ces lignes avant l'import.
 
 ## Décisions — Lot 3 (stock)
 
@@ -551,7 +554,9 @@ vente, et son taux s'applique sur ce prix.
 
 - L'organisme AMO existant est généralisé : chaque organisme a une **nature**, « AMO » (INPS, CMSS…) ou « Autre
   assurance » (assurance privée, ONG, mutuelle d'entreprise). Les organismes déjà créés restent « AMO ».
-- La liste reste un référentiel commun géré par l'éditeur dans l'espace plateforme (« Assurances (AMO et autres) ») :
+- ~~La liste reste un référentiel commun géré par l'éditeur.~~ Revu le 17/10/2026 : les pharmacies créent aussi leurs
+  assurances, voir « Assurances créées par les pharmacies ». Avant :
+  la liste reste un référentiel commun géré par l'éditeur dans l'espace plateforme (« Assurances (AMO et autres) ») :
   une assurance ajoutée une fois sert à toutes les pharmacies. Chaque pharmacie saisit ensuite son taux (Paramètres →
   « Taux AMO et assurances »), avec le même historique par date d'effet ; sans taux saisi, 70 % s'applique.
 - Une autre assurance suit exactement le parcours de l'AMO : client assuré (organisme + n° d'assuré), type de vente
@@ -821,8 +826,8 @@ donc plus signalé tout de suite comme une rupture.
 - **Stock à zéro** : la ligne du produit a un fond légèrement rouge, dès que le stock disponible est à 0, quelle que
   soit la durée (état du stock, alertes, caisse, suggestions de commande ; sur la fiche produit, le bloc du stock).
   Le badge « Seuil » n'est plus affiché pour un stock à zéro : le fond rouge le remplace.
-- **Rupture** : le badge « Rupture » s'ajoute quand le stock est à 0 depuis **5 jours ou plus**
-  (`LotRepository::JOURS_RUPTURE`). En caisse, le produit affiche « 0 en stock » puis « Rupture ».
+- **Rupture** : le badge « Rupture » s'ajoute quand le stock est à 0 depuis **5 jours ou plus** par défaut
+  (délai réglable, voir ci-dessous). En caisse, le produit affiche « 0 en stock » puis « Rupture ».
 - **Depuis quand** : calculé à partir des mouvements de stock existants, sans nouvelle donnée. C'est le dernier
   mouvement sur un lot tant qu'il comptait dans le stock, ou la date de péremption d'un lot qui avait encore des
   unités à cette date (le stock tombe à zéro le jour de la péremption, RG-03). La destruction ou le retour d'un lot
@@ -831,6 +836,10 @@ donc plus signalé tout de suite comme une rupture.
   badge « Rupture ».
 - La fiche produit indique « à zéro depuis le … ». Les alertes « Rupture ou sous le seuil » et les notifications du
   matin listent toujours les produits à zéro, comme avant.
+- **Délai réglable** (demande de Modibo, 17/10/2026) : chaque pharmacie règle le délai dans ses paramètres
+  (onglet « Règles », 5 jours par défaut, de 1 à 365). Un produit peut avoir son propre délai sur sa fiche (champ
+  vide : délai de la pharmacie), par exemple un produit souvent manquant chez les grossistes.
+
 ## Décisions — Plusieurs assurances par client et prix le plus bas (retours de pharmacies, Modibo, 15/10/2026)
 
 ### Plusieurs assurances par client (AM-02)
@@ -860,3 +869,38 @@ donc plus signalé tout de suite comme une rupture.
   quand le prix AMO est retenu. Le chiffre d'affaires et les rapports comptent le prix facturé.
 - Les ventes validées avant ce changement gardent leurs montants et leur base AMO d'origine.
 - La caisse hors ligne applique la même règle.
+
+## Décisions — Modèle d'import produits : liste AMO (demande de Modibo, 17/10/2026)
+
+- Source : fichier Excel « Liste des médicaments AMO, août 2021 » envoyé par Modibo (liste de la CANAM annexée à
+  l'arrêté n°2021-4622/MSDS-SG du 08/11/2021, en vigueur depuis le 01/03/2022 ; la révision validée en décembre 2023
+  n'a pas été trouvée publiée). 4 754 lignes, converties par `bin/liste-amo.py` dans
+  `src/Import/liste-amo-2021-08.csv`, qui remplace les 100 produits d'exemple du modèle d'import produits.
+- Correspondance : désignation découpée en **nom commercial**, **dosage** et **conditionnement** (le reste de la
+  désignation, forme comprise, ex. « Comprimé pelliculé, boîte de 30 ») ; **forme** PharmaGest déduite de ce texte
+  (vide pour 173 lignes sans forme de la liste : lotion, solution cutanée…) ; composition → **DCI** ; classe
+  pharmacothérapeutique (orthographes harmonisées) → catégorie « Médicaments › <classe> » (23 classes) ou
+  « Dispositifs médicaux » (forme « Dispositif médical ») ; **prix public → prix de vente** ; prix base de
+  remboursement (colonne « × 70 % » divisée par 0,7) → **prix de vente AMO** ; remboursable AMO : oui.
+- Non repris : sous-classe pharmacothérapeutique (927 libellés, trop fins pour le rangement), « accord préalable »
+  (89 produits marqués AP : PharmaGest n'a pas ce champ), code-barres, étagère, fournisseur, prix d'achat, seuils.
+  La pharmacie complète ou supprime les lignes avant l'import.
+- Écarts de la source : ligne 671 illisible (désignation « s ») et ligne 4353 en double de la ligne 2612 (MICONAZOLE
+  2 % crème, prix différent) ignorées ; OSMOGEL : prix public 32 635 et base de remboursement 12 400, repris tels
+  quels. Textes trop longs coupés à la taille des champs (nom et DCI 150, conditionnement 100 caractères).
+- **Reconnaissance d'un produit à l'import** (sans code-barres) : nom commercial + dosage + **conditionnement**, et
+  non plus nom + dosage seuls, pour que deux boîtes d'un même médicament (ex. LARITEM boîte de 6 et de 24) soient
+  deux produits. Un produit déjà saisi sans conditionnement n'est reconnu que par une ligne sans conditionnement.
+## Décisions — Assurances créées par les pharmacies (Modibo, 17/10/2026)
+
+- Le propriétaire ajoute lui-même une assurance (AMO ou autre) dans Paramètres → « Taux AMO et assurances » →
+  « Ajouter une assurance » : nom, code et nature. Elle n'est visible que dans sa pharmacie (fiche client, caisse,
+  taux, créances, bordereaux) et suit le même parcours que les organismes communs.
+- Les organismes créés par l'éditeur dans l'espace plateforme restent **communs** à toutes les pharmacies ; une
+  pharmacie ne peut ni les modifier ni les archiver. Le back-office indique pour chaque organisme qui l'a créé.
+- Nom et code sont uniques parmi les organismes que voit une pharmacie (les communs et les siens) : une pharmacie ne
+  peut pas reprendre le code « INPS » d'un organisme commun, mais deux pharmacies peuvent chacune créer « MUTEC ».
+- Une assurance de la pharmacie s'archive (et se réactive) depuis la même page ; elle n'est jamais supprimée (RG-15).
+- L'export des données de la pharmacie contient les organismes communs et les siens, jamais ceux des autres.
+- Point ouvert : un organisme créé par plusieurs pharmacies peut ensuite être rendu commun par l'éditeur ; ce n'est
+  pas automatisé.

@@ -6,6 +6,8 @@ use App\Entity\Categorie;
 use App\Entity\Etagere;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
+use App\Entity\ParametrePharmacie;
+use App\Entity\Pharmacie;
 use App\Entity\Produit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\LockMode;
@@ -21,12 +23,6 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class LotRepository extends ServiceEntityRepository
 {
-    /**
-     * Au Mali, « rupture » veut dire que même le fournisseur n'en a plus : un stock à zéro
-     * n'est signalé en rupture qu'après ce nombre de jours sans réapprovisionnement.
-     */
-    public const JOURS_RUPTURE = 5;
-
     /** Tri FEFO : les lots sans date de péremption passent après tous les autres. */
     private const SANS_DATE = 'CASE WHEN l.datePeremption IS NULL THEN 1 ELSE 0 END AS HIDDEN sansDate';
 
@@ -159,7 +155,8 @@ class LotRepository extends ServiceEntityRepository
     /**
      * Stock disponible, quantité périmée et valeur au prix d'achat de chaque produit donné.
      * Pour un produit dont le stock est à zéro, « aZeroDepuis » donne le moment où il y est tombé
-     * (null s'il n'a jamais été reçu) et « rupture » s'il y est depuis JOURS_RUPTURE jours ou plus.
+     * (null s'il n'a jamais été reçu) et « rupture » s'il y est depuis le délai du produit, ou à défaut
+     * de la pharmacie, ou plus (au Mali, « rupture » veut dire que même le fournisseur n'en a plus).
      *
      * @param iterable<Produit> $produits
      *
@@ -169,8 +166,13 @@ class LotRepository extends ServiceEntityRepository
     {
         $ids = [];
         $synthese = [];
+        $delais = [];
+        $parPharmacie = [];
         foreach ($produits as $produit) {
             $ids[] = $produit->getId();
+            $pharmacie = $produit->getPharmacie();
+            $delais[(int) $produit->getId()] = $produit->getJoursAvantRupture()
+                ?? ($parPharmacie[(int) $pharmacie?->getId()] ??= $this->joursAvantRupture($pharmacie));
             $synthese[(int) $produit->getId()] = ['stock' => 0, 'perime' => 0, 'valeur' => 0, 'aZeroDepuis' => null, 'rupture' => false];
         }
         if ([] === $ids) {
@@ -193,13 +195,20 @@ class LotRepository extends ServiceEntityRepository
         }
 
         $aZero = array_keys(array_filter($synthese, static fn (array $s) => 0 === $s['stock']));
-        $limite = $jour->modify(\sprintf('-%d days', self::JOURS_RUPTURE - 1));
         foreach ($this->aZeroDepuis($aZero, $jour) as $id => $depuis) {
             $synthese[$id]['aZeroDepuis'] = $depuis;
-            $synthese[$id]['rupture'] = $depuis < $limite;
+            $synthese[$id]['rupture'] = $depuis < $jour->modify(\sprintf('-%d days', $delais[$id] - 1));
         }
 
         return $synthese;
+    }
+
+    /** Délai avant le badge « Rupture » fixé par la pharmacie (paramètres), ou le délai par défaut. */
+    private function joursAvantRupture(?Pharmacie $pharmacie): int
+    {
+        $parametres = null !== $pharmacie ? $this->getEntityManager()->getRepository(ParametrePharmacie::class)->findOneBy(['pharmacie' => $pharmacie]) : null;
+
+        return $parametres?->getJoursAvantRupture() ?? ParametrePharmacie::JOURS_AVANT_RUPTURE_PAR_DEFAUT;
     }
 
     /**

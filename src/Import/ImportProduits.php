@@ -17,7 +17,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * Import du catalogue. Un produit existant est mis à jour s'il a le même code-barres
- * (ou, sans code-barres, le même nom commercial et le même dosage). Les catégories, étagères
+ * (ou, sans code-barres, le même nom commercial, le même dosage et le même conditionnement). Les catégories, étagères
  * et fournisseurs inconnus sont créés.
  */
 final class ImportProduits extends AbstractDefinitionImport
@@ -91,6 +91,7 @@ final class ImportProduits extends AbstractDefinitionImport
         $remarques = [];
         $nom = Valeurs::texte($valeurs, 'nom_commercial');
         $dosage = Valeurs::texte($valeurs, 'dosage');
+        $conditionnement = Valeurs::texte($valeurs, 'conditionnement');
         $codeBarres = Valeurs::texte($valeurs, 'code_barres');
         $codeBarres = null === $codeBarres ? null : str_replace(' ', '', $codeBarres);
         $libelle = trim(($nom ?? '(sans nom)').' '.($dosage ?? ''));
@@ -99,18 +100,18 @@ final class ImportProduits extends AbstractDefinitionImport
             $erreurs[] = 'Le nom commercial est obligatoire.';
         }
         $avant = \count($erreurs);
-        $this->dejaVu(null !== $codeBarres ? 'cb:'.$codeBarres : 'nom:'.$nom.'|'.$dosage, $numero, null !== $codeBarres ? 'Ce code-barres' : 'Ce produit', $erreurs);
+        $this->dejaVu(null !== $codeBarres ? 'cb:'.$codeBarres : 'nom:'.mb_strtolower($nom.'|'.$dosage.'|'.$conditionnement), $numero, null !== $codeBarres ? 'Ce code-barres' : 'Ce produit', $erreurs);
         // Ligne en double : elle est ignorée et ne doit pas toucher au produit déjà mis à jour par la première.
         $doublon = \count($erreurs) > $avant;
 
         $produit = ($doublon || null === $codeBarres ? null : $this->produits->parCodeBarres($codeBarres))
-            ?? ($doublon || null === $nom ? null : $this->produits->findOneBy(['nomCommercial' => $nom, 'dosage' => $dosage]))
+            ?? ($doublon || null === $nom ? null : $this->produits->findOneBy(['nomCommercial' => $nom, 'dosage' => $dosage, 'conditionnement' => $conditionnement]))
             ?? new Produit();
 
         $produit->setNomCommercial((string) $nom)
             ->setDci(Valeurs::texte($valeurs, 'dci'))
             ->setDosage($dosage)
-            ->setConditionnement(Valeurs::texte($valeurs, 'conditionnement'))
+            ->setConditionnement($conditionnement)
             ->setOrdonnanceObligatoire(Valeurs::booleen($valeurs, 'ordonnance_obligatoire', 'Ordonnance obligatoire', $erreurs))
             ->setRemboursableAmo(Valeurs::booleen($valeurs, 'remboursable_amo', 'Remboursable AMO', $erreurs));
 

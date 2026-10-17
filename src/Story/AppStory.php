@@ -233,7 +233,7 @@ final class AppStory extends Story
         $cmss = \Zenstruck\Foundry\Persistence\repository(\App\Entity\OrganismeAmo::class)->findOneBy(['code' => 'CMSS']);
         ClientFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Oumar Sidibé', 'telephone' => '+22365443322', 'organismeAmo' => $cmss, 'numeroAssure' => 'CMSS-1187-22']);
         // Autre assurance : une ONG inscrit ses employés auprès d'une mutuelle qui prend en charge 80 % du prix de la pharmacie.
-        $mutuelle = (new \App\Entity\OrganismeAmo())->setNom('Mutuelle Santé Sahel (démo)')->setCode('MSS')->setType(\App\Enum\TypeOrganisme::Assurance);
+        $mutuelle = (new \App\Entity\OrganismeAmo())->setNom('Mutuelle Santé Sahel (démo)')->setCode('MSS')->setType(\App\Enum\TypeOrganisme::Assurance)->setPharmacie($pharmacie);
         $this->em->persist($mutuelle);
         $this->em->persist((new \App\Entity\TauxAmo())->setOrganisme($mutuelle)->setTaux(80)->setDateEffet(new \DateTimeImmutable('first day of january this year'))->setPharmacie($pharmacie));
         $this->em->flush();

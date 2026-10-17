@@ -98,6 +98,28 @@ final class ImportTest extends AppWebTestCase
         self::assertSame(1, $this->compter(Produit::class));
     }
 
+    public function testDeuxConditionnementsDuMemeProduitSontDeuxProduits(): void
+    {
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Laritem', 'dosage' => '20 mg/120 mg', 'conditionnement' => 'Comprimé, boîte de 6', 'prixVente' => 600]);
+
+        $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([
+            ['nom_commercial', 'dosage', 'conditionnement', 'prix_vente'],
+            ['Laritem', '20 mg/120 mg', 'Comprimé, boîte de 6', 670],
+            ['Laritem', '20 mg/120 mg', 'Comprimé, boîte de 24', 2520],
+        ])]);
+        self::assertSelectorNotExists('table tbody tr', 'Aucune ligne en erreur.');
+        $this->client->submitForm('Importer les 2 lignes valides');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', '1 créé(s), 1 mis à jour');
+
+        $prix = $this->sansFiltre(static fn (EntityManagerInterface $em): array => array_map(
+            static fn (Produit $p): array => [$p->getConditionnement(), $p->getPrixVente()],
+            $em->getRepository(Produit::class)->findBy(['nomCommercial' => 'Laritem'], ['prixVente' => 'ASC']),
+        ));
+        self::assertSame([['Comprimé, boîte de 6', 670], ['Comprimé, boîte de 24', 2520]], $prix);
+    }
+
     public function testUnProduitExistantEstMisAJourParSonCodeBarres(): void
     {
         ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Ancien nom', 'codeBarres' => '555', 'prixVente' => 1000]);
@@ -207,15 +229,15 @@ final class ImportTest extends AppWebTestCase
     }
 
     /**
-     * Les modèles sont fournis avec des exemples réalistes (100 produits, 10 catégories, 10 fournisseurs, 30 clients)
-     * qui s'importent tels quels, sans aucune erreur.
+     * Les modèles sont fournis avec des exemples qui s'importent tels quels, sans aucune erreur : la liste AMO de la
+     * CANAM pour les produits (4 752 médicaments et dispositifs), 10 fournisseurs et 30 clients fictifs.
      *
      * @return iterable<string, array{string, int, class-string, int}>
      */
     public static function modeles(): iterable
     {
         yield 'fournisseurs' => ['fournisseurs', 10, Fournisseur::class, 10];
-        yield 'produits' => ['produits', 100, Produit::class, 100];
+        yield 'produits' => ['produits', 4752, Produit::class, 4752];
         yield 'clients' => ['clients', 30, Client::class, 30];
     }
 
@@ -237,11 +259,12 @@ final class ImportTest extends AppWebTestCase
 
         self::assertSame($attendus, $this->compter($classe));
         if ('produits' === $type) {
-            // 9 sous-catégories de « Médicaments » + « Parapharmacie » : 10 catégories de rangement, et les 10 fournisseurs.
+            // 23 classes thérapeutiques sous « Médicaments » + « Dispositifs médicaux » ; aucun fournisseur imposé.
             $feuilles = $this->sansFiltre(static fn (EntityManagerInterface $em): int => (int) $em->createQuery('SELECT COUNT(DISTINCT c.id) FROM '.Produit::class.' p JOIN p.categorie c')->getSingleScalarResult());
-            self::assertSame(10, $feuilles);
-            self::assertSame(10, $this->compter(Fournisseur::class));
-            self::assertSame([1500, 1350], $this->prix('Doliprane'), 'Prix de vente AMO repris du modèle.');
+            self::assertSame(24, $feuilles);
+            self::assertSame(0, $this->compter(Fournisseur::class));
+            self::assertSame([1960, 1960], $this->prix('ABAGYL'), 'Prix public et prix base de remboursement de la liste AMO.');
+            self::assertSame([32635, 12400], $this->prix('OSMOGEL'), 'Prix AMO distinct du prix public quand la liste les distingue.');
         }
     }
 

@@ -14,7 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Stock à zéro et rupture : au Mali, « rupture » veut dire que même le fournisseur n'en a plus.
- * Un stock à zéro a un fond rouge ; le badge « Rupture » n'arrive qu'après cinq jours à zéro.
+ * Un stock à zéro a un fond rouge ; le badge « Rupture » n'arrive qu'après cinq jours à zéro (délai réglable).
  */
 final class RuptureTest extends AppWebTestCase
 {
@@ -66,6 +66,32 @@ final class RuptureTest extends AppWebTestCase
         $this->client->request('GET', '/stock/alertes');
         self::assertSelectorTextContains('tbody tr.pg-stock-nul:contains("ZeroDepuisCinqJours")', 'Rupture');
         self::assertSelectorTextNotContains('tbody tr.pg-stock-nul:contains("ZeroDepuisQuatreJours")', 'Rupture');
+    }
+
+    public function testDelaiReglableParLaPharmacieEtParProduit(): void
+    {
+        $this->produitVendu('ZeroDepuisTroisJours', 'today -3 days 10:00');
+        $long = $this->produitVendu('DelaiPropreDixJours', 'today -6 days 10:00');
+
+        $this->connecter($this->officine->proprietaire)->request('GET', '/parametres?onglet=regles');
+        self::assertInputValueSame('parametres[joursAvantRupture]', '5', 'Cinq jours par défaut.');
+        $this->client->submitForm('Enregistrer les règles', ['parametres[joursAvantRupture]' => '3']);
+        self::assertResponseRedirects('/parametres?onglet=regles');
+
+        $this->client->request('GET', '/produits/'.$long->getId().'/modifier');
+        self::assertInputValueSame('produit[joursAvantRupture]', '', 'Vide : délai de la pharmacie.');
+        $this->client->submitForm('Enregistrer', ['produit[joursAvantRupture]' => '10']);
+        self::assertResponseRedirects('/produits/'.$long->getId());
+
+        $crawler = $this->client->request('GET', '/stock');
+        self::assertStringContainsString('Rupture', $crawler->filter('tbody tr:contains("ZeroDepuisTroisJours")')->text(), 'Délai de la pharmacie : 3 jours.');
+        $ligne = $crawler->filter('tbody tr:contains("DelaiPropreDixJours")');
+        self::assertStringContainsString('pg-stock-nul', (string) $ligne->attr('class'));
+        self::assertStringNotContainsString('Rupture', $ligne->text(), 'Délai propre au produit : 10 jours.');
+
+        $this->client->request('GET', '/parametres?onglet=regles');
+        $this->client->submitForm('Enregistrer les règles', ['parametres[joursAvantRupture]' => '0']);
+        self::assertResponseStatusCodeSame(422, 'Au moins un jour.');
     }
 
     public function testEnCaisse(): void

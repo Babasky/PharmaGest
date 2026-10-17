@@ -84,7 +84,7 @@ class Produit implements TenantAwareInterface
     #[Assert\Positive(message: 'Le prix de vente doit être supérieur à zéro.')]
     private ?int $prixVente = null;
 
-    /** En dessous de ce stock, le produit est signalé en rupture (ST-05). */
+    /** À ce stock ou en dessous, le produit apparaît dans les alertes de stock (ST-05). */
     #[ORM\Column]
     #[Assert\NotNull]
     #[Assert\PositiveOrZero]
@@ -95,6 +95,11 @@ class Produit implements TenantAwareInterface
     #[Assert\PositiveOrZero]
     #[Assert\GreaterThanOrEqual(propertyPath: 'seuilAlerte', message: 'Le stock maximum doit être supérieur ou égal au seuil d\'alerte.')]
     private ?int $stockMax = null;
+
+    /** Délai propre à ce produit avant le badge « Rupture » ; vide : délai de la pharmacie. */
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(min: 1, max: 365)]
+    private ?int $joursAvantRupture = null;
 
     #[ORM\Column]
     private bool $ordonnanceObligatoire = false;
@@ -272,6 +277,18 @@ class Produit implements TenantAwareInterface
     public function setStockMax(?int $stockMax): static
     {
         $this->stockMax = $stockMax;
+
+        return $this;
+    }
+
+    public function getJoursAvantRupture(): ?int
+    {
+        return $this->joursAvantRupture;
+    }
+
+    public function setJoursAvantRupture(?int $joursAvantRupture): static
+    {
+        $this->joursAvantRupture = $joursAvantRupture;
 
         return $this;
     }

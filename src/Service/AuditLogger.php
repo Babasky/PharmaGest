@@ -25,6 +25,7 @@ class AuditLogger
     public const ABONNEMENT_PAIEMENT = 'abonnement.paiement';
     public const OFFRE_MODIFIEE = 'offre.modifiee';
     public const SUPPORT_MODIFIE = 'support.modifie';
+    public const SUPER_ADMIN_CREE = 'super_admin.cree';
     public const STOCK_ENTREE = 'stock.entree';
     public const STOCK_AJUSTEMENT = 'stock.ajustement';
     public const STOCK_DESTRUCTION = 'stock.destruction';
@@ -56,6 +57,7 @@ class AuditLogger
     public const ACTIONS_PLATEFORME = [
         self::PHARMACIE_CREEE, self::PHARMACIE_SUSPENDUE, self::PHARMACIE_REACTIVEE, self::PHARMACIE_ARCHIVEE,
         self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT, self::OFFRE_MODIFIEE, self::SUPPORT_MODIFIE,
+        self::SUPER_ADMIN_CREE,
     ];
 
     public const LIBELLES = [
@@ -70,6 +72,7 @@ class AuditLogger
         self::ABONNEMENT_PAIEMENT => "Paiement d'abonnement",
         self::OFFRE_MODIFIEE => 'Offre modifiée',
         self::SUPPORT_MODIFIE => 'Support client modifié',
+        self::SUPER_ADMIN_CREE => 'Super admin créé',
         self::STOCK_ENTREE => 'Entrée de stock manuelle',
         self::STOCK_AJUSTEMENT => 'Ajustement de stock',
         self::STOCK_DESTRUCTION => 'Destruction de stock',

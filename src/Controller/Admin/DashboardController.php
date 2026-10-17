@@ -102,6 +102,7 @@ final class DashboardController extends AbstractDashboardController
         yield MenuItem::linkTo(FormeGaleniqueCrudController::class, 'Formes galéniques', 'fa fa-capsules');
         yield MenuItem::linkTo(CategorieDepenseCrudController::class, 'Catégories de dépenses', 'fa fa-wallet');
         yield MenuItem::section();
+        yield MenuItem::linkToRoute('Super admins', 'fa fa-user-shield', 'admin_super_admin_index');
         yield MenuItem::linkToRoute('Support client', 'fa fa-headset', 'admin_support_index');
         yield MenuItem::linkToRoute('Journal d\'audit', 'fa fa-clipboard-list', 'admin_journal_index');
     }
