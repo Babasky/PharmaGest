@@ -13,7 +13,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Le super admin est créé à l'installation (§ 2), jamais depuis l'interface.
+ * Le premier super admin est créé à l'installation (§ 2) ; les suivants peuvent l'être depuis l'espace plateforme
+ * par un super admin connecté ({@see \App\Controller\Admin\SuperAdminController}).
  */
 #[AsCommand(name: 'app:super-admin:creer', description: 'Crée un compte super admin (éditeur de la plateforme)')]
 final class CreerSuperAdminCommand
