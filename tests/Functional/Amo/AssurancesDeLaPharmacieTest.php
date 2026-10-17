@@ -5,6 +5,9 @@ namespace App\Tests\Functional\Amo;
 use App\Entity\OrganismeAmo;
 use App\Enum\TypeOrganisme;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 /**
  * Une pharmacie crée ses propres assurances (AMO ou autres), visibles d'elle seule ; les organismes communs
@@ -14,6 +17,7 @@ final class AssurancesDeLaPharmacieTest extends AmoTestCase
 {
     public function testLeProprietaireAjouteUneAssuranceVisibleDeSaSeulePharmacie(): void
     {
+        $autre = $this->creerOfficine();
         $this->connecter($this->officine->proprietaire)->request('GET', '/parametres?onglet=amo');
         $this->client->submitForm('Ajouter cette assurance', [
             'organisme_pharmacie[nom]' => 'Mutuelle des enseignants',
@@ -36,7 +40,6 @@ final class AssurancesDeLaPharmacieTest extends AmoTestCase
         self::assertStringContainsString('Mutuelle des enseignants', (string) $crawler->filter('#assurances-client')->attr('data-collection-prototype-value'));
 
         // Une autre pharmacie ne la voit pas, mais garde les organismes communs.
-        $autre = $this->creerOfficine();
         $crawler = $this->connecter($autre->proprietaire)->request('GET', '/parametres?onglet=amo');
         self::assertCount(0, $crawler->filter('#taux_amo_organisme option:contains("Mutuelle des enseignants")'));
         self::assertCount(1, $crawler->filter('#taux_amo_organisme option:contains("INPS")'));
@@ -81,8 +84,10 @@ final class AssurancesDeLaPharmacieTest extends AmoTestCase
         self::assertResponseRedirects('/parametres?onglet=amo');
         self::assertFalse($this->organisme('MUTEC')->isActif());
 
-        $this->client->request('POST', '/parametres/assurances/'.$this->inps->getId().'/archiver', ['_token' => 'x']);
-        self::assertTrue($this->client->getResponse()->isClientError(), 'Un organisme commun relève de l\'éditeur.');
+        // Un organisme commun relève de l'éditeur, même avec un jeton CSRF valide.
+        $id = $this->inps->getId();
+        $this->client->request('POST', '/parametres/assurances/'.$id.'/archiver', ['_token' => $this->jeton('organisme-'.$id)]);
+        self::assertResponseStatusCodeSame(404);
         self::assertTrue($this->organisme('INPS')->isActif());
     }
 
@@ -90,6 +95,26 @@ final class AssurancesDeLaPharmacieTest extends AmoTestCase
     {
         $this->connecter($this->officine->vendeur)->request('GET', '/parametres?onglet=amo');
         self::assertResponseStatusCodeSame(403);
+    }
+
+    private function jeton(string $id): string
+    {
+        $session = $this->client->getRequest()->getSession();
+        /** @var RequestStack $pile */
+        $pile = self::getContainer()->get('request_stack');
+        $requete = new Request();
+        $requete->setSession($session);
+        $pile->push($requete);
+        try {
+            /** @var CsrfTokenManagerInterface $csrf */
+            $csrf = self::getContainer()->get('security.csrf.token_manager');
+            $jeton = $csrf->getToken($id)->getValue();
+            $session->save();
+
+            return $jeton;
+        } finally {
+            $pile->pop();
+        }
     }
 
     private function organisme(string $code): OrganismeAmo
