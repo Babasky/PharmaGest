@@ -40,7 +40,10 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   quotidien ; sinon un lien d'activation est envoyé. Le propriétaire, lui, reçoit toujours un lien (§ 3.2).
 - **Liens d'activation et de réinitialisation** : URL signées (pas de table dédiée), valables 72 h (activation) ou
   1 h (réinitialisation), et à usage unique (le lien devient invalide dès que le mot de passe change).
-- **Le super admin est créé en ligne de commande** (`app:super-admin:creer`), jamais depuis l'interface.
+- **Le premier super admin est créé en ligne de commande** (`app:super-admin:creer`). Ensuite, un super admin connecté
+  peut en créer d'autres depuis l'espace plateforme (menu « Super admins », demande de Modibo du 17/10/2026) : confirmation
+  avant création, lien d'activation par email (pas de mot de passe saisi par le créateur), trace « Super admin créé »
+  dans le journal de la plateforme.
 
 ### Isolation multi-tenant
 

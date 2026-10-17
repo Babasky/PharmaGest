@@ -24,6 +24,23 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
         return $this->findOneBy(['email' => mb_strtolower(trim($email))]);
     }
 
+    /**
+     * Comptes de l'éditeur de la plateforme, du plus ancien au plus récent.
+     *
+     * @return list<Utilisateur>
+     */
+    public function superAdmins(): array
+    {
+        /** @var list<Utilisateur> */
+        return $this->createQueryBuilder('u')
+            ->where('u.roles LIKE :role')
+            ->setParameter('role', '%"'.Utilisateur::ROLE_SUPER_ADMIN.'"%')
+            ->orderBy('u.creeLe')
+            ->addOrderBy('u.id')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void
     {
         if (!$user instanceof Utilisateur) {
