@@ -45,11 +45,11 @@
                     <ul class="list-group list-group-flush">
                         {% for ligne in taux_en_vigueur %}
                             <li class="list-group-item d-flex justify-content-between">
-                                <span class="min-w-0">{{ ligne.organisme.nom }} <span class="badge text-bg-light border">{{ ligne.organisme.type.libelle }}</span></span>
+                                <span class="min-w-0">{{ ligne.organisme.nom }} <span class="badge text-bg-light border">{{ ligne.organisme.type.libelle }}</span>{% if not ligne.organisme.commun %} <span class="badge text-bg-success-subtle text-success-emphasis border">Ajoutée par la pharmacie</span>{% endif %}</span>
                                 <strong class="text-nowrap ms-2">{{ ligne.taux }}&nbsp;%</strong>
                             </li>
                         {% else %}
-                            <li class="list-group-item text-body-secondary">Aucun organisme d'assurance n'est encore configuré par l'éditeur.</li>
+                            <li class="list-group-item text-body-secondary">Aucune assurance : ajoutez celles de vos clients ci-contre.</li>
                         {% endfor %}
                     </ul>
                     <div class="card-body small text-body-secondary">Sans taux saisi, SoftPharm applique 70 %. Un nouveau taux ne modifie jamais les ventes déjà enregistrées.</div>
@@ -68,6 +68,33 @@
                         <button class="btn btn-success" type="submit">Ajouter ce taux</button>
                         {{ form_end(form_taux) }}
                     </div>
+                </div>
+                <div class="card shadow-sm mb-3" id="assurances-pharmacie">
+                    <div class="card-header bg-body fw-semibold">Ajouter une assurance</div>
+                    <div class="card-body">
+                        <p class="small text-body-secondary">Une assurance (AMO ou autre) absente de la liste : elle ne sera visible que dans votre pharmacie.</p>
+                        {{ form_start(form_organisme) }}
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">{{ form_row(form_organisme.nom) }}</div>
+                            <div class="col-6 col-md-3">{{ form_row(form_organisme.code) }}</div>
+                            <div class="col-6 col-md-3">{{ form_row(form_organisme.type) }}</div>
+                        </div>
+                        <button class="btn btn-success" type="submit">Ajouter cette assurance</button>
+                        {{ form_end(form_organisme) }}
+                    </div>
+                    {% if organismes_pharmacie is not empty %}
+                        <ul class="list-group list-group-flush" id="liste-assurances-pharmacie">
+                            {% for o in organismes_pharmacie %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                                    <span class="min-w-0{{ o.actif ? '' : ' text-body-secondary' }}">{{ o.code }} · {{ o.nom }} <span class="badge text-bg-light border">{{ o.type.libelle }}</span>{% if not o.actif %} <span class="badge text-bg-secondary">Archivée</span>{% endif %}</span>
+                                    <form method="post" action="{{ path('app_parametres_organisme_archiver', {id: o.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('organisme-' ~ o.id) }}">
+                                        <button class="btn btn-sm btn-outline-secondary text-nowrap" type="submit">{{ o.actif ? 'Archiver' : 'Réactiver' }}</button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
                 </div>
                 <div class="card shadow-sm">
                     <div class="card-header bg-body fw-semibold">Historique</div>

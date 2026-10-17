@@ -29,6 +29,11 @@ final class ParametresType extends AbstractType
                 'label' => 'Alerte de péremption (jours avant la date)',
                 'attr' => ['min' => 1, 'max' => 730],
             ])
+            ->add('joursAvantRupture', IntegerType::class, [
+                'label' => 'Badge « Rupture » après (jours à zéro)',
+                'help' => 'Un produit à zéro a d\'abord un fond rouge ; le badge « Rupture » s\'ajoute après ce nombre de jours sans stock. Chaque produit peut avoir son propre délai (fiche produit).',
+                'attr' => ['min' => 1, 'max' => 365],
+            ])
             ->add('politiqueSansOrdonnance', EnumType::class, [
                 'label' => 'Produit « ordonnance obligatoire » vendu sans ordonnance',
                 'class' => PolitiqueSansOrdonnance::class,

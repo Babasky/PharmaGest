@@ -40,7 +40,10 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   quotidien ; sinon un lien d'activation est envoyé. Le propriétaire, lui, reçoit toujours un lien (§ 3.2).
 - **Liens d'activation et de réinitialisation** : URL signées (pas de table dédiée), valables 72 h (activation) ou
   1 h (réinitialisation), et à usage unique (le lien devient invalide dès que le mot de passe change).
-- **Le super admin est créé en ligne de commande** (`app:super-admin:creer`), jamais depuis l'interface.
+- **Le premier super admin est créé en ligne de commande** (`app:super-admin:creer`). Ensuite, un super admin connecté
+  peut en créer d'autres depuis l'espace plateforme (menu « Super admins », demande de Modibo du 17/10/2026) : confirmation
+  avant création, lien d'activation par email (pas de mot de passe saisi par le créateur), trace « Super admin créé »
+  dans le journal de la plateforme.
 
 ### Isolation multi-tenant
 
@@ -551,7 +554,9 @@ vente, et son taux s'applique sur ce prix.
 
 - L'organisme AMO existant est généralisé : chaque organisme a une **nature**, « AMO » (INPS, CMSS…) ou « Autre
   assurance » (assurance privée, ONG, mutuelle d'entreprise). Les organismes déjà créés restent « AMO ».
-- La liste reste un référentiel commun géré par l'éditeur dans l'espace plateforme (« Assurances (AMO et autres) ») :
+- ~~La liste reste un référentiel commun géré par l'éditeur.~~ Revu le 17/10/2026 : les pharmacies créent aussi leurs
+  assurances, voir « Assurances créées par les pharmacies ». Avant :
+  la liste reste un référentiel commun géré par l'éditeur dans l'espace plateforme (« Assurances (AMO et autres) ») :
   une assurance ajoutée une fois sert à toutes les pharmacies. Chaque pharmacie saisit ensuite son taux (Paramètres →
   « Taux AMO et assurances »), avec le même historique par date d'effet ; sans taux saisi, 70 % s'applique.
 - Une autre assurance suit exactement le parcours de l'AMO : client assuré (organisme + n° d'assuré), type de vente
@@ -821,8 +826,8 @@ donc plus signalé tout de suite comme une rupture.
 - **Stock à zéro** : la ligne du produit a un fond légèrement rouge, dès que le stock disponible est à 0, quelle que
   soit la durée (état du stock, alertes, caisse, suggestions de commande ; sur la fiche produit, le bloc du stock).
   Le badge « Seuil » n'est plus affiché pour un stock à zéro : le fond rouge le remplace.
-- **Rupture** : le badge « Rupture » s'ajoute quand le stock est à 0 depuis **5 jours ou plus**
-  (`LotRepository::JOURS_RUPTURE`). En caisse, le produit affiche « 0 en stock » puis « Rupture ».
+- **Rupture** : le badge « Rupture » s'ajoute quand le stock est à 0 depuis **5 jours ou plus** par défaut
+  (délai réglable, voir ci-dessous). En caisse, le produit affiche « 0 en stock » puis « Rupture ».
 - **Depuis quand** : calculé à partir des mouvements de stock existants, sans nouvelle donnée. C'est le dernier
   mouvement sur un lot tant qu'il comptait dans le stock, ou la date de péremption d'un lot qui avait encore des
   unités à cette date (le stock tombe à zéro le jour de la péremption, RG-03). La destruction ou le retour d'un lot
@@ -831,6 +836,10 @@ donc plus signalé tout de suite comme une rupture.
   badge « Rupture ».
 - La fiche produit indique « à zéro depuis le … ». Les alertes « Rupture ou sous le seuil » et les notifications du
   matin listent toujours les produits à zéro, comme avant.
+- **Délai réglable** (demande de Modibo, 17/10/2026) : chaque pharmacie règle le délai dans ses paramètres
+  (onglet « Règles », 5 jours par défaut, de 1 à 365). Un produit peut avoir son propre délai sur sa fiche (champ
+  vide : délai de la pharmacie), par exemple un produit souvent manquant chez les grossistes.
+
 ## Décisions — Plusieurs assurances par client et prix le plus bas (retours de pharmacies, Modibo, 15/10/2026)
 
 ### Plusieurs assurances par client (AM-02)
@@ -882,3 +891,16 @@ donc plus signalé tout de suite comme une rupture.
 - **Reconnaissance d'un produit à l'import** (sans code-barres) : nom commercial + dosage + **conditionnement**, et
   non plus nom + dosage seuls, pour que deux boîtes d'un même médicament (ex. LARITEM boîte de 6 et de 24) soient
   deux produits. Un produit déjà saisi sans conditionnement n'est reconnu que par une ligne sans conditionnement.
+## Décisions — Assurances créées par les pharmacies (Modibo, 17/10/2026)
+
+- Le propriétaire ajoute lui-même une assurance (AMO ou autre) dans Paramètres → « Taux AMO et assurances » →
+  « Ajouter une assurance » : nom, code et nature. Elle n'est visible que dans sa pharmacie (fiche client, caisse,
+  taux, créances, bordereaux) et suit le même parcours que les organismes communs.
+- Les organismes créés par l'éditeur dans l'espace plateforme restent **communs** à toutes les pharmacies ; une
+  pharmacie ne peut ni les modifier ni les archiver. Le back-office indique pour chaque organisme qui l'a créé.
+- Nom et code sont uniques parmi les organismes que voit une pharmacie (les communs et les siens) : une pharmacie ne
+  peut pas reprendre le code « INPS » d'un organisme commun, mais deux pharmacies peuvent chacune créer « MUTEC ».
+- Une assurance de la pharmacie s'archive (et se réactive) depuis la même page ; elle n'est jamais supprimée (RG-15).
+- L'export des données de la pharmacie contient les organismes communs et les siens, jamais ceux des autres.
+- Point ouvert : un organisme créé par plusieurs pharmacies peut ensuite être rendu commun par l'éditeur ; ce n'est
+  pas automatisé.

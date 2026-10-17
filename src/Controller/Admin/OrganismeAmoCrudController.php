@@ -36,6 +36,8 @@ final class OrganismeAmoCrudController extends ReferentielCrudController
         yield TextField::new('code', 'Code')->setFormTypeOption('attr', ['placeholder' => 'INPS']);
         yield from parent::configureFields($pageName);
         yield ChoiceField::new('type', 'Nature')
-            ->setHelp('AMO : le taux s\'applique au prix de vente AMO du médicament. Autre assurance : au prix de vente de la pharmacie.');
+            ->setHelp('AMO : le taux s\'applique au plus bas du prix AMO et du prix de la pharmacie. Autre assurance : au prix de vente de la pharmacie.');
+        // Les organismes créés ici sont communs à toutes les pharmacies ; une pharmacie peut aussi créer les siens.
+        yield TextField::new('createur', 'Créé par')->hideOnForm();
     }
 }

@@ -1,0 +1,58 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block page_title %}Super admins{% endblock %}
+{% block content_title %}Super admins{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-primary" href="{{ path('admin_super_admin_nouveau') }}"><i class="bi bi-plus-lg"></i> Nouveau super admin</a>
+{% endblock %}
+
+{% block main %}
+    <p class="text-body-secondary">
+        Comptes de l'éditeur de SoftPharm. Ils ont accès à tout l'espace plateforme, mais jamais à l'activité interne des pharmacies.
+    </p>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="super-admins">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Email</th>
+                        <th>État</th>
+                        <th>Créé le</th>
+                        <th>Dernière connexion</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for admin in super_admins %}
+                        <tr>
+                            <td class="fw-semibold">{{ admin.nom }}{% if admin is same as(app.user) %} <span class="text-body-secondary fw-normal">(vous)</span>{% endif %}</td>
+                            <td>{{ admin.email }}</td>
+                            <td>
+                                {% if not admin.actif %}
+                                    <span class="badge bg-secondary">Désactivé</span>
+                                {% elseif admin.active %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">En attente d'activation</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ admin.creeLe|date('d/m/Y') }}</td>
+                            <td>{{ admin.derniereConnexion ? admin.derniereConnexion|date('d/m/Y H:i') : '—' }}</td>
+                            <td class="text-end">
+                                {% if admin.actif and not admin.active %}
+                                    <form method="post" action="{{ path('admin_super_admin_renvoyer_activation', {id: admin.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('super-admin-' ~ admin.id) }}">
+                                        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-send"></i> Renvoyer le lien</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

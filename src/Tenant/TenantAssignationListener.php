@@ -27,6 +27,10 @@ final class TenantAssignationListener
         $courante = $this->tenantContext->getPharmacie();
 
         if (null === $entite->getPharmacie()) {
+            if ($entite instanceof TenantPartageInterface) {
+                // Valeur commune, sauf si elle est rattachée explicitement à une pharmacie.
+                return;
+            }
             if (null !== $courante) {
                 $entite->setPharmacie($courante);
             } elseif (!$entite instanceof TenantOptionnelInterface) {

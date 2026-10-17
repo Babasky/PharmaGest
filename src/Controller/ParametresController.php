@@ -2,9 +2,11 @@
 
 namespace App\Controller;
 
+use App\Entity\OrganismeAmo;
 use App\Entity\TauxAmo;
 use App\Entity\Utilisateur;
 use App\Form\FichePharmacieType;
+use App\Form\OrganismePharmacieType;
 use App\Form\ParametresType;
 use App\Form\TauxAmoType;
 use App\Repository\OrganismeAmoRepository;
@@ -13,11 +15,13 @@ use App\Service\ParametresPharmacie;
 use App\Stockage\StockageFichiers;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
@@ -50,6 +54,8 @@ final class ParametresController extends AbstractAppController
         $regles = $this->createForm(ParametresType::class, $parametres);
         $nouveauTaux = (new TauxAmo())->setDateEffet($horloge->now());
         $formTaux = $this->createForm(TauxAmoType::class, $nouveauTaux);
+        $nouvelOrganisme = new OrganismeAmo();
+        $formOrganisme = $this->createForm(OrganismePharmacieType::class, $nouvelOrganisme);
 
         $fiche->handleRequest($requete);
         if ($fiche->isSubmitted() && $fiche->isValid()) {
@@ -82,11 +88,21 @@ final class ParametresController extends AbstractAppController
             return $this->redirectToRoute('app_parametres', ['onglet' => 'amo']);
         }
 
+        $formOrganisme->handleRequest($requete);
+        if ($formOrganisme->isSubmitted() && $formOrganisme->isValid()) {
+            $nouvelOrganisme->setPharmacie($pharmacie);
+            $this->em->persist($nouvelOrganisme);
+            $this->em->flush();
+            $this->addFlash('success', \sprintf('Assurance %s ajoutée : choisissez maintenant son taux.', $nouvelOrganisme->getNom()));
+
+            return $this->redirectToRoute('app_parametres', ['onglet' => 'amo']);
+        }
+
         $ongletDemande = $requete->query->getString('onglet');
         $onglet = match (true) {
             $fiche->isSubmitted() => 'fiche',
             $regles->isSubmitted() => 'regles',
-            $formTaux->isSubmitted() => 'amo',
+            $formTaux->isSubmitted(), $formOrganisme->isSubmitted() => 'amo',
             \in_array($ongletDemande, self::ONGLETS, true) => $ongletDemande,
             default => 'fiche',
         };
@@ -103,8 +119,23 @@ final class ParametresController extends AbstractAppController
             'form_taux' => $formTaux,
             'taux_en_vigueur' => $tauxEnVigueur,
             'historique_taux' => $taux->historique(),
+            'form_organisme' => $formOrganisme,
+            'organismes_pharmacie' => $organismes->findBy(['pharmacie' => $pharmacie], ['nom' => 'ASC']),
             'onglet' => $onglet,
-        ], new Response(status: ($fiche->isSubmitted() || $regles->isSubmitted() || $formTaux->isSubmitted()) ? 422 : 200));
+        ], new Response(status: ($fiche->isSubmitted() || $regles->isSubmitted() || $formTaux->isSubmitted() || $formOrganisme->isSubmitted()) ? 422 : 200));
+    }
+
+    /**
+     * Archive ou réactive une assurance créée par la pharmacie (les organismes communs relèvent de l'éditeur).
+     */
+    #[Route('/assurances/{id}/archiver', name: 'app_parametres_organisme_archiver', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[IsGranted(Utilisateur::ROLE_PROPRIETAIRE)]
+    #[IsCsrfTokenValid(new Expression('"organisme-" ~ args["organisme"].getId()'))]
+    public function archiverOrganisme(OrganismeAmo $organisme): Response
+    {
+        $this->basculerArchivage($organisme, \sprintf('L\'assurance %s', $organisme->getNom()));
+
+        return $this->redirectToRoute('app_parametres', ['onglet' => 'amo']);
     }
 
     /**
