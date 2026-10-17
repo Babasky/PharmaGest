@@ -86,7 +86,7 @@ final class AssurancesDeLaPharmacieTest extends AmoTestCase
 
         // Un organisme commun relève de l'éditeur, même avec un jeton CSRF valide.
         $id = $this->inps->getId();
-        $this->client->request('POST', '/parametres/assurances/'.$id.'/archiver', ['_token' => $this->jeton('organisme-'.$id)]);
+        $this->client->request('POST', '/parametres/assurances/'.$id.'/archiver', ['_token' => $this->jetonCsrf('organisme-'.$id)]);
         self::assertResponseStatusCodeSame(404);
         self::assertTrue($this->organisme('INPS')->isActif());
     }
@@ -97,7 +97,7 @@ final class AssurancesDeLaPharmacieTest extends AmoTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
-    private function jeton(string $id): string
+    private function jetonCsrf(string $id): string
     {
         $session = $this->client->getRequest()->getSession();
         /** @var RequestStack $pile */
