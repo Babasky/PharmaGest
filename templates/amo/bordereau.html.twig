@@ -39,9 +39,9 @@
     {% if reglable %}<form method="post" action="{{ path('app_amo_bordereau_reglement', {id: bordereau.id}) }}" id="reglement">{% endif %}
     <div class="card shadow-sm mb-3">
         <div class="table-responsive">
-            <table class="table align-middle mb-0" id="creances">
+            <table class="table align-middle table-bordered mb-0" id="creances">
                 <thead class="table-light">
-                    <tr>
+                    <tr class="text-center">
                         <th class="ps-3">Vente</th><th>Assuré</th><th>Ordonnance</th><th class="text-end">Part AMO</th>
                         {% if bordereau.estTransmis %}<th class="text-end">Réglé</th><th>Statut</th>{% endif %}
                         {% if reglable %}<th class="text-end">Montant réglé</th><th class="pe-3">Motif de rejet</th>{% endif %}
@@ -52,7 +52,7 @@
                     {% for creance in bordereau.creances %}
                         {% set vente = creance.vente %}
                         {% set ord = vente.ordonnance %}
-                        <tr data-vente="{{ vente.numero }}">
+                        <tr data-vente="{{ vente.numero }}" class="text-center">
                             <td class="ps-3"><a class="font-monospace text-decoration-none" href="{{ path('app_vente_voir', {id: vente.id}) }}">{{ vente.numero }}</a><div class="small text-body-secondary">{{ creance.dateVente|date('d/m/Y') }}</div></td>
                             <td>{{ vente.client ? vente.client.nom }}<div class="small text-body-secondary">{{ vente.numeroAssure }}</div></td>
                             <td class="small">

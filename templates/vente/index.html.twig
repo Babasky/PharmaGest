@@ -39,7 +39,7 @@
                 </thead>
                 <tbody>
                     {% for vente in ventes %}
-                        <tr class="{{ vente.statut.value == 'annulee' ? 'text-body-secondary' }}">
+                        <tr class="{{ vente.statut.value == 'annulee' ? 'text-danger' }}">
                             <td class="ps-3">
                                 <a class="fw-semibold text-decoration-none font-monospace" href="{{ path('app_vente_voir', {id: vente.id}) }}">{{ vente.numero }}</a>
                                 {% if vente.statut.value != 'validee' %}<span class="badge text-bg-{{ vente.statut.couleur }}">{{ vente.statut.libelle }}</span>{% endif %}

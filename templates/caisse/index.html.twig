@@ -369,15 +369,19 @@
                 <div class="card-body">
                     {% if totaux %}
                         <dl class="row mb-2" id="totaux">
-                            <dt class="col-7 fw-normal">Total</dt><dd class="col-5 montant mb-1">{{ totaux.totalBrut|fcfa }}</dd>
+                            <dt class="col-7 fw-normal">Total</dt>
+                            <dd class="col-5 montant mb-1">{{ totaux.totalBrut|fcfa }}</dd>
                             {% if panier.type.value == 'amo' %}
-                                <dt class="col-7 fw-normal" id="part-organisme">Part {{ panier.organismeAmo ? panier.organismeAmo.code : 'assurance' }} ({{ panier.tauxAmo ?? 0 }} % de {{ totaux.baseAmo|fcfa }}{{ panier.tarifAmo ? ', prix le plus bas' }})</dt><dd class="col-5 montant mb-1">− {{ totaux.partAmo|fcfa }}</dd>
-                                <dt class="col-7 fw-normal">Part assuré</dt><dd class="col-5 montant mb-1">{{ totaux.partAssureAvantRemise|fcfa }}</dd>
+                                <dt class="col-7 fw-normal" id="part-organisme">Part {{ panier.organismeAmo ? panier.organismeAmo.code : 'assurance' }} ({{ panier.tauxAmo ?? 0 }} % de {{ totaux.baseAmo|fcfa }}{{ panier.tarifAmo ? ', prix le plus bas' }})</dt>
+                                <dd class="col-5 montant mb-1">− {{ totaux.partAmo|fcfa }}</dd>
+                                <dt class="col-7 fw-normal">Part assuré</dt>
+                                <dd class="col-5 montant mb-1">{{ totaux.partAssureAvantRemise|fcfa }}</dd>
                             {% endif %}
                             {% if totaux.remiseTotale > 0 %}
                                 <dt class="col-7 fw-normal text-success">Remise</dt><dd class="col-5 montant text-success mb-1">− {{ totaux.remiseTotale|fcfa }}</dd>
                             {% endif %}
-                            <dt class="col-7 fs-5">À payer</dt><dd class="col-5 montant fs-4 fw-bold mb-0" data-caisse-target="du" data-montant="{{ totaux.aEncaisser }}">{{ totaux.aEncaisser|fcfa }}</dd>
+                            <dt class="col-7 fs-5">À payer</dt>
+                            <dd class="col-5 montant fs-4 fw-bold mb-0" data-caisse-target="du" data-montant="{{ totaux.aEncaisser }}">{{ totaux.aEncaisser|fcfa }}</dd>
                         </dl>
                     {% else %}
                         <p class="text-body-secondary">Ajoutez des produits pour encaisser.</p>

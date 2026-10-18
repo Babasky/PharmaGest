@@ -9,7 +9,7 @@
         h1 { font-size: 14pt; margin: 0 0 2mm; color: #198754; }
         .entete td { vertical-align: top; }
         .petit { font-size: 7.5pt; color: #555; }
-        table.lignes { width: 100%; border-collapse: collapse; margin-top: 5mm; }
+        table.lignes { width: 100%; border-collapse: collapse; margin-top: 5mm; border: 1px solid #ccc;}
         table.lignes th { background: #e9f3ee; text-align: left; padding: 1.5mm; border-bottom: 1px solid #198754; font-size: 7.5pt; }
         table.lignes td { padding: 1.5mm; border-bottom: 1px solid #ddd; vertical-align: top; }
         table.lignes tr.total td { font-weight: bold; border-top: 1px solid #198754; border-bottom: none; font-size: 9pt; }
@@ -20,6 +20,7 @@
         .signature td { width: 50%; vertical-align: top; height: 25mm; }
         .annexe { page-break-before: always; text-align: center; }
         .annexe img { max-width: 100%; max-height: 240mm; }
+        .text-center{text-align:center;}
     </style>
 </head>
 <body>
@@ -50,17 +51,25 @@
     {% set transmis = bordereau.numero is not null %}
     <table class="lignes">
         <thead>
-            <tr>
-                <th>N°</th><th>Date</th><th>Vente</th><th>Assuré</th><th>Ordonnance</th>
-                <th class="droite">Total</th><th class="droite">Base remb.{% if bordereau.organisme.appliqueTarifAmo %}<br>(prix AMO){% endif %}</th><th class="droite">Part {{ bordereau.organisme.code }}</th>
-                {% if transmis %}<th class="droite">Réglé</th>{% endif %}
+            <tr class="text-center">
+                <th>N°</th>
+                <th>Date</th>
+                <th>Vente</th>
+                <th>Assuré</th>
+                <th>Ordonnance</th>
+                <th class="droite">Total</th>
+                <th class="droite">Base remb.{% if bordereau.organisme.appliqueTarifAmo %}<br>(prix AMO){% endif %}</th>
+                <th class="droite">Part {{ bordereau.organisme.code }}</th>
+                {% if transmis %}
+                    <th class="droite">Réglé</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for creance in bordereau.creances %}
                 {% set vente = creance.vente %}
                 {% set ord = vente.ordonnance %}
-                <tr>
+                <tr class="text-center">
                     <td>{{ loop.index }}</td>
                     <td class="nowrap">{{ creance.dateVente|date('d/m/Y') }}</td>
                     <td class="nowrap">{{ vente.numero }}</td>
