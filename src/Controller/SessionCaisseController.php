@@ -19,6 +19,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 /**
  * Sessions de caisse : clôture avec comptage des espèces (FI-06) et rapport Z (FI-07).
  * Chacun voit et clôture sa session ; le propriétaire et l'adjoint voient et peuvent clôturer toutes les sessions.
+ * Seul le propriétaire voit les montants en espèces (attendues, encaissées, écart) : les autres comptent le tiroir à l'aveugle.
  */
 #[Route('/caisse/sessions')]
 #[IsGranted(Utilisateur::ROLE_CAISSIER)]
@@ -36,6 +37,7 @@ final class SessionCaisseController extends AbstractAppController
         return $this->render('session_caisse/index.html.twig', [
             'sessions' => $sessions->liste($tout ? null : $this->utilisateur(), $page),
             'tout' => $tout,
+            'voit_especes' => $this->voitEspeces(),
         ]);
     }
 
@@ -62,6 +64,7 @@ final class SessionCaisseController extends AbstractAppController
             'session' => $session,
             'synthese' => $this->caisse->synthese($session),
             'coupures' => SessionCaisse::COUPURES,
+            'voit_especes' => $this->voitEspeces(),
         ]);
     }
 
@@ -73,10 +76,13 @@ final class SessionCaisseController extends AbstractAppController
         try {
             /** @var array<array-key, mixed> $comptage */
             $comptage = $requete->getPayload()->all('comptage');
-            $this->caisse->cloturer($session, $comptage, (string) $requete->getPayload()->get('justification'));
-            $this->addFlash(0 === $session->getEcart() ? 'success' : 'warning', 0 === $session->getEcart()
-                ? \sprintf('Session %s clôturée, sans écart.', $session->getNumero())
-                : \sprintf('Session %s clôturée avec un écart de %s.', $session->getNumero(), \App\Util\Fcfa::format((int) $session->getEcart())));
+            $voitEspeces = $this->voitEspeces();
+            $this->caisse->cloturer($session, $comptage, (string) $requete->getPayload()->get('justification'), $voitEspeces);
+            $this->addFlash(0 === $session->getEcart() || !$voitEspeces ? 'success' : 'warning', match (true) {
+                !$voitEspeces => \sprintf('Session %s clôturée.', $session->getNumero()),
+                0 === $session->getEcart() => \sprintf('Session %s clôturée, sans écart.', $session->getNumero()),
+                default => \sprintf('Session %s clôturée avec un écart de %s.', $session->getNumero(), \App\Util\Fcfa::format((int) $session->getEcart())),
+            });
         } catch (VenteException $e) {
             $this->addFlash('error', $e->getMessage());
         }
@@ -92,7 +98,13 @@ final class SessionCaisseController extends AbstractAppController
             throw $this->createNotFoundException();
         }
 
-        return $pdf->reponseRapportZ($this->caisse->synthese($session));
+        return $pdf->reponseRapportZ($this->caisse->synthese($session), $this->voitEspeces());
+    }
+
+    /** Montants en espèces attendus de la caisse : réservés au propriétaire. */
+    private function voitEspeces(): bool
+    {
+        return $this->isGranted(Utilisateur::ROLE_PROPRIETAIRE);
     }
 
     private function exigerAcces(SessionCaisse $session): void

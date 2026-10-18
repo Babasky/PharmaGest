@@ -10,8 +10,10 @@ use App\Enum\StatutVente;
 use App\Enum\TypeMouvement;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\ProduitFactory;
+use App\Vente\GestionCaisse;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DomCrawler\Crawler;
+use Twig\Environment;
 
 /**
  * Annulation le jour même (VE-09, RG-12), clôture de caisse et rapport Z (FI-06, FI-07, RG-13) ;
@@ -60,7 +62,10 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         self::assertSame(StatutVente::Annulee, $this->derniereVente()->getStatut());
 
         // La recette est contre-passée : les espèces remboursées sortent de la caisse (RG-13).
+        // Seul le propriétaire voit les espèces attendues.
         $this->client->request('GET', '/caisse/sessions/'.$vente->getSession()?->getId());
+        self::assertSelectorNotExists('#attendues');
+        $this->connecter($this->officine->proprietaire)->request('GET', '/caisse/sessions/'.$vente->getSession()?->getId());
         self::assertSelectorTextContains('#attendues', "2\u{00A0}000\u{00A0}FCFA");
         self::assertSelectorTextContains('#synthese', '1 ('."5\u{00A0}000\u{00A0}FCFA".')');
     }
@@ -81,19 +86,23 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         $this->client->request('GET', '/caisse/sessions/cloture');
         self::assertResponseRedirects('/caisse/sessions/'.$session->getId());
         $this->client->followRedirect();
-        self::assertSelectorTextContains('#attendues', "27\u{00A0}500\u{00A0}FCFA");
+        $this->assertEspecesMasquees();
 
         // 500 FCFA manquants : 2 billets de 10 000, 1 de 5 000, 4 pièces de 500.
+        // Le vendeur compte à l'aveugle : le message ne donne pas le montant de l'écart.
         $comptage = ['comptage[b10000]' => '2', 'comptage[b5000]' => '1', 'comptage[p500]' => '4'];
         $this->client->submitForm('Clôturer la caisse', $comptage);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-danger', "Écart de -500\u{00A0}FCFA : la justification est obligatoire");
+        self::assertSelectorTextContains('.alert-danger', 'Le comptage ne correspond pas aux espèces attendues');
+        self::assertSelectorTextNotContains('.alert-danger', '500');
         self::assertSelectorExists('#cloture', 'La session reste ouverte.');
 
         $this->client->submitForm('Clôturer la caisse', $comptage + ['justification' => 'Erreur de monnaie sur une vente']);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-warning', 'écart de -500');
-        self::assertSelectorTextContains('#ecart', "-500\u{00A0}FCFA");
+        self::assertSelectorTextContains('.alert-success', 'Session '.$session->getNumero().' clôturée.');
+        self::assertSelectorTextContains('#comptees', "27\u{00A0}000\u{00A0}FCFA");
+        $this->assertEspecesMasquees();
+        self::assertSelectorNotExists('#ecart');
         self::assertSelectorNotExists('#cloture');
         $coupures = $this->client->getCrawler()->filter('#comptage td:first-child')->each(static fn (Crawler $td): string => $td->text());
         self::assertSame(['Billet de 10 000', 'Billet de 5 000', 'Pièce de 500'], $coupures, 'Le comptage commence par la plus grosse coupure.');
@@ -101,6 +110,43 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         $this->client->clickLink('Rapport Z');
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('Content-Type', 'application/pdf');
+
+        $this->client->request('GET', '/caisse/sessions');
+        self::assertSelectorTextNotContains('thead', 'Écart');
+
+        // Le propriétaire voit tout : espèces attendues, mode espèces et écart.
+        $this->connecter($this->officine->proprietaire)->request('GET', '/caisse/sessions/'.$session->getId());
+        self::assertSelectorTextContains('#attendues', "27\u{00A0}500\u{00A0}FCFA");
+        self::assertSelectorTextContains('#ecart', "-500\u{00A0}FCFA");
+        self::assertSelectorTextContains('#synthese', 'Espèces');
+        self::assertSelectorTextContains('#especes', 'Encaissements espèces');
+        $this->client->request('GET', '/caisse/sessions');
+        self::assertSelectorTextContains('thead', 'Écart');
+        self::assertSelectorTextContains('tbody', "-500\u{00A0}FCFA");
+
+        // Rapport Z : mêmes règles que l'écran.
+        $rapport = fn (bool $voitEspeces): string => $this->sansFiltre(static function (EntityManagerInterface $em) use ($session, $voitEspeces): string {
+            /** @var GestionCaisse $caisse */
+            $caisse = self::getContainer()->get(GestionCaisse::class);
+            /** @var Environment $twig */
+            $twig = self::getContainer()->get('twig');
+            $session = $em->find(SessionCaisse::class, $session->getId());
+            self::assertInstanceOf(SessionCaisse::class, $session);
+
+            return $twig->render('pdf/rapport_z.html.twig', [
+                'synthese' => $caisse->synthese($session), 'session' => $session, 'pharmacie' => $session->getPharmacie(),
+                'coupures' => SessionCaisse::COUPURES, 'voit_especes' => $voitEspeces,
+            ]);
+        });
+        $pourLeProprietaire = $rapport(true);
+        foreach (['Espèces attendues', 'Écart', 'Encaissements espèces', "27\u{00A0}500\u{00A0}FCFA"] as $texte) {
+            self::assertStringContainsString($texte, $pourLeProprietaire);
+        }
+        $pourLeVendeur = $rapport(false);
+        self::assertStringContainsString('Espèces comptées', $pourLeVendeur);
+        foreach (['Espèces attendues', 'Écart', 'Encaissements espèces', '<td>Espèces</td>', "27\u{00A0}500\u{00A0}FCFA"] as $texte) {
+            self::assertStringNotContainsString($texte, $pourLeVendeur);
+        }
 
         $this->sansFiltre(static function (EntityManagerInterface $em) use ($session): void {
             $session = $em->find(SessionCaisse::class, $session->getId());
@@ -116,6 +162,28 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         $this->client->submitForm('Annuler la vente', ['motif' => 'Trop tard']);
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-danger', 'il faut établir un avoir');
+    }
+
+    public function testLAdjointNeVoitPasNonPlusLesEspecesAttendues(): void
+    {
+        $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1000]);
+        LotFactory::createOne(['produit' => $produit]);
+
+        $this->ouvrirCaisse($this->officine->adjoint, 1000);
+        $this->ajouter($produit, 2);
+        $this->encaisser(['especes' => ['remis' => '2000']]);
+
+        $this->client->request('GET', '/caisse/sessions/cloture');
+        $this->client->followRedirect();
+        $this->assertEspecesMasquees();
+        self::assertSelectorTextContains('#especes', 'visibles que par le propriétaire');
+
+        $this->client->submitForm('Clôturer la caisse', ['comptage[b2000]' => '1', 'comptage[p500]' => '2']);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', 'clôturée.');
+        self::assertSelectorTextNotContains('.alert-success', 'sans écart');
+        $this->assertEspecesMasquees();
+        self::assertSelectorNotExists('#ecart');
     }
 
     public function testClotureSansEcartEtTableauDeBord(): void
@@ -161,5 +229,14 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         self::assertSelectorExists('#cloture', 'L\'adjoint peut clôturer la caisse d\'un vendeur parti sans la fermer.');
         $this->client->request('GET', '/caisse/sessions/'.$duVendeur->getId().'/rapport-z');
         self::assertResponseStatusCodeSame(404, 'Pas de rapport Z avant la clôture.');
+    }
+
+    /** Hors propriétaire : ni mode espèces, ni espèces attendues, ni encaissements espèces. */
+    private function assertEspecesMasquees(): void
+    {
+        self::assertSelectorNotExists('#attendues');
+        self::assertSelectorTextNotContains('#synthese', 'Espèces');
+        self::assertSelectorTextNotContains('#especes', 'Encaissements espèces');
+        self::assertSelectorTextNotContains('#especes', 'Remboursements espèces');
     }
 }
