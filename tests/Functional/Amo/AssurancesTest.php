@@ -64,7 +64,7 @@ final class AssurancesTest extends AmoTestCase
         self::assertSelectorTextContains('main', 'Mutuelle Santé Sahel');
     }
 
-    public function testPrixAmoPlusBasLeMedicamentEstVenduAuPrixAmo(): void
+    public function testPrixAmoPlusBasLaPartAmoSeCalculeSurCePrix(): void
     {
         // Le propriétaire saisit le prix fixé par l'AMO sur la fiche produit (1 000 FCFA à la pharmacie).
         $this->connecter($this->officine->proprietaire)->request('GET', '/produits/'.$this->remboursable->getId().'/modifier');
@@ -78,21 +78,22 @@ final class AssurancesTest extends AmoTestCase
         $this->poster('/caisse/client', ['client' => $this->assure->getId()]);
         $this->poster('/caisse/vente', ['type' => 'amo', 'ordonnance_date' => (new \DateTimeImmutable('today'))->format('Y-m-d'), 'ordonnance_prescripteur' => 'Dr Coulibaly']);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('#panier', "prix AMO, au lieu de 1\u{00A0}000\u{00A0}FCFA");
+        self::assertSelectorTextContains('#panier', "part AMO sur 800\u{00A0}FCFA");
         self::assertSelectorTextContains('#part-organisme', "Part INPS (70 % de 1\u{00A0}600\u{00A0}FCFA, prix le plus bas)");
+        self::assertSelectorTextContains('#totaux', "2\u{00A0}000\u{00A0}FCFA");
         self::assertSelectorTextContains('#totaux', "1\u{00A0}120\u{00A0}FCFA");
-        self::assertSelectorTextContains('#totaux', "480\u{00A0}FCFA");
+        self::assertSelectorTextContains('#totaux', "880\u{00A0}FCFA");
 
         $this->encaisser(['especes' => ['remis' => '1000']]);
         self::assertResponseRedirects();
         $id = (int) $this->derniereVente()->getId();
         $vente = $this->vente($id);
         self::assertTrue($vente->tarifAmo());
-        self::assertSame([1600, 1600, 1120, 480], [$vente->getTotalBrut(), $vente->getBaseAmo(), $vente->getPartAmo(), $vente->getMontantEncaisse()], 'Vendu au prix AMO : part AMO = 2 × 800 × 70 %, l\'assuré paie 30 % de 1 600.');
+        self::assertSame([2000, 1600, 1120, 880], [$vente->getTotalBrut(), $vente->getBaseAmo(), $vente->getPartAmo(), $vente->getMontantEncaisse()], 'Ordonnance au prix de la pharmacie ; part AMO = 2 × 800 × 70 %, l\'assuré paie le reste.');
         self::assertSame(1120, $this->creance($id)->getMontant());
-        self::assertSame([800, 1000], [$vente->getLignes()->first()->getPrixUnitaire(), $vente->getLignes()->first()->getPrixPharmacie()]);
+        self::assertSame([1000, 1000], [$vente->getLignes()->first()->getPrixUnitaire(), $vente->getLignes()->first()->getPrixPharmacie()]);
         $this->client->request('GET', '/ventes/'.$id);
-        self::assertSelectorTextContains('main', "prix AMO, au lieu de 1\u{00A0}000\u{00A0}FCFA");
+        self::assertSelectorTextContains('main', "part AMO sur 800\u{00A0}FCFA");
 
         // Un nouveau prix AMO ne change pas la vente passée (RG-06).
         $this->connecter($this->officine->proprietaire)->request('GET', '/produits/'.$this->remboursable->getId().'/modifier');
@@ -123,15 +124,15 @@ final class AssurancesTest extends AmoTestCase
         $this->encaisser(['especes' => ['remis' => '2000']]);
         self::assertSame(2000, $this->derniereVente()->getTotalBrut(), 'Hors vente AMO, le prix de la pharmacie s\'applique.');
 
-        // Le prix AMO se retire si l'on repasse la vente en vente sans ordonnance avant l'encaissement.
+        // La part AMO au prix AMO disparaît si l'on repasse la vente en vente sans ordonnance avant l'encaissement.
         $this->ajouter($this->remboursable, 1);
         $this->poster('/caisse/client', ['client' => $this->assure->getId()]);
         $this->poster('/caisse/vente', ['type' => 'amo', 'ordonnance_date' => (new \DateTimeImmutable('today'))->format('Y-m-d')]);
         $this->client->request('GET', '/caisse');
-        self::assertSelectorTextContains('#panier', 'prix AMO');
+        self::assertSelectorTextContains('#panier', 'part AMO sur');
         $this->poster('/caisse/vente', ['type' => 'sans_ordonnance']);
         $this->client->request('GET', '/caisse');
-        self::assertSelectorTextNotContains('#panier', 'prix AMO');
+        self::assertSelectorTextNotContains('#panier', 'part AMO');
         self::assertSelectorTextContains('#totaux', "1\u{00A0}000\u{00A0}FCFA");
     }
 

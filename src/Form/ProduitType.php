@@ -109,7 +109,11 @@ final class ProduitType extends AbstractType
             ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable (AMO et assurances)', 'required' => false])
             ->add('prixVenteAmo', IntegerType::class, [
                 'label' => 'Prix de vente AMO (FCFA)', 'required' => false, ...$montant,
-                'help' => 'Prix fixé par l\'AMO : le taux AMO s\'applique sur ce prix. Vide : prix de vente de la pharmacie.',
+                'help' => 'Prix fixé par l\'AMO : la part AMO se calcule sur ce prix s\'il est plus bas que celui de la pharmacie. Vide : prix de vente de la pharmacie.',
+            ])
+            ->add('accordPrealableAmo', CheckboxType::class, [
+                'label' => 'Accord préalable de l\'AMO', 'required' => false,
+                'help' => 'L\'AMO ne le prend en charge que sur présentation d\'un accord préalable de l\'organisme, en plus de l\'ordonnance.',
             ]);
     }
 

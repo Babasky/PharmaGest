@@ -70,6 +70,7 @@ final class ImportProduits extends AbstractDefinitionImport
             new Colonne('ordonnance_obligatoire', 'Ordonnance obligatoire', false, 'oui ou non.', 'non'),
             new Colonne('remboursable_amo', 'Remboursable AMO', false, 'oui ou non.', 'oui'),
             new Colonne('prix_vente_amo', 'Prix de vente AMO', false, 'Prix fixé par l\'AMO, en FCFA. Vide : prix de la pharmacie.', '1400'),
+            new Colonne('accord_prealable_amo', 'Accord préalable AMO', false, 'oui : l\'AMO exige un accord préalable de l\'organisme.', 'non'),
         ];
     }
 
@@ -126,6 +127,10 @@ final class ImportProduits extends AbstractDefinitionImport
         if (\array_key_exists('code_barres', $valeurs)) {
             // Colonne absente du fichier : le code-barres déjà saisi est conservé.
             $produit->setCodeBarres($codeBarres);
+        }
+        if (\array_key_exists('accord_prealable_amo', $valeurs)) {
+            // Colonne absente du fichier : l'accord préalable déjà saisi est conservé.
+            $produit->setAccordPrealableAmo(Valeurs::booleen($valeurs, 'accord_prealable_amo', 'Accord préalable AMO', $erreurs));
         }
         if (\array_key_exists('prix_vente_amo', $valeurs)) {
             // Colonne absente du fichier : le prix AMO déjà saisi est conservé.

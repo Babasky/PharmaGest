@@ -59,6 +59,7 @@
                     <div class="d-flex flex-wrap gap-2">
                         <span class="badge text-bg-{{ produit.ordonnanceObligatoire ? 'warning' : 'light border' }}">{{ produit.ordonnanceObligatoire ? 'Ordonnance obligatoire' : 'Sans ordonnance' }}</span>
                         <span class="badge text-bg-{{ produit.remboursableAmo ? 'info' : 'light border' }}">{{ produit.remboursableAmo ? 'Remboursable AMO' : 'Non remboursable' }}</span>
+                        {% if produit.accordPrealableAmo %}<span class="badge text-bg-warning" id="accord-prealable">Accord préalable AMO</span>{% endif %}
                     </div>
                 </div>
             </div>

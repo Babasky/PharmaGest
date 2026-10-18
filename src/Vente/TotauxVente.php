@@ -16,7 +16,7 @@ final class TotauxVente
         public readonly int $totalBrut,
         public readonly int $remiseLignes,
         public readonly int $remiseGlobale,
-        /** Total des lignes remboursables (0 hors AMO). */
+        /** Base de prise en charge : lignes prises en charge par l'organisme (0 hors AMO). */
         public readonly int $baseAmo,
         public readonly int $partAmo,
         /** Montant sur lequel portent les remises : total brut, ou part assuré pour l'AMO. */

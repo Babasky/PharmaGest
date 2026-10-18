@@ -8,7 +8,7 @@ import 'bootstrap-icons/font/bootstrap-icons.min.css';
 import './styles/app.css';
 import './styles/hors_ligne.css';
 import {
-    calculer, donnees, prixFacture, enregistrerVente, formatFcfa, numeroProvisoire, quantitesNonEnvoyees, rafraichirDonnees,
+    calculer, donnees, estPriseEnCharge, prixPriseEnCharge, enregistrerVente, formatFcfa, numeroProvisoire, quantitesNonEnvoyees, rafraichirDonnees,
     supprimerVente, synchroniser, uuid, ventes,
 } from './hors_ligne.js';
 
@@ -37,8 +37,8 @@ const etat = {
 
 const charger = (copie) => {
     etat.copie = copie;
-    etat.produits = new Map(copie.produits.map(([id, nom, details, codeBarres, prix, prixAmo, remboursable, ordonnance, stock]) => [id, {
-        id, nom, details, codeBarres, prix, prixAmo, remboursable: remboursable === 1, ordonnance: ordonnance === 1, stock,
+    etat.produits = new Map(copie.produits.map(([id, nom, details, codeBarres, prix, prixAmo, remboursable, ordonnance, stock, accord]) => [id, {
+        id, nom, details, codeBarres, prix, prixAmo, remboursable: remboursable === 1, ordonnance: ordonnance === 1, stock, accord: accord === 1,
         recherche: sansAccents(`${nom} ${details}`),
     }]));
     $('hl-identite').textContent = `${copie.pharmacie.nom} · ${copie.utilisateur.nom}`;
@@ -117,7 +117,7 @@ const ajouter = (id) => {
 
 const lignesPanier = () => etat.panier.map((l) => {
     const p = etat.produits.get(l.produit);
-    return { produit: p.id, quantite: l.quantite, nom: p.nom, prix: p.prix, prixAmo: p.prixAmo, remboursable: p.remboursable };
+    return { produit: p.id, quantite: l.quantite, nom: p.nom, prix: p.prix, prixAmo: p.prixAmo, remboursable: p.remboursable, accord: p.accord };
 });
 
 const organismeChoisi = () => etat.copie?.organismes.find((o) => String(o.id) === $('hl-organisme').value) ?? null;
@@ -130,9 +130,12 @@ const afficherPanier = () => {
         ? '<tr><td colspan="4" class="text-body-secondary small">Panier vide : recherchez un produit.</td></tr>'
         : etat.panier.map((l) => {
             const p = etat.produits.get(l.produit);
-            const nonRembourse = type === 'amo' && !p.remboursable ? ' <span class="badge text-bg-secondary">NR</span>' : '';
-            const prix = prixFacture(p, type, organismeChoisi());
-            const auPrixAmo = prix < p.prix ? ` (prix AMO, au lieu de <s>${formatFcfa(p.prix)}</s>)` : '';
+            const organisme = organismeChoisi();
+            const couverte = type === 'amo' && estPriseEnCharge(p, organisme);
+            const nonRembourse = type === 'amo' && !couverte ? ` <span class="badge text-bg-secondary">NR</span>${p.remboursable && p.accord && organisme?.tarifAmo ? ' <span class="small text-warning-emphasis">accord préalable : à saisir en ligne</span>' : ''}` : '';
+            const { prix } = p;
+            const base = prixPriseEnCharge(p, organisme);
+            const auPrixAmo = couverte && base < prix ? ` (part AMO sur ${formatFcfa(base)})` : '';
             return `<tr><td>${echapper(p.nom)}${nonRembourse}<br><span class="small text-body-secondary">${formatFcfa(prix)}${auPrixAmo}</span></td>
                 <td><input class="form-control form-control-sm text-end" inputmode="numeric" value="${l.quantite}" data-quantite="${p.id}" aria-label="Quantité"></td>
                 <td class="text-end">${formatFcfa(prix * l.quantite)}</td>
@@ -242,8 +245,8 @@ const encaisser = (event) => {
         organisme: type === 'amo' ? organisme.id : null,
         organismeNom: type === 'amo' ? organisme.nom : null,
         numeroAssure: type === 'amo' ? $('hl-assure').value.trim() : null,
-        // Prix facturé (prix AMO s'il est plus bas) : c'est lui qui figure sur le ticket provisoire.
-        lignes: lignes.map((l) => ({ ...l, prix: prixFacture(l, type, organisme) })),
+        // Prix de la pharmacie : c'est lui qui figure sur le ticket provisoire.
+        lignes,
         total: totaux.total,
         partAmo: totaux.partAmo,
         montant: totaux.aPayer,
