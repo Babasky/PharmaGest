@@ -2,21 +2,25 @@
 
 namespace App\Vente;
 
+use App\Entity\Caisse;
 use App\Entity\Pharmacie;
 use App\Entity\SessionCaisse;
 use App\Entity\Utilisateur;
+use App\Repository\CaisseRepository;
 use App\Repository\SessionCaisseRepository;
 use App\Repository\VenteRepository;
 use App\Service\AuditLogger;
 use App\Service\Numeroteur;
 use App\Stock\StockService;
 use App\Tenant\TenantContext;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Sessions de caisse (FI-06) : chaque utilisateur ouvre la sienne avec un fond de caisse et la clôture
- * en comptant ses espèces par coupure. Un écart non nul exige une justification et est tracé (RG-13, AU-01).
+ * Caisses et sessions de caisse (FI-06). La pharmacie a une caisse par défaut et peut en ajouter ; chaque caisse
+ * s'ouvre avec un fond de caisse et toute l'équipe y encaisse jusqu'à la clôture, où l'on compte les espèces
+ * par coupure. Un écart non nul exige une justification et est tracé (RG-13, AU-01).
  */
 class GestionCaisse
 {
@@ -25,6 +29,7 @@ class GestionCaisse
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly SessionCaisseRepository $sessions,
+        private readonly CaisseRepository $caisses,
         private readonly VenteRepository $ventes,
         private readonly StockService $stock,
         private readonly Numeroteur $numeroteur,
@@ -34,26 +39,100 @@ class GestionCaisse
     ) {
     }
 
-    public function sessionOuverte(Utilisateur $utilisateur): ?SessionCaisse
+    /**
+     * Caisses en service de la pharmacie courante, dans l'ordre de création. La « Caisse principale » est créée
+     * d'office : une pharmacie a toujours au moins une caisse.
+     *
+     * @return non-empty-list<Caisse>
+     */
+    public function caisses(Pharmacie $pharmacie): array
     {
-        return $this->sessions->ouverteDe($utilisateur);
+        $actives = $this->caisses->actives();
+        if ([] !== $actives) {
+            return $actives;
+        }
+        $caisse = $this->caisses->toutes()[0] ?? (new Caisse(Caisse::PRINCIPALE))->setPharmacie($pharmacie);
+        $caisse->setActif(true);
+        $this->em->persist($caisse);
+        $this->em->flush();
+
+        return [$caisse];
     }
 
     /**
+     * Ajoute une caisse à la pharmacie.
+     *
      * @throws VenteException
      */
-    public function ouvrir(Pharmacie $pharmacie, Utilisateur $utilisateur, int $fondCaisse): SessionCaisse
+    public function ajouter(Pharmacie $pharmacie, string $libelle): Caisse
     {
-        if (null !== $this->sessions->ouverteDe($utilisateur)) {
-            throw new VenteException('Votre caisse est déjà ouverte.');
+        $this->caisses($pharmacie);
+        $libelle = mb_substr(trim($libelle), 0, 60);
+        if ('' === $libelle) {
+            throw new VenteException('Donnez un nom à la caisse (ex. Caisse 2).');
+        }
+        if (null !== $this->caisses->findOneBy(['libelle' => $libelle])) {
+            throw new VenteException(\sprintf('Une caisse s\'appelle déjà « %s ».', $libelle));
+        }
+        $caisse = (new Caisse($libelle))->setPharmacie($pharmacie);
+        $this->em->persist($caisse);
+        $this->em->flush();
+
+        return $caisse;
+    }
+
+    /**
+     * Retire une caisse du service (ou l'y remet). La dernière caisse en service et une caisse ouverte restent.
+     *
+     * @throws VenteException
+     */
+    public function basculer(Pharmacie $pharmacie, Caisse $caisse): void
+    {
+        if ($caisse->isActif()) {
+            if (null !== $this->sessions->ouverteDeLaCaisse($caisse)) {
+                throw new VenteException(\sprintf('%s est ouverte : clôturez-la avant de la retirer.', $caisse->getLibelle()));
+            }
+            if (\count($this->caisses($pharmacie)) < 2) {
+                throw new VenteException('La pharmacie doit garder au moins une caisse.');
+            }
+        }
+        $caisse->setActif(!$caisse->isActif());
+        $this->em->flush();
+    }
+
+    public function sessionOuverte(Caisse $caisse): ?SessionCaisse
+    {
+        return $this->sessions->ouverteDeLaCaisse($caisse);
+    }
+
+    /**
+     * Ouvre une caisse (la première caisse de la pharmacie si aucune n'est précisée).
+     *
+     * @throws VenteException
+     */
+    public function ouvrir(Pharmacie $pharmacie, Utilisateur $utilisateur, int $fondCaisse, ?Caisse $caisse = null): SessionCaisse
+    {
+        $caisse ??= $this->caisses($pharmacie)[0];
+        if (!$caisse->isActif()) {
+            throw new VenteException(\sprintf('%s n\'est plus en service.', $caisse->getLibelle()));
+        }
+        $ouverte = $this->sessions->ouverteDeLaCaisse($caisse);
+        if (null !== $ouverte) {
+            throw new VenteException(\sprintf('%s est déjà ouverte (session %s, par %s).', $caisse->getLibelle(), $ouverte->getNumero(), $ouverte->getUtilisateur()->getNom()));
         }
         if ($fondCaisse < 0 || $fondCaisse > self::FOND_MAXIMUM) {
             throw new VenteException('Le fond de caisse doit être un montant positif ou nul.');
         }
 
-        return $this->stock->transaction(function () use ($pharmacie, $utilisateur, $fondCaisse): SessionCaisse {
+        return $this->stock->transaction(function () use ($pharmacie, $utilisateur, $fondCaisse, $caisse): SessionCaisse {
+            // Deux ouvertures simultanées de la même caisse : la seconde attend la première, puis est refusée.
+            $this->em->lock($caisse, LockMode::PESSIMISTIC_WRITE);
+            if (null !== $this->sessions->ouverteDeLaCaisse($caisse)) {
+                throw new VenteException(\sprintf('%s vient d\'être ouverte.', $caisse->getLibelle()));
+            }
             $session = new SessionCaisse($this->numeroteur->suivant('SC', $pharmacie), $utilisateur, $this->horloge->now(), $fondCaisse);
             $session->setPharmacie($pharmacie);
+            $session->setCaisse($caisse);
             $this->em->persist($session);
             $this->em->flush();
 
@@ -103,6 +182,7 @@ class GestionCaisse
             if (0 !== $session->getEcart()) {
                 $this->audit->journaliser(AuditLogger::CAISSE_ECART, $session->getPharmacie(), $session, null, [
                     'session' => $session->getNumero(),
+                    'caisse' => $session->getCaisse()?->getLibelle(),
                     'caissier' => $session->getUtilisateur()->getNom(),
                     'attendu' => $session->getEspecesAttendues(),
                     'compte' => $session->getEspecesComptees(),

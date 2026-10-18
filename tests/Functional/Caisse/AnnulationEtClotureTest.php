@@ -209,26 +209,44 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         self::assertSelectorTextContains('#synthese', 'Carte bancaire');
     }
 
-    public function testChacunVoitSesSessionsLAdjointVoitTout(): void
+    /**
+     * La caisse est partagée : chacun voit et peut clôturer la session ouverte, et revoit les sessions qu'il a ouvertes ;
+     * le propriétaire et l'adjoint voient tout.
+     */
+    public function testChacunVoitSesSessionsEtLaCaisseOuverteLAdjointVoitTout(): void
     {
         $this->ouvrirCaisse($this->officine->vendeur);
+        $this->cloturerLaCaisse();
         $this->ouvrirCaisse($this->officine->proprietaire);
+        $this->cloturerLaCaisse();
+        $this->ouvrirCaisse($this->officine->adjoint);
         $sessions = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(SessionCaisse::class)->findBy([], ['id' => 'ASC']));
-        [$duVendeur, $duProprietaire] = $sessions;
+        [$duVendeur, $duProprietaire, $ouverte] = $sessions;
+        self::assertSame($duVendeur->getCaisse()?->getId(), $ouverte->getCaisse()?->getId(), 'Une seule caisse par défaut.');
 
         $this->connecter($this->officine->vendeur)->request('GET', '/caisse/sessions');
         self::assertSelectorTextContains('tbody', $duVendeur->getNumero());
+        self::assertSelectorTextContains('tbody', $ouverte->getNumero());
         self::assertSelectorTextNotContains('tbody', $duProprietaire->getNumero());
         $this->client->request('GET', '/caisse/sessions/'.$duProprietaire->getId());
         self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/caisse/sessions/'.$ouverte->getId());
+        self::assertSelectorExists('#cloture', 'Le vendeur peut clôturer la caisse ouverte par l\'adjoint.');
 
         $this->connecter($this->officine->adjoint)->request('GET', '/caisse/sessions');
         self::assertSelectorTextContains('tbody', $duProprietaire->getNumero());
         self::assertSelectorTextContains('tbody', $duVendeur->getNumero());
-        $this->client->request('GET', '/caisse/sessions/'.$duVendeur->getId());
-        self::assertSelectorExists('#cloture', 'L\'adjoint peut clôturer la caisse d\'un vendeur parti sans la fermer.');
-        $this->client->request('GET', '/caisse/sessions/'.$duVendeur->getId().'/rapport-z');
+        $this->client->request('GET', '/caisse/sessions/'.$ouverte->getId().'/rapport-z');
         self::assertResponseStatusCodeSame(404, 'Pas de rapport Z avant la clôture.');
+    }
+
+    private function cloturerLaCaisse(): void
+    {
+        $this->client->request('GET', '/caisse/sessions/cloture');
+        $this->client->followRedirect();
+        $this->client->submitForm('Clôturer la caisse');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', 'clôturée');
     }
 
     /** Hors propriétaire : ni mode espèces, ni espèces attendues, ni encaissements espèces. */

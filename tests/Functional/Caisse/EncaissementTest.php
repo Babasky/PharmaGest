@@ -17,8 +17,8 @@ use App\Tests\Factory\UtilisateurFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Rôle caissier : le vendeur valide la vente et l'envoie à la caisse, le caissier l'encaisse dans sa propre
- * session ; le vendeur garde le droit d'encaisser lui-même. Chacun arrive sur son écran à la connexion.
+ * Rôle caissier : le vendeur valide la vente et l'envoie à la caisse, le caissier l'encaisse dans la session de la
+ * caisse ; le vendeur garde le droit d'encaisser lui-même. Chacun arrive sur son écran à la connexion.
  */
 final class EncaissementTest extends CaisseTestCase
 {
@@ -42,7 +42,7 @@ final class EncaissementTest extends CaisseTestCase
         $this->ajouter($produit, 3);
         $this->client->followRedirect();
         self::assertSelectorNotExists('form[action="/caisse/encaisser"]');
-        $this->poster('/caisse/envoyer');
+        $this->envoyerALaCaisse();
         self::assertResponseRedirects('/caisse');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-success', 'envoyée à la caisse');
@@ -87,6 +87,7 @@ final class EncaissementTest extends CaisseTestCase
             self::assertSame(StatutVente::Validee, $vente->getStatut());
             self::assertSame($this->officine->vendeur->getId(), $vente->getVendeur()->getId());
             self::assertSame($this->caissier->getId(), $vente->getSession()?->getUtilisateur()->getId());
+            self::assertSame($this->caissier->getId(), $vente->getEncaisseePar()?->getId());
             self::assertSame(4500, $vente->getMontantEncaisse());
             self::assertSame(1, $em->getRepository(Recette::class)->count(['vente' => $vente->getId()]));
         });
@@ -110,10 +111,10 @@ final class EncaissementTest extends CaisseTestCase
         $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1000]);
         LotFactory::createOne(['produit' => $produit]);
 
-        // Une vente envoyée à la caisse par l'adjoint, encaissée par le vendeur dans sa propre session.
+        // Une vente envoyée à la caisse par l'adjoint, encaissée par le vendeur.
         $this->connecter($this->officine->adjoint);
         $this->ajouter($produit, 2);
-        $this->poster('/caisse/envoyer');
+        $this->envoyerALaCaisse();
         $vente = $this->derniereVente();
         self::assertSame(StatutVente::AEncaisser, $vente->getStatut());
 
@@ -129,7 +130,7 @@ final class EncaissementTest extends CaisseTestCase
         $vente = $this->derniereVente();
         self::assertSame(StatutVente::Validee, $vente->getStatut());
         self::assertSame($this->officine->adjoint->getId(), $vente->getVendeur()->getId());
-        self::assertSame($this->officine->vendeur->getId(), $vente->getSession()?->getUtilisateur()->getId());
+        self::assertSame($this->officine->vendeur->getId(), $vente->getEncaisseePar()?->getId());
         self::assertSame(2000, $vente->montantPaye(ModePaiement::Carte));
     }
 
@@ -140,7 +141,7 @@ final class EncaissementTest extends CaisseTestCase
 
         $this->connecter($this->officine->vendeur);
         $this->ajouter($produit, 2);
-        $this->poster('/caisse/envoyer');
+        $this->envoyerALaCaisse();
         $vente = $this->derniereVente();
 
         $this->ouvrirCaissier();

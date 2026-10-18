@@ -3,11 +3,12 @@
 {% block title %}Encaissement{% endblock %}
 
 {% block page_actions %}
-    <span class="align-self-center small text-body-secondary">
-        <i class="bi bi-safe"></i> Session {{ session.numero }} · {{ app.user.nom }} · ouverte à {{ session.ouverteLe|date('H:i') }}
+    {% include 'caisse/_poste.html.twig' with {caisse: session.caisse, retour: 'encaissement'} %}
+    <span class="align-self-center small text-body-secondary" id="session-caisse">
+        <i class="bi bi-safe"></i> {{ session.caisse.libelle }} · session {{ session.numero }} · ouverte par {{ session.utilisateur.nom }} à {{ session.ouverteLe|date('H:i') }}
     </span>
     <a class="btn btn-outline-secondary" href="{{ path('app_encaissement_index') }}"><i class="bi bi-arrow-clockwise"></i> Actualiser</a>
-    <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer ma caisse</a>
+    <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer la caisse</a>
 {% endblock %}
 
 {% block content %}

@@ -5,7 +5,7 @@
 {% block page_actions %}
     <a class="btn btn-outline-secondary" href="{{ path('app_session_caisse_index') }}"><i class="bi bi-arrow-left"></i> Sessions</a>
     {% if session.estOuverte %}
-        {% if session.utilisateur.id == app.user.id %}<a class="btn btn-success" href="{{ path(is_granted('ROLE_VENDEUR') ? 'app_caisse' : 'app_encaissement_index') }}"><i class="bi bi-cart-plus"></i> Retour à la caisse</a>{% endif %}
+        <a class="btn btn-success" href="{{ path(is_granted('ROLE_VENDEUR') ? 'app_caisse' : 'app_encaissement_index') }}"><i class="bi bi-cart-plus"></i> Retour à la caisse</a>
     {% else %}
         <a class="btn btn-success" href="{{ path('app_session_caisse_rapport_z', {id: session.id}) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Rapport Z</a>
     {% endif %}
@@ -14,7 +14,7 @@
 {% block content %}
     <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
         <span class="badge fs-6 text-bg-{{ session.estOuverte ? 'success' : 'secondary' }}">{{ session.estOuverte ? 'Ouverte' : 'Clôturée' }}</span>
-        <span>{{ session.utilisateur.nom }}</span>
+        <span>{{ session.caisse.libelle }} · ouverte par {{ session.utilisateur.nom }}</span>
         <span class="small text-body-secondary">Ouverte le {{ session.ouverteLe|date('d/m/Y H:i') }}{% if session.clotureeLe %} · clôturée le {{ session.clotureeLe|date('d/m/Y H:i') }}{{ session.clotureePar ? ' par ' ~ session.clotureePar.nom }}{% endif %}</span>
     </div>
 

@@ -13,7 +13,6 @@ use App\Enum\PolitiqueSansOrdonnance;
 use App\Enum\StatutVente;
 use App\Enum\TypeMouvement;
 use App\Enum\TypeVente;
-use App\Security\CodePin;
 use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\ClientFactory;
 use App\Tests\Factory\LotFactory;
@@ -251,7 +250,7 @@ final class CaisseTest extends CaisseTestCase
 
     public function testR06RemiseAuDelaDuPlafondAutoriseeParLePinDuProprietaire(): void
     {
-        self::getContainer()->get(CodePin::class)->definir($this->officine->proprietaire, '4826');
+        $this->definirPin($this->officine->proprietaire, '4826');
         $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 2000]);
         LotFactory::createOne(['produit' => $produit]);
         $client = ClientFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nom' => 'Aïssata Cissé', 'privilegie' => true]);
@@ -352,7 +351,7 @@ final class CaisseTest extends CaisseTestCase
 
     public function testOrdonnanceObligatoireBloqueeOuConfirmeeParLeProprietaire(): void
     {
-        self::getContainer()->get(CodePin::class)->definir($this->officine->proprietaire, '4826');
+        $this->definirPin($this->officine->proprietaire, '4826');
         $antibiotique = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Amoxicilline', 'ordonnanceObligatoire' => true]);
         LotFactory::createOne(['produit' => $antibiotique]);
 
@@ -433,7 +432,7 @@ final class CaisseTest extends CaisseTestCase
     {
         $collegue = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_VENDEUR, 'nom' => 'Collègue Vendeur']);
         AffectationFactory::createOne(['utilisateur' => $collegue, 'pharmacie' => $this->officine->pharmacie]);
-        self::getContainer()->get(CodePin::class)->definir($collegue, '2580');
+        $this->definirPin($collegue, '2580');
 
         $this->ouvrirCaisse($this->officine->vendeur);
         $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '0852']);
@@ -442,7 +441,7 @@ final class CaisseTest extends CaisseTestCase
         $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '2580']);
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-success', 'Bonjour Collègue Vendeur');
-        self::assertSelectorExists('form[action="/caisse/ouvrir"]', 'Chacun a sa propre session de caisse.');
+        self::assertSelectorNotExists('form[action="/caisse/ouvrir"]', 'La caisse est partagée : le collègue encaisse dans la session ouverte.');
         self::assertSelectorTextContains('header', 'Collègue Vendeur');
     }
 
@@ -452,8 +451,8 @@ final class CaisseTest extends CaisseTestCase
      */
     public function testLeCodePinNOuvrePasLeCompteDuProprietaireNiDUnAdjoint(): void
     {
-        self::getContainer()->get(CodePin::class)->definir($this->officine->proprietaire, '2580');
-        self::getContainer()->get(CodePin::class)->definir($this->officine->adjoint, '3691');
+        $this->definirPin($this->officine->proprietaire, '2580');
+        $this->definirPin($this->officine->adjoint, '3691');
 
         $this->ouvrirCaisse($this->officine->vendeur);
         $this->client->request('GET', '/caisse');
