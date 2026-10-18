@@ -197,28 +197,35 @@ export const synchroniser = () => {
 export const formatFcfa = (valeur) => `${Math.round(valeur).toLocaleString('fr-FR').replace(/\s/g, ' ')} FCFA`;
 
 /**
- * Prix facturé d'une ligne : sur une vente AMO avec un organisme AMO, un médicament remboursable qui a un prix AMO
- * est vendu au plus bas de ce prix et du prix de la pharmacie (LigneVente::appliquerPrix).
+ * Prix unitaire sur lequel s'applique le taux : pour un organisme AMO, le plus bas du prix AMO et du prix de la
+ * pharmacie ; l'ordonnance reste facturée au prix de la pharmacie (LigneVente::prixPriseEnCharge).
  */
-export const prixFacture = (ligne, type, organisme) => (type === 'amo' && organisme?.tarifAmo && ligne.remboursable && ligne.prixAmo !== null && ligne.prixAmo !== undefined
+export const prixPriseEnCharge = (ligne, organisme) => (organisme?.tarifAmo && ligne.prixAmo !== null && ligne.prixAmo !== undefined
     ? Math.min(ligne.prix, ligne.prixAmo)
     : ligne.prix);
 
 /**
- * Montants d'un panier hors ligne. La part AMO se calcule sur le prix facturé des médicaments remboursables
- * et ne dépasse jamais ce prix.
+ * Ligne prise en charge par l'organisme : médicament remboursable ; hors ligne, pas de n° d'accord préalable, donc
+ * un produit qui en exige un reste à la charge de l'assuré AMO (LigneVente::estPriseEnCharge).
+ */
+export const estPriseEnCharge = (ligne, organisme) => ligne.remboursable && !(organisme?.tarifAmo && ligne.accord);
+
+/**
+ * Montants d'un panier hors ligne. La part AMO se calcule sur le prix de prise en charge des lignes prises en
+ * charge et ne dépasse jamais leur prix facturé.
  */
 export const calculer = (lignes, type, organisme) => {
     let total = 0;
     let base = 0;
+    let brutPrisEnCharge = 0;
     for (const ligne of lignes) {
-        const brut = prixFacture(ligne, type, organisme) * ligne.quantite;
+        const brut = ligne.prix * ligne.quantite;
         total += brut;
-        if (type === 'amo' && organisme && ligne.remboursable) {
-            base += brut;
+        if (type === 'amo' && organisme && estPriseEnCharge(ligne, organisme)) {
+            base += prixPriseEnCharge(ligne, organisme) * ligne.quantite;
+            brutPrisEnCharge += brut;
         }
     }
-    const brutRemboursable = base;
-    const partAmo = type === 'amo' && organisme ? Math.min(brutRemboursable, Math.round((base * organisme.taux) / 100)) : 0;
+    const partAmo = type === 'amo' && organisme ? Math.min(brutPrisEnCharge, Math.round((base * organisme.taux) / 100)) : 0;
     return { total, partAmo, aPayer: total - partAmo };
 };

@@ -9,8 +9,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Session de caisse d'un utilisateur (FI-06) : ouverte avec un fond de caisse, clôturée avec le comptage
- * des espèces par coupure. L'écart (RG-13) et les montants attendus sont figés à la clôture (rapport Z, FI-07).
+ * Session d'une caisse (FI-06) : ouverte par un utilisateur avec un fond de caisse, partagée par toute l'équipe
+ * qui encaisse à cette caisse, clôturée avec le comptage des espèces par coupure. L'écart (RG-13) et les montants attendus sont figés à la clôture (rapport Z, FI-07).
  */
 #[ORM\Entity(repositoryClass: SessionCaisseRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_session_caisse_numero', columns: ['pharmacie_id', 'numero'])]
@@ -43,6 +43,10 @@ class SessionCaisse implements TenantAwareInterface
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
+    private ?Caisse $caisse = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $clotureeLe = null;
@@ -96,9 +100,22 @@ class SessionCaisse implements TenantAwareInterface
         return $this->numero;
     }
 
+    /** Utilisateur qui a ouvert la session. */
     public function getUtilisateur(): Utilisateur
     {
         return $this->utilisateur;
+    }
+
+    public function getCaisse(): ?Caisse
+    {
+        return $this->caisse;
+    }
+
+    public function setCaisse(Caisse $caisse): static
+    {
+        $this->caisse = $caisse;
+
+        return $this;
     }
 
     public function getOuverteLe(): \DateTimeImmutable

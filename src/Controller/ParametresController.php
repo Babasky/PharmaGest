@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Caisse;
 use App\Entity\OrganismeAmo;
 use App\Entity\TauxAmo;
 use App\Entity\Utilisateur;
@@ -9,10 +10,13 @@ use App\Form\FichePharmacieType;
 use App\Form\OrganismePharmacieType;
 use App\Form\ParametresType;
 use App\Form\TauxAmoType;
+use App\Repository\CaisseRepository;
 use App\Repository\OrganismeAmoRepository;
 use App\Repository\TauxAmoRepository;
 use App\Service\ParametresPharmacie;
 use App\Stockage\StockageFichiers;
+use App\Vente\GestionCaisse;
+use App\Vente\VenteException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\ExpressionLanguage\Expression;
@@ -30,7 +34,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/parametres')]
 final class ParametresController extends AbstractAppController
 {
-    public const ONGLETS = ['fiche', 'regles', 'amo'];
+    public const ONGLETS = ['fiche', 'regles', 'amo', 'caisses'];
 
     public function __construct(
         private readonly EntityManagerInterface $em,
@@ -45,6 +49,8 @@ final class ParametresController extends AbstractAppController
         StockageFichiers $stockage,
         TauxAmoRepository $taux,
         OrganismeAmoRepository $organismes,
+        CaisseRepository $caisses,
+        GestionCaisse $gestionCaisse,
         ClockInterface $horloge,
     ): Response {
         $pharmacie = $this->pharmacie();
@@ -122,6 +128,7 @@ final class ParametresController extends AbstractAppController
             'form_organisme' => $formOrganisme,
             'organismes_pharmacie' => $organismes->findBy(['pharmacie' => $pharmacie], ['nom' => 'ASC']),
             'onglet' => $onglet,
+            'caisses' => 'caisses' === $onglet ? $this->caissesEtSessions($caisses, $gestionCaisse) : [],
         ], new Response(status: ($fiche->isSubmitted() || $regles->isSubmitted() || $formTaux->isSubmitted() || $formOrganisme->isSubmitted()) ? 422 : 200));
     }
 
@@ -136,6 +143,69 @@ final class ParametresController extends AbstractAppController
         $this->basculerArchivage($organisme, \sprintf('L\'assurance %s', $organisme->getNom()));
 
         return $this->redirectToRoute('app_parametres', ['onglet' => 'amo']);
+    }
+
+    /**
+     * Une officine a souvent une seule caisse, créée d'office ; le propriétaire peut en ajouter d'autres.
+     */
+    #[Route('/caisses', name: 'app_parametres_caisse_ajouter', methods: ['POST'])]
+    #[IsGranted(Utilisateur::ROLE_PROPRIETAIRE)]
+    #[IsCsrfTokenValid('caisses')]
+    public function ajouterCaisse(Request $requete, GestionCaisse $gestionCaisse): Response
+    {
+        try {
+            $caisse = $gestionCaisse->ajouter($this->pharmacie(), (string) $requete->getPayload()->get('libelle'));
+            $this->addFlash('success', \sprintf('%s ajoutée : choisissez-la sur le poste qui l\'utilise (écran de caisse, « Ce poste »).', $caisse->getLibelle()));
+        } catch (VenteException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_parametres', ['onglet' => 'caisses']);
+    }
+
+    #[Route('/caisses/{id}/renommer', name: 'app_parametres_caisse_renommer', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[IsGranted(Utilisateur::ROLE_PROPRIETAIRE)]
+    #[IsCsrfTokenValid('caisses')]
+    public function renommerCaisse(Caisse $caisse, Request $requete, CaisseRepository $caisses): Response
+    {
+        $this->exigerMemePharmacie($caisse);
+        $libelle = mb_substr(trim((string) $requete->getPayload()->get('libelle')), 0, 60);
+        $homonyme = $caisses->findOneBy(['libelle' => $libelle]);
+        if ('' === $libelle || (null !== $homonyme && $homonyme !== $caisse)) {
+            $this->addFlash('error', '' === $libelle ? 'Donnez un nom à la caisse.' : \sprintf('Une caisse s\'appelle déjà « %s ».', $libelle));
+        } else {
+            $caisse->setLibelle($libelle);
+            $this->em->flush();
+            $this->addFlash('success', \sprintf('Caisse renommée « %s ».', $libelle));
+        }
+
+        return $this->redirectToRoute('app_parametres', ['onglet' => 'caisses']);
+    }
+
+    #[Route('/caisses/{id}/basculer', name: 'app_parametres_caisse_basculer', requirements: ['id' => '\d+'], methods: ['POST'])]
+    #[IsGranted(Utilisateur::ROLE_PROPRIETAIRE)]
+    #[IsCsrfTokenValid('caisses')]
+    public function basculerCaisse(Caisse $caisse, GestionCaisse $gestionCaisse): Response
+    {
+        $this->exigerMemePharmacie($caisse);
+        try {
+            $gestionCaisse->basculer($this->pharmacie(), $caisse);
+            $this->addFlash('success', \sprintf($caisse->isActif() ? '%s est de nouveau en service.' : '%s est retirée du service.', $caisse->getLibelle()));
+        } catch (VenteException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_parametres', ['onglet' => 'caisses']);
+    }
+
+    /**
+     * @return list<array{caisse: Caisse, session: ?\App\Entity\SessionCaisse}>
+     */
+    private function caissesEtSessions(CaisseRepository $caisses, GestionCaisse $gestionCaisse): array
+    {
+        $gestionCaisse->caisses($this->pharmacie());
+
+        return array_map(static fn (Caisse $c) => ['caisse' => $c, 'session' => $gestionCaisse->sessionOuverte($c)], $caisses->toutes());
     }
 
     /**

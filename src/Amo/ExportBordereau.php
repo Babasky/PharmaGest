@@ -46,6 +46,10 @@ class ExportBordereau
         if ($transmis) {
             array_push($entetes, 'Réglé', 'Statut', 'Motif du rejet');
         }
+        $accords = $bordereau->getOrganisme()->appliqueTarifAmo();
+        if ($accords) {
+            $entetes[] = 'Accords préalables';
+        }
         $ligne = 5;
         foreach ($entetes as $i => $entete) {
             $feuille->setCellValue([$i + 1, $ligne], $entete);
@@ -75,6 +79,15 @@ class ExportBordereau
             ];
             if ($transmis) {
                 array_push($valeurs, $creance->getMontantRegle(), $creance->getStatut()->libelle(), $creance->getMotifRejet());
+            }
+            if ($accords) {
+                $numeros = [];
+                foreach ($vente->getLignes() as $l) {
+                    if (null !== $l->getNumeroAccord() && $l->isCouverte()) {
+                        $numeros[] = \sprintf('%s : %s', $l->getProduit()->getNomCommercial(), $l->getNumeroAccord());
+                    }
+                }
+                $valeurs[] = [] === $numeros ? null : implode(' ; ', $numeros);
             }
             foreach ($valeurs as $i => $valeur) {
                 if (\is_string($valeur)) {

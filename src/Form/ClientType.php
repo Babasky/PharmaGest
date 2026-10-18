@@ -49,7 +49,7 @@ final class ClientType extends AbstractType
                 'delete_empty' => static fn (?ClientAssurance $a = null): bool => null === $a || (null === $a->getOrganisme() && '' === $a->getNumeroAssure()),
                 'required' => false,
                 'block_prefix' => 'assurances_client',
-                'help' => 'Un client peut avoir plusieurs assurances ; à la caisse, on choisit celle qui s\'applique à la vente.',
+                'help' => 'Un client peut avoir plusieurs assurances ; à la caisse, on choisit celle qui s\'applique à la vente. Taux : celui de l\'assuré selon son statut (assurances autres que l\'AMO) ; vide, le taux de la pharmacie s\'applique.',
             ])
             ->add('entreprise', TextType::class, [
                     'label' => 'Entreprise ou mutuelle', 

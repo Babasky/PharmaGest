@@ -2,12 +2,17 @@
 
 {% block title %}{{ (retour ?? 'caisse') == 'encaissement' ? 'Encaissement' : 'Caisse' }}{% endblock %}
 
+{% block page_actions %}
+    {% include 'caisse/_poste.html.twig' with {retour: retour ?? 'caisse'} %}
+{% endblock %}
+
 {% block content %}
     <div class="card shadow-sm" style="max-width: 32rem">
         <div class="card-body">
-            <h2 class="h5"><i class="bi bi-safe"></i> Ouvrir ma caisse</h2>
+            <h2 class="h5"><i class="bi bi-safe"></i> Ouvrir {{ caisses|length > 1 ? caisse.libelle : 'la caisse' }}</h2>
             <p class="text-body-secondary small">
                 Comptez les espèces présentes dans le tiroir avant de commencer : ce fond de caisse servira au calcul de l'écart à la clôture.
+                Toute l'équipe encaisse ensuite dans cette caisse jusqu'à sa clôture.
             </p>
             {% if ecriture_autorisee() %}
                 <form method="post" action="{{ path('app_caisse_ouvrir') }}">
@@ -30,6 +35,6 @@
         </div>
     </div>
     <p class="small text-body-secondary mt-3">
-        <a href="{{ path('app_session_caisse_index') }}">Mes sessions de caisse</a>
+        <a href="{{ path('app_session_caisse_index') }}">Sessions de caisse</a>
     </p>
 {% endblock %}

@@ -73,7 +73,7 @@
         <tbody>
             {% for ligne in vente.lignes %}
                 <tr>
-                    <td>{{ ligne.produit.designation }}{% if vente.type.value == 'amo' %}<br><span class="petit">{{ ligne.remboursable ? 'Remboursable' ~ (ligne.auPrixAmo ? ', au prix AMO (prix pharmacie ' ~ ligne.prixPharmacie|fcfa ~ ')') : 'Non remboursable : à la charge de l\'assuré' }}</span>{% endif %}</td>
+                    <td>{{ ligne.produit.designation }}{% if vente.type.value == 'amo' %}<br><span class="petit">{{ ligne.couverte ? 'Pris en charge' ~ (ligne.auPrixAmo ? ', au prix AMO (prix pharmacie ' ~ ligne.prixPharmacie|fcfa ~ ')' : (ligne.baseAuPrixAmo(vente.tarifAmo) ? ', part AMO sur ' ~ ligne.prixPriseEnCharge(true)|fcfa)) ~ (ligne.numeroAccord ? ', accord préalable n° ' ~ ligne.numeroAccord) : 'Non pris en charge : à la charge de l\'assuré' }}</span>{% endif %}</td>
                     <td class="droite">{{ ligne.quantite }}</td>
                     <td class="droite">{{ ligne.prixUnitaire|fcfa }}</td>
                     <td class="droite">{{ ligne.remise > 0 ? ligne.remise|fcfa : '-' }}</td>

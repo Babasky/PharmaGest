@@ -4,9 +4,10 @@
 
 {% block page_actions %}
     <a class="btn btn-outline-secondary" href="{{ path('app_caisse_hors_ligne') }}" data-turbo="false" title="Vendre pendant une coupure d'internet"><i class="bi bi-wifi-off"></i> Caisse hors ligne</a>
+    {% include 'caisse/_poste.html.twig' with {retour: 'caisse'} %}
     {% if session %}
-        <span class="align-self-center small text-body-secondary">
-            <i class="bi bi-safe"></i> Session {{ session.numero }} · {{ app.user.nom }} · ouverte à {{ session.ouverteLe|date('H:i') }}
+        <span class="align-self-center small text-body-secondary" id="session-caisse">
+            <i class="bi bi-safe"></i> {{ caisse.libelle }} · session {{ session.numero }} · ouverte par {{ session.utilisateur.nom }} à {{ session.ouverteLe|date('H:i') }}
         </span>
     {% endif %}
     {% if vendeurs is not empty %}
@@ -29,7 +30,7 @@
         </div>
     {% endif %}
     {% if session %}
-        <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer ma caisse</a>
+        <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer la caisse</a>
     {% endif %}
 {% endblock %}
 
@@ -40,7 +41,7 @@
         {# Sans caisse ouverte, le vendeur prépare la vente et l'envoie à la caisse ; il peut aussi ouvrir la sienne. #}
         <div class="alert alert-info d-flex flex-wrap align-items-center gap-3" id="caisse-fermee">
             {% if ecriture_autorisee() %}
-                <span class="flex-grow-1"><i class="bi bi-info-circle"></i> Votre caisse n'est pas ouverte : validez vos ventes avec « Envoyer à la caisse », le caissier les encaissera. Pour encaisser vous-même, ouvrez votre caisse.</span>
+                <span class="flex-grow-1"><i class="bi bi-info-circle"></i> {{ caisses|length > 1 ? caisse.libelle : 'La caisse' }} n'est pas ouverte : validez vos ventes avec « Envoyer à la caisse », le caissier les encaissera. Pour encaisser vous-même, ouvrez la caisse.</span>
                 <form method="post" action="{{ path('app_caisse_ouvrir') }}" class="d-flex gap-2 align-items-center">
                     <input type="hidden" name="_token" value="{{ token }}">
                     <input type="hidden" name="retour" value="caisse">
@@ -142,12 +143,15 @@
                                 <th class="ps-3">Produit</th>
                                 <th class="text-end">Prix</th>
                                 <th style="width: 6rem">Qté</th>
-                                {% if remise_possible and panier.type.value != 'amo' %}<th style="width: 11rem">Remise</th>{% endif %}
+                                {% if remise_possible %}<th style="width: 11rem">Remise{% if panier.type.value == 'amo' %} <span class="fw-normal">(part assuré)</span>{% endif %}</th>{% endif %}
                                 <th class="text-end">Montant</th>
                                 <th class="pe-3"></th>
                             </tr>
                         </thead>
                         <tbody>
+                            {% set vente_assuree = panier and panier.type.value == 'amo' %}
+                            {% set tarif_amo = vente_assuree and panier.tarifAmo %}
+                            {% set autre_assurance = vente_assuree and panier.organismeAmo and not panier.tarifAmo %}
                             {% for ligne in panier ? panier.lignes : [] %}
                                 {% set produit = ligne.produit %}
                                 {% set form_id = 'ligne-' ~ ligne.id %}
@@ -155,17 +159,33 @@
                                     <td class="ps-3">
                                         <span class="fw-semibold">{{ produit.nomCommercial }}</span>
                                         {% if produit.ordonnanceObligatoire %}<span class="badge text-bg-warning ms-1">Ord.</span>{% endif %}
-                                        {% if panier.type.value == 'amo' %}<span class="badge {{ ligne.remboursable ? 'text-bg-info' : 'text-bg-light border' }} ms-1">{{ ligne.remboursable ? 'Remboursable' : 'Non remboursable' }}</span>{% endif %}
+                                        {% if autre_assurance %}
+                                            {# Assurance autre que l'AMO : on coche les produits qu'elle prend en charge, d'après l'ordonnance. #}
+                                            <input type="hidden" form="{{ form_id }}" name="prise_en_charge" value="0">
+                                            <div class="form-check form-check-inline small ms-1 mb-0 prise-en-charge">
+                                                <input class="form-check-input" type="checkbox" form="{{ form_id }}" name="prise_en_charge" value="1" id="prise-{{ ligne.id }}"{{ ligne.estPriseEnCharge(false) ? ' checked' }} onchange="this.form.requestSubmit()">
+                                                <label class="form-check-label" for="prise-{{ ligne.id }}">Pris en charge par {{ panier.organismeAmo.code }}</label>
+                                            </div>
+                                        {% elseif vente_assuree %}
+                                            <span class="badge {{ ligne.remboursable ? 'text-bg-info' : 'text-bg-light border' }} ms-1">{{ ligne.remboursable ? 'Remboursable' : 'Non remboursable' }}</span>
+                                        {% endif %}
+                                        {% if tarif_amo and ligne.remboursable and ligne.accordPrealable %}
+                                            <div class="input-group input-group-sm mt-1 accord-prealable" style="max-width: 20rem">
+                                                <span class="input-group-text">Accord préalable n°</span>
+                                                <input type="text" form="{{ form_id }}" name="accord" value="{{ ligne.numeroAccord }}" maxlength="40" class="form-control" aria-label="N° d'accord préalable pour {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
+                                            </div>
+                                            {% if ligne.attendAccord(true) %}<div class="small text-warning-emphasis">Sans le n° d'accord de l'organisme, ce produit reste à la charge de l'assuré.</div>{% endif %}
+                                        {% endif %}
                                         <div class="small text-body-secondary">{{ produit.etagere ? 'Étagère ' ~ produit.etagere.code ~ ' · ' }}{{ stocks[produit.id].stock ?? 0 }} en stock</div>
                                     </td>
-                                    <td class="montant small">{{ ligne.prixUnitaire|fcfa }}{% if ligne.auPrixAmo %}<div class="text-body-secondary prix-pharmacie" title="Prix AMO plus bas que le prix de la pharmacie">prix AMO, au lieu de <s>{{ ligne.prixPharmacie|fcfa }}</s></div>{% endif %}</td>
+                                    <td class="montant small">{{ ligne.prixUnitaire|fcfa }}{% if ligne.estPriseEnCharge(true) and ligne.baseAuPrixAmo(tarif_amo) %}<div class="text-body-secondary prix-amo" title="Le taux AMO s'applique sur le prix AMO ; la différence est à la charge de l'assuré">part AMO sur {{ ligne.prixPriseEnCharge(true)|fcfa }}</div>{% endif %}</td>
                                     <td>
                                         <form method="post" action="{{ path('app_caisse_ligne', {id: ligne.id}) }}" id="{{ form_id }}">
                                             <input type="hidden" name="_token" value="{{ token }}">
                                         </form>
                                         <input type="number" form="{{ form_id }}" name="quantite" value="{{ ligne.quantite }}" min="0" class="form-control form-control-sm text-end" aria-label="Quantité de {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
                                     </td>
-                                    {% if remise_possible and panier.type.value != 'amo' %}
+                                    {% if remise_possible %}
                                         <td>
                                             <div class="input-group input-group-sm">
                                                 <input type="text" inputmode="numeric" form="{{ form_id }}" name="remise_valeur" value="{{ ligne.remiseValeur ?: '' }}" class="form-control text-end" aria-label="Remise sur {{ produit.nomCommercial }}">
@@ -393,11 +413,38 @@
                     {% endif %}
 
                     {% if panier and panier.lignes is not empty and ecriture_autorisee() %}
-                        {% set bloquee = controle and controle.estBloquee %}
+                        {% set bloquee = (controle and controle.estBloquee) or vendeurs_vente is empty %}
                         <form method="post" action="{{ path(session ? 'app_caisse_encaisser' : 'app_caisse_envoyer') }}">
                             <input type="hidden" name="_token" value="{{ token }}">
                             {% if session %}
                                 {% include 'caisse/_paiements.html.twig' with {du: totaux.aEncaisser} %}
+                            {% endif %}
+                            {# Chaque vente se valide avec le code PIN de celui qui la fait : la vente est à son nom. #}
+                            {% if vendeurs_vente is empty %}
+                                <div class="alert alert-warning py-2 small mb-2" id="pin-manquant">
+                                    <i class="bi bi-key"></i> Chaque vente se valide avec le code PIN du vendeur.
+                                    <a href="{{ path('app_code_pin') }}">Définissez votre code PIN</a> pour valider vos ventes.
+                                </div>
+                            {% else %}
+                                <div class="row g-2 mb-2" id="pin-vendeur">
+                                    {% set choix_vendeur = vendeurs_vente|length > 1 or vendeurs_vente|first.id != app.user.id %}
+                                    {% if choix_vendeur %}
+                                        <div class="col-7">
+                                            <label class="form-label small mb-1" for="vente-vendeur">Vendeur</label>
+                                            <select class="form-select" id="vente-vendeur" name="vendeur">
+                                                {% for v in vendeurs_vente %}
+                                                    <option value="{{ v.id }}"{{ v.id == app.user.id ? ' selected' }}>{{ v.nom }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    {% else %}
+                                        <input type="hidden" name="vendeur" value="{{ vendeurs_vente|first.id }}">
+                                    {% endif %}
+                                    <div class="{{ choix_vendeur ? 'col-5' : 'col-12' }}">
+                                        <label class="form-label small mb-1" for="pin-vente">{{ choix_vendeur ? 'Code PIN du vendeur' : 'Votre code PIN' }}</label>
+                                        <input type="password" inputmode="numeric" maxlength="4" pattern="\d{4}" class="form-control" id="pin-vente" name="pin_vendeur" autocomplete="off" required>
+                                    </div>
+                                </div>
                             {% endif %}
                             {% if controle and controle.exigeCodePin %}
                                 <div class="mb-2">
@@ -411,7 +458,7 @@
                             {% else %}
                                 <button class="btn btn-success btn-lg w-100" type="submit"{{ bloquee ? ' disabled' }}><i class="bi bi-send"></i> Envoyer à la caisse</button>
                             {% endif %}
-                            <div class="form-text">« Envoyer à la caisse » valide la vente et sort les produits du stock ; le client la règle auprès du caissier.</div>
+                            <div class="form-text">Le code PIN est demandé à chaque vente : celui qui le saisit fait la vente et prend la main. « Envoyer à la caisse » valide la vente et sort les produits du stock ; le client la règle auprès du caissier.</div>
                         </form>
                     {% endif %}
                 </div>

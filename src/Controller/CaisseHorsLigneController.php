@@ -12,9 +12,9 @@ use App\Repository\ProduitRepository;
 use App\Repository\VenteHorsLigneRepository;
 use App\Service\ParametresPharmacie;
 use App\Stock\StockService;
-use App\Vente\GestionCaisse;
 use App\Vente\HorsLigneService;
 use App\Vente\ImportInterrompuException;
+use App\Vente\PosteCaisse;
 use App\Vente\VenteException;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -64,7 +64,7 @@ final class CaisseHorsLigneController extends AbstractAppController
         LotRepository $lots,
         OrganismeAmoRepository $organismes,
         ParametresPharmacie $parametres,
-        GestionCaisse $caisse,
+        PosteCaisse $poste,
         StockService $stock,
         ClockInterface $horloge,
         CsrfTokenManagerInterface $jetons,
@@ -90,6 +90,7 @@ final class CaisseHorsLigneController extends AbstractAppController
                 $p['remboursableAmo'] ? 1 : 0,
                 $p['ordonnanceObligatoire'] ? 1 : 0,
                 $stocks[$p['id']] ?? 0,
+                $p['accordPrealableAmo'] ? 1 : 0,
             ];
         }
 
@@ -103,7 +104,7 @@ final class CaisseHorsLigneController extends AbstractAppController
                 'adresse' => trim($pharmacie->getAdresse().', '.$pharmacie->getVille(), ', '),
                 'telephone' => $pharmacie->getTelephone(),
             ],
-            'sessionOuverte' => null !== $caisse->sessionOuverte($utilisateur),
+            'sessionOuverte' => null !== $poste->session($pharmacie),
             'politiqueSansOrdonnance' => $parametres->pour($pharmacie)->getPolitiqueSansOrdonnance()->value,
             'modes' => array_map(static fn (ModePaiement $m) => ['code' => $m->value, 'libelle' => $m->libelle()], ModePaiement::horsEspeces()),
             'organismes' => array_map(static fn (OrganismeAmo $o) => [

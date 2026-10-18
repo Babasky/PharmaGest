@@ -57,13 +57,13 @@ class ProduitRepository extends ServiceEntityRepository
      * Catalogue vendable copié sur le poste pour la caisse hors ligne : produits actifs avec un prix de vente,
      * en lecture directe (sans hydratation) car il peut compter des milliers de produits.
      *
-     * @return list<array{id: int, nomCommercial: string, dci: ?string, dosage: ?string, forme: ?string, codeBarres: ?string, prixVente: int, prixVenteAmo: ?int, remboursableAmo: bool, ordonnanceObligatoire: bool}>
+     * @return list<array{id: int, nomCommercial: string, dci: ?string, dosage: ?string, forme: ?string, codeBarres: ?string, prixVente: int, prixVenteAmo: ?int, remboursableAmo: bool, accordPrealableAmo: bool, ordonnanceObligatoire: bool}>
      */
     public function catalogueHorsLigne(): array
     {
-        /** @var list<array{id: int, nomCommercial: string, dci: ?string, dosage: ?string, forme: ?string, codeBarres: ?string, prixVente: int, prixVenteAmo: ?int, remboursableAmo: bool, ordonnanceObligatoire: bool}> */
+        /** @var list<array{id: int, nomCommercial: string, dci: ?string, dosage: ?string, forme: ?string, codeBarres: ?string, prixVente: int, prixVenteAmo: ?int, remboursableAmo: bool, accordPrealableAmo: bool, ordonnanceObligatoire: bool}> */
         return $this->createQueryBuilder('p')
-            ->select('p.id', 'p.nomCommercial', 'p.dci', 'p.dosage', 'f.nom AS forme', 'p.codeBarres', 'p.prixVente', 'p.prixVenteAmo', 'p.remboursableAmo', 'p.ordonnanceObligatoire')
+            ->select('p.id', 'p.nomCommercial', 'p.dci', 'p.dosage', 'f.nom AS forme', 'p.codeBarres', 'p.prixVente', 'p.prixVenteAmo', 'p.remboursableAmo', 'p.accordPrealableAmo', 'p.ordonnanceObligatoire')
             ->leftJoin('p.forme', 'f')
             ->andWhere('p.actif = true')
             ->andWhere('p.prixVente > 0')

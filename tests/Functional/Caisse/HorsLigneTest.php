@@ -44,7 +44,7 @@ final class HorsLigneTest extends CaisseTestCase
         self::assertSame('blocage', $donnees['politiqueSansOrdonnance']);
         self::assertNotEmpty($donnees['organismes']);
         // Seuls les produits vendables de la pharmacie, avec le stock non périmé.
-        self::assertSame([[$produit->getId(), 'Doliprane', 'Paracétamol 500 mg', '3400935955534', 1500, null, 0, 0, 12]], $donnees['produits']);
+        self::assertSame([[$produit->getId(), 'Doliprane', 'Paracétamol 500 mg', '3400935955534', 1500, null, 0, 0, 12, 0]], $donnees['produits']);
 
         // La page elle-même ne contient aucune donnée : elle peut être gardée par le service worker.
         $this->client->request('GET', '/caisse/hors-ligne');
@@ -105,7 +105,7 @@ final class HorsLigneTest extends CaisseTestCase
         $vente = $this->venteHorsLigne([['produit' => $produit->getId(), 'quantite' => 2]], 2000);
         $resultats = $this->envoyer([$vente]);
         self::assertSame('anomalie', $resultats[$vente['uuid']]['statut']);
-        self::assertStringContainsString('caisse de '.$this->officine->vendeur->getNom().' est fermée', (string) $resultats[$vente['uuid']]['message']);
+        self::assertStringContainsString('La caisse est fermée', (string) $resultats[$vente['uuid']]['message']);
 
         $this->client->request('GET', '/ventes/hors-ligne');
         self::assertSelectorTextContains('tbody', 'HL-AB12-1');

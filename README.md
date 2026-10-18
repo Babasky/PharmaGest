@@ -33,22 +33,27 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 | `m.dembele@groupe-dembele.ml` | Propriétaire Premium | Deux pharmacies, Kati et Koulikoro (sélecteur en haut de page), avec des **Transferts** de stock entre elles |
 | `s.cisse@groupe-dembele.ml` | Adjoint | Pharmacie de Koulikoro : un transfert venu de Kati à réceptionner |
 
-Codes PIN de la Pharmacie du Fleuve (remise hors plafond, vente sans ordonnance, changement de vendeur) :
+Codes PIN de la Pharmacie du Fleuve (validation de chaque vente, remise hors plafond, vente sans ordonnance, changement de vendeur) :
 Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**,
 Awa Konaté **4826** (caissière).
 Moussa a une session de caisse clôturée avec cinq ventes (dont trois AMO et une annulée).
 
 **Vente et encaissement.** Chacun arrive sur son écran à la connexion : le vendeur sur la **Caisse** (écran de vente),
 le caissier sur l'**Encaissement**, le propriétaire et l'adjoint sur le tableau de bord. Le vendeur prépare la vente
-sans avoir à ouvrir de caisse, puis choisit :
-- **Encaisser** lui-même (il ouvre alors sa caisse avec son fond de caisse) ;
+sans avoir à ouvrir de caisse, puis valide chaque vente avec **son code PIN**, même s'il est déjà connecté : la vente
+est au nom de celui qui saisit son code, et un collègue vendeur qui saisit le sien prend la main sur le poste. Il choisit :
+- **Encaisser** lui-même (la caisse doit être ouverte, avec son fond de caisse) ;
 - ou **Envoyer à la caisse** : la vente est validée, numérotée et ses produits sortent du stock ; elle attend dans la
-  file du caissier, qui l'encaisse dans sa propre session (espèces, Orange Money, Moov Money, Wave, carte bancaire, paiement mixte)
+  file du caissier, qui l'encaisse (espèces, Orange Money, Moov Money, Wave, carte bancaire, paiement mixte)
   ou l'annule si le client repart sans payer (les produits reviennent en stock).
+
+La pharmacie a **une seule caisse** par défaut (« Caisse principale ») : elle est ouverte une fois, toute l'équipe y
+encaisse dans la même session, et n'importe qui la clôture. Le propriétaire peut ajouter d'autres caisses dans
+**Paramètres > Caisses** ; chaque poste choisit alors la sienne (« Ce poste » sur l'écran de caisse).
 
 Dans la démo, Seydou a envoyé quatre ventes à Awa : deux encaissées (dont une prise en charge à 80 % par la mutuelle
 d'une ONG), une annulée et une qui attend. Le caissier n'a accès qu'à l'Encaissement, aux Ventes (réimpression des
-tickets) et à ses sessions de caisse. Le propriétaire ajoute un caissier depuis **Équipe**. Le menu **AMO** (propriétaire et adjoint) montre l'encours, un bordereau INPS transmis
+tickets) et aux sessions de caisse. Le propriétaire ajoute un caissier depuis **Équipe**. Le menu **AMO** (propriétaire et adjoint) montre l'encours, un bordereau INPS transmis
 et réglé en partie, et une créance CMSS encore en attente. Le menu **Commandes** montre une commande Laborex reçue
 en partie (l'Augmentin est encore attendu), un brouillon PPM à envoyer et les suggestions du jour. En local, les emails
 aux fournisseurs arrivent dans Mailpit (`ddev launch -m`).

@@ -25,7 +25,7 @@
             <td><h1>Rapport Z</h1><div>{{ pharmacie.nom }}</div><div class="petit">{{ pharmacie.ville }}</div></td>
             <td class="droite">
                 Session <strong>{{ session.numero }}</strong><br>
-                Caissier : {{ session.utilisateur.nom }}<br>
+                {{ session.caisse.libelle }}, ouverte par {{ session.utilisateur.nom }}<br>
                 <span class="petit">Du {{ session.ouverteLe|date('d/m/Y H:i') }} au {{ session.clotureeLe|date('d/m/Y H:i') }}{{ session.clotureePar ? ' · clôturée par ' ~ session.clotureePar.nom }}</span>
             </td>
         </tr>
@@ -43,7 +43,7 @@
     <h2>Encaissements par mode de paiement</h2>
     <table>
         <tr><th>Mode</th><th class="droite">Encaissé</th><th class="droite">Remboursé (annulations)</th><th class="droite">Net</th></tr>
-        {% for mode in synthese.modes %}
+        {% for mode in synthese.modes|filter(m => voit_especes or m.value != 'especes') %}
             <tr class="ligne">
                 <td>{{ mode.libelle }}</td>
                 <td class="droite">{{ synthese.encaissements[mode.value]|fcfa }}</td>
@@ -51,17 +51,19 @@
                 <td class="droite gras">{{ synthese.net(mode)|fcfa }}</td>
             </tr>
         {% endfor %}
-        <tr><td class="gras">Total</td><td></td><td></td><td class="droite gras">{{ synthese.totalEncaisse|fcfa }}</td></tr>
+        {% if voit_especes %}<tr><td class="gras">Total</td><td></td><td></td><td class="droite gras">{{ synthese.totalEncaisse|fcfa }}</td></tr>{% endif %}
     </table>
 
     <h2>Contrôle des espèces</h2>
     <table>
         <tr class="ligne"><td>Fond de caisse</td><td class="droite">{{ session.fondCaisse|fcfa }}</td></tr>
-        <tr class="ligne"><td>+ Encaissements espèces</td><td class="droite">{{ synthese.encaissements.especes|fcfa }}</td></tr>
-        <tr class="ligne"><td>− Remboursements espèces</td><td class="droite">{{ synthese.decaissements.especes|fcfa }}</td></tr>
-        <tr class="ligne"><td class="gras">Espèces attendues</td><td class="droite gras">{{ session.especesAttendues|fcfa }}</td></tr>
+        {% if voit_especes %}
+            <tr class="ligne"><td>+ Encaissements espèces</td><td class="droite">{{ synthese.encaissements.especes|fcfa }}</td></tr>
+            <tr class="ligne"><td>− Remboursements espèces</td><td class="droite">{{ synthese.decaissements.especes|fcfa }}</td></tr>
+            <tr class="ligne"><td class="gras">Espèces attendues</td><td class="droite gras">{{ session.especesAttendues|fcfa }}</td></tr>
+        {% endif %}
         <tr class="ligne"><td class="gras">Espèces comptées</td><td class="droite gras">{{ session.especesComptees|fcfa }}</td></tr>
-        <tr><td class="ecart">Écart</td><td class="droite ecart {{ session.ecart != 0 ? 'rouge' }}">{{ session.ecart|fcfa }}</td></tr>
+        {% if voit_especes %}<tr><td class="ecart">Écart</td><td class="droite ecart {{ session.ecart != 0 ? 'rouge' }}">{{ session.ecart|fcfa }}</td></tr>{% endif %}
     </table>
     {% if session.justification %}<p><span class="gras">Justification :</span> {{ session.justification }}</p>{% endif %}
 

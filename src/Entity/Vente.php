@@ -106,6 +106,11 @@ class Vente implements TenantAwareInterface
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Utilisateur $autorisePar = null;
 
+    /** Qui a encaissé la vente : le vendeur lui-même, ou le caissier pour une vente envoyée à la caisse. */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Utilisateur $encaisseePar = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $annuleeLe = null;
 
@@ -186,11 +191,6 @@ class Vente implements TenantAwareInterface
         }
         if (TypeVente::Amo !== $type) {
             $this->definirAmo(null, null, null);
-        } else {
-            // RG-09 : sur une vente AMO, seule une remise globale sur la part assuré est possible.
-            foreach ($this->lignes as $ligne) {
-                $ligne->definirRemise(null, 0);
-            }
         }
 
         return $this;
@@ -316,14 +316,8 @@ class Vente implements TenantAwareInterface
         $this->tauxAmo = $taux;
         $this->tarifAmo = $organisme?->appliqueTarifAmo() ?? false;
         foreach ($this->lignes as $ligne) {
-            $ligne->appliquerPrix($this->prixAmoApplicable());
+            $ligne->retablirPrixPharmacie();
         }
-    }
-
-    /** Vente AMO avec un organisme AMO : les médicaments sont vendus au plus bas du prix AMO et du prix de la pharmacie. */
-    private function prixAmoApplicable(): bool
-    {
-        return TypeVente::Amo === $this->type && $this->tarifAmo;
     }
 
     /**
@@ -348,7 +342,7 @@ class Vente implements TenantAwareInterface
     public function ajouterLigne(Produit $produit, int $quantite): LigneVente
     {
         $ligne = new LigneVente($this, $produit, $quantite, (int) $produit->getPrixVente(), $produit->isRemboursableAmo(), $produit->getPrixVenteAmo());
-        $ligne->appliquerPrix($this->prixAmoApplicable());
+        $ligne->exigerAccordPrealable($produit->isAccordPrealableAmo());
         $this->lignes->add($ligne);
 
         return $ligne;
@@ -376,25 +370,26 @@ class Vente implements TenantAwareInterface
         $tauxMax = 0.0;
 
         $tarifAmo = $this->tarifAmo();
-        $brutRemboursable = 0;
+        $brutPrisEnCharge = 0;
 
         foreach ($this->lignes as $ligne) {
             $brut = $ligne->getMontantBrut();
             $totalBrut += $brut;
-            if ($amo && $ligne->isRemboursable()) {
+            if ($amo && $ligne->estPriseEnCharge($tarifAmo)) {
                 $baseAmo += $ligne->basePriseEnCharge($tarifAmo);
-                $brutRemboursable += $brut;
+                $brutPrisEnCharge += $brut;
             }
-            if (!$amo) {
-                $remise = $ligne->calculerRemise();
-                $remiseLignes += $remise;
-                $tauxMax = max($tauxMax, self::taux($remise, $brut));
-            }
+            // RG-09 : sur une vente AMO, la remise d'une ligne porte sur sa part assuré.
+            $remise = $ligne->calculerRemise();
+            $remiseLignes += $remise;
+            $tauxMax = max($tauxMax, self::taux($remise, $ligne->baseRemise()));
         }
 
-        // La part de l'organisme ne dépasse jamais ce que la pharmacie facture pour les lignes remboursables.
-        $partAmo = $amo ? min($brutRemboursable, Fcfa::arrondir($baseAmo * ($this->tauxAmo ?? 0) / 100)) : 0;
+        // La part de l'organisme ne dépasse jamais ce que la pharmacie facture pour les lignes prises en charge.
+        $partAmo = $amo ? min($brutPrisEnCharge, Fcfa::arrondir($baseAmo * ($this->tauxAmo ?? 0) / 100)) : 0;
         $baseRemise = $totalBrut - $partAmo;
+        // Les parts AMO des lignes, arrondies une à une, peuvent différer d'un franc de la part AMO de la vente.
+        $remiseLignes = min($remiseLignes, $baseRemise);
         $baseRemiseGlobale = $baseRemise - $remiseLignes;
         $remiseGlobale = $this->remiseType?->montantSur($baseRemiseGlobale, $this->remiseValeur) ?? 0;
         $tauxMax = max($tauxMax, self::taux($remiseGlobale, $baseRemiseGlobale), self::taux($remiseLignes + $remiseGlobale, $baseRemise));
@@ -411,6 +406,7 @@ class Vente implements TenantAwareInterface
     {
         $this->figer($numero, $le, $autorisePar);
         $this->session = $session;
+        $this->encaisseePar = $this->vendeur;
         $this->statut = StatutVente::Validee;
     }
 
@@ -432,12 +428,13 @@ class Vente implements TenantAwareInterface
      *
      * @internal réservé à {@see \App\Vente\VenteService}
      */
-    public function encaisserEnCaisse(SessionCaisse $session, \DateTimeImmutable $le): void
+    public function encaisserEnCaisse(SessionCaisse $session, \DateTimeImmutable $le, Utilisateur $caissier): void
     {
         if (!$this->estAEncaisser()) {
             throw new \LogicException('Cette vente n\'attend pas d\'encaissement.');
         }
         $this->session = $session;
+        $this->encaisseePar = $caissier;
         $this->valideeLe = $le;
         $this->statut = StatutVente::Validee;
     }
@@ -449,7 +446,7 @@ class Vente implements TenantAwareInterface
         }
         $totaux = $this->calculer();
         foreach ($this->lignes as $ligne) {
-            $ligne->figerRemise(TypeVente::Amo === $this->type ? 0 : $ligne->calculerRemise());
+            $ligne->figerRemise($ligne->calculerRemise());
         }
         $this->numero = $numero;
         $this->valideeLe = $le;
@@ -516,8 +513,9 @@ class Vente implements TenantAwareInterface
     }
 
     /**
-     * Base de prise en charge : total des lignes remboursables, au plus bas du prix AMO et du prix de la pharmacie
-     * pour un organisme AMO, au prix de la pharmacie pour une autre assurance (RG-07).
+     * Base de prise en charge (RG-07) : lignes prises en charge, au plus bas du prix AMO et du prix de la pharmacie
+     * pour un organisme AMO (l'ordonnance reste facturée au prix de la pharmacie), au prix de la pharmacie pour une
+     * autre assurance.
      */
     public function getBaseAmo(): int
     {
@@ -533,7 +531,7 @@ class Vente implements TenantAwareInterface
         return $base;
     }
 
-    /** Organisme AMO : le prix AMO des médicaments s'applique quand il est plus bas que celui de la pharmacie. */
+    /** Organisme AMO : la part AMO se calcule sur le prix AMO des médicaments quand il est plus bas que celui de la pharmacie. */
     public function tarifAmo(): bool
     {
         return $this->tarifAmo;
@@ -571,6 +569,11 @@ class Vente implements TenantAwareInterface
     public function getAnnuleeLe(): ?\DateTimeImmutable
     {
         return $this->annuleeLe;
+    }
+
+    public function getEncaisseePar(): ?Utilisateur
+    {
+        return $this->encaisseePar;
     }
 
     public function getAnnuleePar(): ?Utilisateur
