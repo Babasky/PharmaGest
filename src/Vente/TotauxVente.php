@@ -6,8 +6,8 @@ namespace App\Vente;
  * Montants d'une vente, en FCFA entiers (RG-01).
  *
  * Vente AMO (RG-07, RG-09) : la part AMO se calcule sur le prix plein des lignes remboursables ;
- * la remise ne porte que sur la part assuré. Exemple du § 5 : 20 000 dont 18 000 remboursables, taux 70 %,
- * remise 10 % → part AMO 12 600, part assuré 7 400, remise 740, encaissé 6 660.
+ * la remise ne porte que sur la part assuré (celle de chaque ligne pour une remise par ligne). Exemple du § 5 :
+ * 20 000 dont 18 000 remboursables, taux 70 %, remise 10 % → part AMO 12 600, part assuré 7 400, remise 740, encaissé 6 660.
  */
 final class TotauxVente
 {

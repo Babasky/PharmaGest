@@ -181,7 +181,8 @@ class VenteService
     }
 
     /**
-     * Remise sur une ligne, en % ou en FCFA (RE-02). Réservée à un client privilégié (RE-01) et aux ventes hors AMO.
+     * Remise sur une ligne, en % ou en FCFA (RE-02). Réservée à un client privilégié (RE-01) ; sur une vente AMO, elle
+     * porte sur la part assuré de la ligne (RG-09).
      *
      * @throws VenteException
      */
@@ -191,9 +192,6 @@ class VenteService
         $this->exigerModifiable($vente);
         if ($valeur > 0) {
             $this->exigerRemisePossible($vente, $type, $valeur);
-            if (TypeVente::Amo === $vente->getType()) {
-                throw new VenteException('Sur une vente AMO / assurance, la remise porte sur la part assuré : utilisez la remise sur le total (RG-09).');
-            }
         }
         $ligne->definirRemise($type, $valeur);
         $this->em->flush();

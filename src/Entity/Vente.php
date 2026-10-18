@@ -186,11 +186,6 @@ class Vente implements TenantAwareInterface
         }
         if (TypeVente::Amo !== $type) {
             $this->definirAmo(null, null, null);
-        } else {
-            // RG-09 : sur une vente AMO, seule une remise globale sur la part assuré est possible.
-            foreach ($this->lignes as $ligne) {
-                $ligne->definirRemise(null, 0);
-            }
         }
 
         return $this;
@@ -385,16 +380,17 @@ class Vente implements TenantAwareInterface
                 $baseAmo += $ligne->basePriseEnCharge($tarifAmo);
                 $brutRemboursable += $brut;
             }
-            if (!$amo) {
-                $remise = $ligne->calculerRemise();
-                $remiseLignes += $remise;
-                $tauxMax = max($tauxMax, self::taux($remise, $brut));
-            }
+            // RG-09 : sur une vente AMO, la remise d'une ligne porte sur sa part assuré.
+            $remise = $ligne->calculerRemise();
+            $remiseLignes += $remise;
+            $tauxMax = max($tauxMax, self::taux($remise, $ligne->baseRemise()));
         }
 
         // La part de l'organisme ne dépasse jamais ce que la pharmacie facture pour les lignes remboursables.
         $partAmo = $amo ? min($brutRemboursable, Fcfa::arrondir($baseAmo * ($this->tauxAmo ?? 0) / 100)) : 0;
         $baseRemise = $totalBrut - $partAmo;
+        // Les parts AMO des lignes, arrondies une à une, peuvent différer d'un franc de la part AMO de la vente.
+        $remiseLignes = min($remiseLignes, $baseRemise);
         $baseRemiseGlobale = $baseRemise - $remiseLignes;
         $remiseGlobale = $this->remiseType?->montantSur($baseRemiseGlobale, $this->remiseValeur) ?? 0;
         $tauxMax = max($tauxMax, self::taux($remiseGlobale, $baseRemiseGlobale), self::taux($remiseLignes + $remiseGlobale, $baseRemise));
@@ -449,7 +445,7 @@ class Vente implements TenantAwareInterface
         }
         $totaux = $this->calculer();
         foreach ($this->lignes as $ligne) {
-            $ligne->figerRemise(TypeVente::Amo === $this->type ? 0 : $ligne->calculerRemise());
+            $ligne->figerRemise($ligne->calculerRemise());
         }
         $this->numero = $numero;
         $this->valideeLe = $le;

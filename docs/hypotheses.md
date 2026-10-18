@@ -209,8 +209,10 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 
 ### Remises et code PIN
 
-- Remise par ligne ou globale, en pourcentage ou en montant (arrondi RG-01). Sur une **vente AMO**, seule la remise
-  globale est possible et elle porte sur la **part assuré** (H2, RG-09).
+- Remise par ligne (produit par produit) ou globale, en pourcentage ou en montant (arrondi RG-01). Sur une **vente
+  AMO / assurance**, les deux sont possibles et portent sur la **part assuré** : celle de la ligne pour une remise
+  par ligne, celle de la vente pour la remise globale ; la part de l'organisme reste calculée sans remise (H2, RG-09).
+  La remise par ligne sur une vente AMO a été demandée par Modibo le 2026-10-18 (avant : remise globale seulement).
 - Les remises sont réservées aux **clients privilégiés**. Le **plafond** de la pharmacie (RG-08) est comparé au
   **plus haut** des taux : chaque ligne, la remise globale et le total des remises. Au-delà, le **code PIN du
   propriétaire** est demandé ; le propriétaire connecté n'a pas besoin de le saisir. Chaque dépassement est
