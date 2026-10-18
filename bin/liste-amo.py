@@ -138,6 +138,7 @@ def main(source, sortie_csv):
         produits.append({
             'nom_commercial': nom, 'dci': dci, 'forme': frm, 'dosage': dosage, 'conditionnement': cond,
             'categorie': cat, 'prix_vente': str(prix_public), 'remboursable_amo': 'oui', 'prix_vente_amo': str(tarif),
+            'accord_prealable_amo': 'oui' if str(accord or '').strip().upper() == 'AP' else 'non',
         })
         if str(accord or '').strip().upper() == 'AP':
             accords.append(designation)

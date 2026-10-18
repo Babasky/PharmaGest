@@ -55,9 +55,10 @@
                                     <td class="ps-3">
                                         {{ ligne.produit.nomCommercial }}
                                         {% if amo %}
-                                            <span class="badge {{ ligne.remboursable ? 'text-bg-info' : 'text-bg-light border' }}">
-                                                {{ ligne.remboursable ? 'Remboursable' : 'Non remboursable' }}
+                                            <span class="badge {{ ligne.couverte ? 'text-bg-info' : 'text-bg-light border' }}">
+                                                {{ ligne.couverte ? 'Pris en charge' : 'Non pris en charge' }}
                                             </span>
+                                            {% if ligne.numeroAccord %}<span class="small text-body-secondary">Accord préalable n° {{ ligne.numeroAccord }}</span>{% endif %}
                                         {% endif %}
                                         <div class="small text-body-secondary">
                                             {% for ll in ligne.lots %}
@@ -70,7 +71,8 @@
                                     </td>
                                     <td class="montant">
                                         {{ ligne.prixUnitaire|fcfa }}
-                                        {% if ligne.auPrixAmo %}<div class="small text-body-secondary">prix AMO, au lieu de <s>{{ ligne.prixPharmacie|fcfa }}</s></div>{% endif %}
+                                        {% if ligne.auPrixAmo %}<div class="small text-body-secondary">prix AMO, au lieu de <s>{{ ligne.prixPharmacie|fcfa }}</s></div>
+                                        {% elseif amo and ligne.couverte and ligne.baseAuPrixAmo(vente.tarifAmo) %}<div class="small text-body-secondary">part AMO sur {{ ligne.prixPriseEnCharge(true)|fcfa }}</div>{% endif %}
                                     </td>
                                     <td class="montant">
                                         {{ ligne.remise > 0 ? '− ' ~ ligne.remise|fcfa : '0' }}

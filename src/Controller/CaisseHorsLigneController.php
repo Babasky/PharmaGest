@@ -90,6 +90,7 @@ final class CaisseHorsLigneController extends AbstractAppController
                 $p['remboursableAmo'] ? 1 : 0,
                 $p['ordonnanceObligatoire'] ? 1 : 0,
                 $stocks[$p['id']] ?? 0,
+                $p['accordPrealableAmo'] ? 1 : 0,
             ];
         }
 

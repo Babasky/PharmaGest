@@ -6,6 +6,7 @@ use App\Entity\Categorie;
 use App\Entity\Client;
 use App\Entity\Fournisseur;
 use App\Entity\Produit;
+use App\Import\ExemplesImport;
 use App\Tests\Factory\ProduitFactory;
 use App\Tests\Support\AppWebTestCase;
 use App\Tests\Support\Officine;
@@ -167,6 +168,37 @@ final class ImportTest extends AppWebTestCase
         $this->client->submitForm('Importer les 2 lignes valides');
         self::assertSame([3900, 3600], $this->prix('Coartem'));
         self::assertSame([1500, null], $this->prix('Doliprane'), 'Cellule vide : pas de prix AMO, le prix de la pharmacie sert de base.');
+    }
+
+    public function testAccordPrealableAmoImporteOuConserve(): void
+    {
+        ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Augmentin', 'dosage' => null, 'prixVente' => 6800, 'accordPrealableAmo' => true]);
+
+        $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([['nom_commercial', 'prix_vente'], ['Augmentin', 6900]])]);
+        $this->client->submitForm('Importer les 1 ligne valide');
+        self::assertTrue($this->produit('Augmentin')->isAccordPrealableAmo(), 'Colonne absente : l\'accord préalable est conservé.');
+
+        $this->client->request('GET', '/imports/produits');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([
+            ['nom_commercial', 'prix_vente', 'accord_prealable_amo'],
+            ['Augmentin', 6900, 'non'],
+            ['Imatinib', 90000, 'oui'],
+        ])]);
+        $this->client->submitForm('Importer les 2 lignes valides');
+        self::assertFalse($this->produit('Augmentin')->isAccordPrealableAmo());
+        self::assertTrue($this->produit('Imatinib')->isAccordPrealableAmo());
+
+        $avecAccord = array_filter(ExemplesImport::produits(), static fn (array $l) => 'oui' === $l['accord_prealable_amo']);
+        self::assertCount(89, $avecAccord, 'Le modèle reprend les 89 produits « AP » de la liste CANAM.');
+    }
+
+    private function produit(string $nom): Produit
+    {
+        $produit = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['nomCommercial' => $nom]));
+        self::assertInstanceOf(Produit::class, $produit);
+
+        return $produit;
     }
 
     /**

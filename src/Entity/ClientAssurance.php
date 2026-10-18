@@ -35,6 +35,11 @@ class ClientAssurance implements TenantAwareInterface
     #[Assert\Length(max: 40)]
     private string $numeroAssure = '';
 
+    /** Taux de prise en charge propre à l'assuré (selon son statut) ; null : taux de la pharmacie pour cet organisme. */
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(notInRangeMessage: 'Le taux est un pourcentage entre {{ min }} et {{ max }}.', min: 0, max: 100)]
+    private ?int $taux = null;
+
     public function __construct(?OrganismeAmo $organisme = null, ?string $numeroAssure = null)
     {
         $this->organisme = $organisme;
@@ -84,6 +89,18 @@ class ClientAssurance implements TenantAwareInterface
     public function setNumeroAssure(?string $numeroAssure): static
     {
         $this->numeroAssure = mb_strtoupper(trim((string) $numeroAssure));
+
+        return $this;
+    }
+
+    public function getTaux(): ?int
+    {
+        return $this->taux;
+    }
+
+    public function setTaux(?int $taux): static
+    {
+        $this->taux = $taux;
 
         return $this;
     }

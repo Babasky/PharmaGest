@@ -181,7 +181,8 @@ class VenteService
     }
 
     /**
-     * Remise sur une ligne, en % ou en FCFA (RE-02). Réservée à un client privilégié (RE-01) et aux ventes hors AMO.
+     * Remise sur une ligne, en % ou en FCFA (RE-02). Réservée à un client privilégié (RE-01) ; sur une vente AMO, elle
+     * porte sur la part assuré de la ligne (RG-09).
      *
      * @throws VenteException
      */
@@ -191,11 +192,41 @@ class VenteService
         $this->exigerModifiable($vente);
         if ($valeur > 0) {
             $this->exigerRemisePossible($vente, $type, $valeur);
-            if (TypeVente::Amo === $vente->getType()) {
-                throw new VenteException('Sur une vente AMO / assurance, la remise porte sur la part assuré : utilisez la remise sur le total (RG-09).');
-            }
         }
         $ligne->definirRemise($type, $valeur);
+        $this->em->flush();
+    }
+
+    /**
+     * N° de l'accord préalable de l'organisme AMO pour un produit qui l'exige : sans lui, la ligne reste à la
+     * charge de l'assuré.
+     *
+     * @throws VenteException
+     */
+    public function accordLigne(LigneVente $ligne, ?string $numero): void
+    {
+        $vente = $ligne->getVente();
+        $this->exigerModifiable($vente);
+        if (!$ligne->isAccordPrealable()) {
+            throw new VenteException(\sprintf('%s ne demande pas d\'accord préalable.', $ligne->getProduit()->getNomCommercial()));
+        }
+        $ligne->setNumeroAccord($numero);
+        $this->em->flush();
+    }
+
+    /**
+     * Assurance autre que l'AMO : produit pris en charge ou non, coché au panier d'après l'ordonnance.
+     *
+     * @throws VenteException
+     */
+    public function priseEnChargeLigne(LigneVente $ligne, bool $priseEnCharge): void
+    {
+        $vente = $ligne->getVente();
+        $this->exigerModifiable($vente);
+        if (TypeVente::Amo !== $vente->getType() || null === $vente->getOrganismeAmo() || $vente->tarifAmo()) {
+            throw new VenteException('Les produits pris en charge se cochent sur une vente avec une assurance autre que l\'AMO.');
+        }
+        $ligne->setPriseEnCharge($priseEnCharge);
         $this->em->flush();
     }
 
@@ -700,7 +731,8 @@ class VenteService
             $vente->definirAmo(null, null, null);
         } elseif (null !== ($assurance = $client?->assurancePour($organisme) ?? $client?->assurancePrincipale())) {
             $organisme = $assurance->getOrganisme() ?? throw new \LogicException('Assurance sans organisme.');
-            $vente->definirAmo($organisme, $assurance->getNumeroAssure(), $this->parametres->tauxAmo($organisme, $le));
+            // Taux propre à l'assuré (selon son statut), sinon celui de la pharmacie pour cet organisme.
+            $vente->definirAmo($organisme, $assurance->getNumeroAssure(), $assurance->getTaux() ?? $this->parametres->tauxAmo($organisme, $le));
         } elseif (null !== $organisme) {
             // Sans client assuré : organisme et n° d'assuré (facultatif) saisis sur la vente.
             $numeroAssure = null === $numeroAssure || '' === trim($numeroAssure) ? null : mb_substr(trim($numeroAssure), 0, 40);

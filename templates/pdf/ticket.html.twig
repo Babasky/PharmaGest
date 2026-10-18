@@ -47,7 +47,7 @@
             <tr>
                 <td colspan="2">
                     {{ ligne.produit.nomCommercial }} {{ ligne.produit.dosage }}
-                    {% if vente.type.value == 'amo' and not ligne.remboursable %} 
+                     {% if vente.type.value == 'amo' and not ligne.couverte %}
                         <span class="gras">(NR)</span>
                     {% endif %}
                 </td>
@@ -97,7 +97,7 @@
         {% endif %}
     </table>
     {% if vente.type.value == 'amo' %}
-        <div class="petit">(NR) : non remboursable, payé à 100 % par l'assuré.</div>
+        <div class="petit">(NR) : non pris en charge, payé à 100 % par l'assuré.</div>
     {% endif %}
     <hr>
     {% if mentions %}

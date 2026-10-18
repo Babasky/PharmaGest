@@ -209,8 +209,10 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
 
 ### Remises et code PIN
 
-- Remise par ligne ou globale, en pourcentage ou en montant (arrondi RG-01). Sur une **vente AMO**, seule la remise
-  globale est possible et elle porte sur la **part assuré** (H2, RG-09).
+- Remise par ligne (produit par produit) ou globale, en pourcentage ou en montant (arrondi RG-01). Sur une **vente
+  AMO / assurance**, les deux sont possibles et portent sur la **part assuré** : celle de la ligne pour une remise
+  par ligne, celle de la vente pour la remise globale ; la part de l'organisme reste calculée sans remise (H2, RG-09).
+  La remise par ligne sur une vente AMO a été demandée par Modibo le 2026-10-18 (avant : remise globale seulement).
 - Les remises sont réservées aux **clients privilégiés**. Le **plafond** de la pharmacie (RG-08) est comparé au
   **plus haut** des taux : chaque ligne, la remise globale et le total des remises. Au-delà, le **code PIN du
   propriétaire** est demandé ; le propriétaire connecté n'a pas besoin de le saisir. Chaque dépassement est
@@ -859,10 +861,13 @@ donc plus signalé tout de suite comme une rupture.
 
 ### Prix le plus bas (RG-07, AM-13)
 
-- Sur une vente AMO avec un organisme de nature AMO, chaque médicament remboursable qui a un prix de vente AMO est
+> Corrigé le 18/10/2026 : l'ordonnance reste au prix de la pharmacie, seul le calcul de la part AMO prend le prix le
+> plus bas. Voir « Part AMO, accord préalable et autres assurances ».
+
+- ~~Sur une vente AMO avec un organisme de nature AMO, chaque médicament remboursable qui a un prix de vente AMO est
   **vendu au plus bas** du prix AMO et du prix de la pharmacie, et le taux s'applique sur ce prix :
   prix AMO plus bas → la ligne est facturée au prix AMO (l'assuré ne paie plus la différence) ; prix de la pharmacie
-  plus bas → la ligne reste au prix de la pharmacie et le taux s'applique dessus.
+  plus bas → la ligne reste au prix de la pharmacie et le taux s'applique dessus.~~
 - Sans prix AMO, ou pour une autre assurance, le prix de la pharmacie s'applique comme avant.
 - Le prix de la pharmacie et le prix AMO restent figés sur la ligne (RG-06) ; le prix facturé suit l'assurance
   choisie jusqu'à la validation. La caisse, le détail de la vente et la facture indiquent « prix AMO, au lieu de … »
@@ -883,7 +888,8 @@ donc plus signalé tout de suite comme une rupture.
   « Dispositifs médicaux » (forme « Dispositif médical ») ; **prix public → prix de vente** ; prix base de
   remboursement (colonne « × 70 % » divisée par 0,7) → **prix de vente AMO** ; remboursable AMO : oui.
 - Non repris : sous-classe pharmacothérapeutique (927 libellés, trop fins pour le rangement), « accord préalable »
-  (89 produits marqués AP : PharmaGest n'a pas ce champ), code-barres, étagère, fournisseur, prix d'achat, seuils.
+  ~~(89 produits marqués AP : PharmaGest n'a pas ce champ)~~ (repris le 18/10/2026 dans la colonne
+  `accord_prealable_amo`), code-barres, étagère, fournisseur, prix d'achat, seuils.
   La pharmacie complète ou supprime les lignes avant l'import.
 - Écarts de la source : ligne 671 illisible (désignation « s ») et ligne 4353 en double de la ligne 2612 (MICONAZOLE
   2 % crème, prix différent) ignorées ; OSMOGEL : prix public 32 635 et base de remboursement 12 400, repris tels
@@ -904,6 +910,28 @@ donc plus signalé tout de suite comme une rupture.
 - L'export des données de la pharmacie contient les organismes communs et les siens, jamais ceux des autres.
 - Point ouvert : un organisme créé par plusieurs pharmacies peut ensuite être rendu commun par l'éditeur ; ce n'est
   pas automatisé.
+
+## Décisions — Part AMO, accord préalable et autres assurances (retours de pharmacies, Modibo, 18/10/2026)
+
+- **Part AMO sur le prix le plus bas, ordonnance au prix de la pharmacie** : le montant de l'ordonnance est toujours
+  calculé au prix de la pharmacie ; seule la part AMO se calcule sur le plus bas du prix AMO et du prix de la
+  pharmacie. Exemple : 2 Augmentin à 6 800 (prix AMO 6 000) → ordonnance 13 600, part AMO 70 % de 12 000 = 8 400,
+  l'assuré paie 5 200 (30 % de 12 000 plus les 1 600 d'écart). Remplace la règle du 15/10/2026 (ligne vendue au prix
+  AMO). Les paniers en cours reprennent le prix de la pharmacie ; les ventes validées gardent leurs montants.
+- **Accord préalable** : case « Accord préalable de l'AMO » sur la fiche produit et colonne `accord_prealable_amo`
+  à l'import ; le modèle d'import reprend les 89 produits marqués « AP » dans la liste CANAM. Sur une vente avec un
+  organisme AMO, la caisse demande le n° d'accord pour ces produits : **sans n° d'accord, la ligne reste à la charge
+  de l'assuré** (la vente n'est pas bloquée, l'assuré peut payer le produit en entier). Le n° est figé sur la ligne
+  et repris sur la facture, la fiche de la vente et le bordereau AMO (colonne « Accords préalables »). Une assurance
+  autre que l'AMO n'exige pas d'accord. Hors ligne, le n° ne peut pas être saisi : le produit reste à la charge de
+  l'assuré.
+- **Taux propre à l'assuré** : chaque assurance de la fiche client peut avoir son taux (selon le statut de l'assuré) ;
+  vide, le taux de la pharmacie pour cet organisme s'applique. Prévu pour les assurances autres que l'AMO, mais
+  accepté aussi pour un organisme AMO.
+- **Produits pris en charge par une autre assurance** : sur une vente avec une assurance autre que l'AMO, chaque ligne
+  du panier a une case « Pris en charge par … ». Par défaut, les produits remboursables sont cochés (comportement
+  d'avant) ; on coche ou décoche d'après l'ordonnance et le contrat de l'assuré, produits non remboursables AMO
+  compris. Pour un organisme AMO, la prise en charge reste automatique (produits remboursables, accord préalable).
 
 ## Décisions — Code PIN à chaque vente et caisse partagée (retours de tests, Modibo, 18/10/2026)
 

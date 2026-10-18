@@ -3,9 +3,11 @@
 namespace App\Entity;
 
 use App\Enum\TypeRemise;
+use App\Enum\TypeVente;
 use App\Repository\LigneVenteRepository;
 use App\Tenant\TenantAwareInterface;
 use App\Tenant\TenantAwareTrait;
+use App\Util\Fcfa;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -36,12 +38,27 @@ class LigneVente implements TenantAwareInterface
     private int $remise = 0;
 
     /**
-     * Prix de vente de la pharmacie au moment de la vente. Sur une vente AMO, {@see self::$prixUnitaire} est le plus
-     * bas de ce prix et du prix de vente AMO. Null sur les lignes antérieures à cette règle (prix unitaire = prix
-     * de la pharmacie, part AMO calculée sur le prix AMO).
+     * Prix de vente de la pharmacie au moment de la vente. Null sur les lignes antérieures au 15/10/2026 (part AMO
+     * calculée sur le prix AMO, même plus élevé). Du 15 au 18/10/2026, une ligne AMO pouvait être facturée au prix
+     * AMO ({@see self::$prixUnitaire} plus bas que ce prix).
      */
     #[ORM\Column(nullable: true)]
     private ?int $prixPharmacie = null;
+
+    /** L'AMO exigeait un accord préalable de l'organisme pour ce produit au moment de la vente (RG-06). */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $accordPrealable = false;
+
+    /** N° de l'accord préalable présenté par l'assuré : sans lui, l'AMO ne prend pas la ligne en charge. */
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $numeroAccord = null;
+
+    /**
+     * Assurance autre que l'AMO : la ligne est-elle prise en charge (cochée au panier) ? Null : selon que le produit
+     * est remboursable.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?bool $priseEnCharge = null;
 
     /** @var Collection<int, LigneVenteLot> */
     #[ORM\OneToMany(targetEntity: LigneVenteLot::class, mappedBy: 'ligne', cascade: ['persist'])]
@@ -57,7 +74,7 @@ class LigneVente implements TenantAwareInterface
         private Produit $produit,
         #[ORM\Column]
         private int $quantite,
-        /** Prix unitaire facturé, figé à la vente (RG-06) : le plus bas du prix de la pharmacie et du prix AMO sur une vente AMO. */
+        /** Prix unitaire facturé, figé à la vente (RG-06) : le prix de la pharmacie, même sur une vente AMO. */
         #[ORM\Column]
         private int $prixUnitaire,
         /** Remboursable AMO au moment de la vente (RG-06). */
@@ -112,26 +129,92 @@ class LigneVente implements TenantAwareInterface
         return $this->prixPharmacie ?? $this->prixUnitaire;
     }
 
-    /** La ligne est facturée au prix AMO, plus bas que le prix de la pharmacie. */
+    /** Ligne vendue entre le 15 et le 18/10/2026 au prix AMO, plus bas que le prix de la pharmacie. */
     public function isAuPrixAmo(): bool
     {
         return $this->prixUnitaire < $this->getPrixPharmacie();
     }
 
+    /** Pour un organisme AMO, la part AMO se calcule sur le prix AMO, plus bas que le prix facturé. */
+    public function isBaseAuPrixAmo(bool $tarifAmo): bool
+    {
+        return $tarifAmo && null !== $this->prixPharmacie && $this->prixPriseEnCharge(true) < $this->prixUnitaire;
+    }
+
     /**
-     * Prix facturé : sur une vente AMO (organisme AMO), un médicament remboursable qui a un prix de vente AMO est
-     * vendu au plus bas de ce prix et du prix de la pharmacie ; sinon au prix de la pharmacie.
+     * Ligne d'un panier commencé quand une ligne AMO était facturée au prix AMO : elle reprend le prix de la pharmacie.
      *
      * @internal réservé à {@see Vente}
      */
-    public function appliquerPrix(bool $tarifAmo): void
+    public function retablirPrixPharmacie(): void
     {
-        if (null === $this->prixPharmacie) {
-            return;
+        if (null !== $this->prixPharmacie) {
+            $this->prixUnitaire = $this->prixPharmacie;
         }
-        $this->prixUnitaire = $tarifAmo && $this->remboursable && null !== $this->prixUnitaireAmo
-            ? min($this->prixPharmacie, $this->prixUnitaireAmo)
-            : $this->prixPharmacie;
+    }
+
+    public function isAccordPrealable(): bool
+    {
+        return $this->accordPrealable;
+    }
+
+    /**
+     * @internal réservé à {@see Vente::ajouterLigne()}
+     */
+    public function exigerAccordPrealable(bool $accordPrealable): void
+    {
+        $this->accordPrealable = $accordPrealable;
+    }
+
+    public function getNumeroAccord(): ?string
+    {
+        return $this->numeroAccord;
+    }
+
+    public function setNumeroAccord(?string $numeroAccord): static
+    {
+        $numeroAccord = mb_strtoupper(trim((string) $numeroAccord));
+        $this->numeroAccord = '' === $numeroAccord ? null : mb_substr($numeroAccord, 0, 40);
+
+        return $this;
+    }
+
+    /** Coche du panier pour une assurance autre que l'AMO (null : selon que le produit est remboursable). */
+    public function getPriseEnCharge(): ?bool
+    {
+        return $this->priseEnCharge;
+    }
+
+    public function setPriseEnCharge(?bool $priseEnCharge): static
+    {
+        $this->priseEnCharge = $priseEnCharge;
+
+        return $this;
+    }
+
+    /**
+     * L'organisme prend-il la ligne en charge ? Organisme AMO : médicament remboursable, avec le n° d'accord quand
+     * un accord préalable est exigé. Autre assurance : ligne cochée au panier, par défaut les produits remboursables.
+     */
+    public function estPriseEnCharge(bool $tarifAmo): bool
+    {
+        if ($tarifAmo) {
+            return $this->remboursable && (!$this->accordPrealable || null !== $this->numeroAccord);
+        }
+
+        return $this->priseEnCharge ?? $this->remboursable;
+    }
+
+    /** Prise en charge par l'organisme de la vente (ticket, facture, fiche de la vente). */
+    public function isCouverte(): bool
+    {
+        return TypeVente::Amo === $this->vente->getType() && $this->estPriseEnCharge($this->vente->tarifAmo());
+    }
+
+    /** Organisme AMO, accord préalable exigé mais pas encore saisi : la ligne reste à la charge de l'assuré. */
+    public function attendAccord(bool $tarifAmo): bool
+    {
+        return $tarifAmo && $this->remboursable && $this->accordPrealable && null === $this->numeroAccord;
     }
 
     public function isRemboursable(): bool
@@ -151,23 +234,23 @@ class LigneVente implements TenantAwareInterface
     }
 
     /**
-     * Prix unitaire sur lequel s'applique le taux de prise en charge : le prix facturé, soit pour un organisme AMO
-     * le plus bas du prix AMO et du prix de la pharmacie. Les lignes antérieures à cette règle gardent leur calcul
-     * d'origine (prix AMO, même plus élevé).
+     * Prix unitaire sur lequel s'applique le taux de prise en charge : pour un organisme AMO, le plus bas du prix AMO
+     * et du prix facturé (la différence reste à la charge de l'assuré) ; pour une autre assurance, le prix facturé.
+     * Les lignes antérieures au 15/10/2026 gardent leur calcul d'origine (prix AMO, même plus élevé).
      */
     public function prixPriseEnCharge(bool $tarifAmo): int
     {
-        if (null === $this->prixPharmacie) {
-            return $tarifAmo ? $this->prixUnitaireAmo ?? $this->prixUnitaire : $this->prixUnitaire;
+        if (!$tarifAmo || null === $this->prixUnitaireAmo) {
+            return $this->prixUnitaire;
         }
 
-        return $this->prixUnitaire;
+        return null === $this->prixPharmacie ? $this->prixUnitaireAmo : min($this->prixUnitaire, $this->prixUnitaireAmo);
     }
 
-    /** Base de prise en charge de la ligne (0 si le produit n'est pas remboursable). */
+    /** Base de prise en charge de la ligne (0 si l'organisme ne la prend pas en charge). */
     public function basePriseEnCharge(bool $tarifAmo): int
     {
-        return $this->remboursable ? $this->prixPriseEnCharge($tarifAmo) * $this->quantite : 0;
+        return $this->estPriseEnCharge($tarifAmo) ? $this->prixPriseEnCharge($tarifAmo) * $this->quantite : 0;
     }
 
     public function getRemiseType(): ?TypeRemise
@@ -188,10 +271,30 @@ class LigneVente implements TenantAwareInterface
         return $this;
     }
 
-    /** Remise calculée sur le montant actuel de la ligne. */
+    /**
+     * Part de la ligne prise en charge par l'organisme d'une vente AMO / assurance : taux appliqué à sa base de prise en
+     * charge, sans dépasser le montant facturé. 0 hors AMO ou pour une ligne que l'organisme ne prend pas en charge.
+     */
+    public function calculerPartAmo(): int
+    {
+        if (TypeVente::Amo !== $this->vente->getType()) {
+            return 0;
+        }
+        $part = Fcfa::arrondir($this->basePriseEnCharge($this->vente->tarifAmo()) * ($this->vente->getTauxAmo() ?? 0) / 100);
+
+        return min($this->getMontantBrut(), $part);
+    }
+
+    /** Montant sur lequel porte la remise de la ligne : le montant de la ligne, ou sa part assuré sur une vente AMO (RG-09). */
+    public function baseRemise(): int
+    {
+        return $this->getMontantBrut() - $this->calculerPartAmo();
+    }
+
+    /** Remise calculée sur le montant actuel de la ligne (sa part assuré sur une vente AMO, RG-09). */
     public function calculerRemise(): int
     {
-        return $this->remiseType?->montantSur($this->getMontantBrut(), $this->remiseValeur) ?? 0;
+        return $this->remiseType?->montantSur($this->baseRemise(), $this->remiseValeur) ?? 0;
     }
 
     /** Remise figée à la validation (0 avant). */

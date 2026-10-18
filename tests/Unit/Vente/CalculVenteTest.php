@@ -109,20 +109,41 @@ final class CalculVenteTest extends TestCase
         self::assertNull($ligne->getRemiseType());
     }
 
-    public function testUneVenteAmoNAcceptePasDeRemiseParLigne(): void
+    public function testSurUneVenteAmoLaRemiseDUneLignePorteSurSaPartAssure(): void
+    {
+        $vente = $this->vente();
+        $vente->setClient($this->client(privilegie: true));
+        $rembourse = $vente->ajouterLigne($this->produit(5000, remboursable: true), 2);
+        $nonRembourse = $vente->ajouterLigne($this->produit(2000), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
+        $rembourse->definirRemise(TypeRemise::Pourcentage, 10);
+        $nonRembourse->definirRemise(TypeRemise::Montant, 500);
+
+        $totaux = $vente->calculer();
+
+        self::assertSame(7000, $totaux->partAmo, 'La part AMO reste calculée sans remise (RG-09) : 10 000 × 70 %.');
+        self::assertSame(300, $rembourse->calculerRemise(), '10 % de la part assuré de la ligne (3 000), pas des 10 000.');
+        self::assertSame(500, $nonRembourse->calculerRemise(), 'Une ligne non remboursable est entièrement à la charge du client.');
+        self::assertSame(800, $totaux->remiseLignes);
+        self::assertSame(4200, $totaux->aEncaisser(), 'Part assuré 5 000 − 800 de remises.');
+        self::assertEqualsWithDelta(25.0, $totaux->tauxRemiseMaximal, 0.001, 'Taux d\'une ligne : 500 sur 2 000.');
+    }
+
+    public function testUneRemiseDeLigneSurUneVenteAmoNeDepassePasSaPartAssure(): void
     {
         $vente = $this->vente();
         $vente->setClient($this->client(privilegie: true));
         $ligne = $vente->ajouterLigne($this->produit(1000, remboursable: true), 1);
-        $ligne->definirRemise(TypeRemise::Pourcentage, 5);
-
+        $ligne->definirRemise(TypeRemise::Montant, 900);
         $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
 
-        self::assertSame(0, $ligne->calculerRemise());
-        self::assertSame(0, $vente->calculer()->remiseLignes);
+        self::assertSame(300, $ligne->calculerRemise(), 'Remise saisie avant le passage en AMO, ramenée à la part assuré.');
+        self::assertSame(0, $vente->calculer()->aEncaisser());
     }
 
-    public function testUnMedicamentRemboursableEstVenduAuPrixAmoQuandIlEstPlusBas(): void
+    public function testLaPartAmoSeCalculeSurLePrixAmoPlusBasMaisLOrdonnanceResteAuPrixDeLaPharmacie(): void
     {
         $vente = $this->vente();
         $vente->ajouterLigne($this->produit(2400, remboursable: true)->setPrixVenteAmo(2100), 1);
@@ -134,11 +155,10 @@ final class CalculVenteTest extends TestCase
 
         self::assertSame(2100, $totaux->baseAmo, 'Base AMO au prix AMO, lignes remboursables seulement.');
         self::assertSame(1470, $totaux->partAmo, '2 100 × 70 %.');
-        self::assertSame(4100, $totaux->totalBrut, 'Ligne remboursable vendue au prix AMO (2 100), l\'autre au prix de la pharmacie.');
-        self::assertSame(2630, $totaux->aEncaisser());
+        self::assertSame(4400, $totaux->totalBrut, 'Ordonnance au prix de la pharmacie (2 400 + 2 000).');
+        self::assertSame(2930, $totaux->aEncaisser(), 'L\'assuré paie le reste : 30 % de 2 100, les 300 d\'écart et la ligne non remboursable.');
         self::assertSame(2100, $vente->getBaseAmo());
 
-        // Repasser en vente sans ordonnance rend le prix de la pharmacie.
         $vente->setType(TypeVente::SansOrdonnance);
         self::assertSame(4400, $vente->calculer()->totalBrut);
     }
@@ -192,6 +212,55 @@ final class CalculVenteTest extends TestCase
 
         self::assertSame(1000, $totaux->partAmo, 'Plafonnée au prix facturé des lignes remboursables.');
         self::assertSame(500, $totaux->aEncaisser());
+    }
+
+    public function testExempleAugmentin(): void
+    {
+        // Exemple de Modibo (18/10/2026) : 2 Augmentin à 6 800 (prix AMO 6 000), AMO à 70 %.
+        $vente = $this->vente();
+        $vente->ajouterLigne($this->produit(6800, remboursable: true)->setPrixVenteAmo(6000), 2);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
+
+        $totaux = $vente->calculer();
+
+        self::assertSame([13600, 12000, 8400, 5200], [$totaux->totalBrut, $totaux->baseAmo, $totaux->partAmo, $totaux->aEncaisser()], '70 % de 12 000 ; l\'assuré paie 3 600 + 1 600.');
+    }
+
+    public function testSansSonAccordPrealableUnProduitResteALaChargeDeLAssure(): void
+    {
+        $vente = $this->vente();
+        $ligne = $vente->ajouterLigne($this->produit(10000, remboursable: true)->setAccordPrealableAmo(true), 1);
+        $vente->ajouterLigne($this->produit(1000, remboursable: true), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
+
+        self::assertTrue($ligne->attendAccord(true));
+        self::assertSame([1000, 700], [$vente->calculer()->baseAmo, $vente->calculer()->partAmo]);
+
+        $ligne->setNumeroAccord(' ap-2026-17 ');
+        self::assertSame('AP-2026-17', $ligne->getNumeroAccord());
+        self::assertSame([11000, 7700], [$vente->calculer()->baseAmo, $vente->calculer()->partAmo]);
+
+        // Une assurance autre que l'AMO n'exige pas d'accord préalable.
+        $ligne->setNumeroAccord('');
+        $vente->definirAmo((new OrganismeAmo())->setCode('MSS')->setType(TypeOrganisme::Assurance), 'MSS-1', 80);
+        self::assertSame(11000, $vente->calculer()->baseAmo);
+    }
+
+    public function testUneAutreAssuranceNePrendEnChargeQueLesProduitsCoches(): void
+    {
+        $vente = $this->vente();
+        $ligne = $vente->ajouterLigne($this->produit(3000, remboursable: true), 1);
+        $parapharmacie = $vente->ajouterLigne($this->produit(2000), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('MSS')->setType(TypeOrganisme::Assurance), 'MSS-1', 80);
+        self::assertSame(3000, $vente->calculer()->baseAmo, 'Par défaut, les produits remboursables.');
+
+        $ligne->setPriseEnCharge(false);
+        $parapharmacie->setPriseEnCharge(true);
+
+        self::assertSame([2000, 1600, 3400], [$vente->calculer()->baseAmo, $vente->calculer()->partAmo, $vente->calculer()->aEncaisser()]);
     }
 
     private function vente(): Vente

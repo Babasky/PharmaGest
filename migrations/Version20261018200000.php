@@ -8,43 +8,29 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Caisses de la pharmacie : une « Caisse principale » par pharmacie, à laquelle sont rattachées les sessions
- * existantes. Une session de caisse appartient désormais à une caisse, partagée par l'équipe : la vente retient
- * donc qui l'a encaissée.
+ * Part AMO sur le prix le plus bas, ordonnance au prix de la pharmacie ; accord préalable de l'AMO ; taux propre à
+ * l'assuré et produits pris en charge par une assurance autre que l'AMO.
  */
 final class Version20261018200000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Caisses de la pharmacie (une caisse principale par défaut) et rattachement des sessions de caisse.';
+        return 'Accord préalable AMO (produit, ligne de vente), taux de l\'assuré, produits pris en charge par l\'assurance ; paniers en cours au prix de la pharmacie.';
     }
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE caisse (id INT AUTO_INCREMENT NOT NULL, libelle VARCHAR(60) NOT NULL, actif TINYINT NOT NULL, pharmacie_id INT NOT NULL, UNIQUE INDEX uniq_caisse_libelle (pharmacie_id, libelle), INDEX IDX_B2A353C8BC6D351B (pharmacie_id), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4');
-        $this->addSql('ALTER TABLE caisse ADD CONSTRAINT FK_B2A353C8BC6D351B FOREIGN KEY (pharmacie_id) REFERENCES pharmacie (id) ON DELETE RESTRICT');
-        $this->addSql("INSERT INTO caisse (libelle, actif, pharmacie_id) SELECT 'Caisse principale', 1, id FROM pharmacie");
-        $this->addSql('ALTER TABLE session_caisse ADD caisse_id INT DEFAULT NULL');
-        $this->addSql('UPDATE session_caisse s INNER JOIN caisse c ON c.pharmacie_id = s.pharmacie_id SET s.caisse_id = c.id');
-        $this->addSql('ALTER TABLE session_caisse MODIFY caisse_id INT NOT NULL');
-        $this->addSql('ALTER TABLE session_caisse ADD CONSTRAINT FK_DDC8599127B4FEBF FOREIGN KEY (caisse_id) REFERENCES caisse (id) ON DELETE RESTRICT');
-        $this->addSql('CREATE INDEX IDX_DDC8599127B4FEBF ON session_caisse (caisse_id)');
-        // Jusqu'ici, chacun encaissait dans sa propre session : celui qui a encaissé est celui qui l'a ouverte.
-        $this->addSql('ALTER TABLE vente ADD encaissee_par_id INT DEFAULT NULL');
-        $this->addSql('UPDATE vente v INNER JOIN session_caisse s ON s.id = v.session_id SET v.encaissee_par_id = s.utilisateur_id');
-        $this->addSql('ALTER TABLE vente ADD CONSTRAINT FK_888A2A4C405667E8 FOREIGN KEY (encaissee_par_id) REFERENCES utilisateur (id) ON DELETE SET NULL');
-        $this->addSql('CREATE INDEX IDX_888A2A4C405667E8 ON vente (encaissee_par_id)');
+        $this->addSql('ALTER TABLE produit ADD accord_prealable_amo TINYINT DEFAULT 0 NOT NULL');
+        $this->addSql('ALTER TABLE client_assurance ADD taux INT DEFAULT NULL');
+        $this->addSql('ALTER TABLE ligne_vente ADD accord_prealable TINYINT DEFAULT 0 NOT NULL, ADD numero_accord VARCHAR(40) DEFAULT NULL, ADD prise_en_charge TINYINT DEFAULT NULL');
+        // Paniers en cours facturés au prix AMO (règle du 15/10/2026) : retour au prix de la pharmacie.
+        $this->addSql('UPDATE ligne_vente l INNER JOIN vente v ON v.id = l.vente_id SET l.prix_unitaire = l.prix_pharmacie WHERE v.numero IS NULL AND l.prix_pharmacie IS NOT NULL');
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE vente DROP FOREIGN KEY FK_888A2A4C405667E8');
-        $this->addSql('DROP INDEX IDX_888A2A4C405667E8 ON vente');
-        $this->addSql('ALTER TABLE vente DROP encaissee_par_id');
-        $this->addSql('ALTER TABLE session_caisse DROP FOREIGN KEY FK_DDC8599127B4FEBF');
-        $this->addSql('DROP INDEX IDX_DDC8599127B4FEBF ON session_caisse');
-        $this->addSql('ALTER TABLE session_caisse DROP caisse_id');
-        $this->addSql('ALTER TABLE caisse DROP FOREIGN KEY FK_B2A353C8BC6D351B');
-        $this->addSql('DROP TABLE caisse');
+        $this->addSql('ALTER TABLE ligne_vente DROP accord_prealable, DROP numero_accord, DROP prise_en_charge');
+        $this->addSql('ALTER TABLE client_assurance DROP taux');
+        $this->addSql('ALTER TABLE produit DROP accord_prealable_amo');
     }
 }
