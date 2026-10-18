@@ -192,11 +192,11 @@ class LigneVente implements TenantAwareInterface
 
     /**
      * Part de la ligne prise en charge par l'organisme d'une vente AMO / assurance : taux appliqué à sa base de prise en
-     * charge, sans dépasser le montant facturé. 0 hors AMO ou pour une ligne non remboursable.
+     * charge, sans dépasser le montant facturé. 0 hors AMO ou pour une ligne que l'organisme ne prend pas en charge.
      */
     public function calculerPartAmo(): int
     {
-        if (TypeVente::Amo !== $this->vente->getType() || !$this->remboursable) {
+        if (TypeVente::Amo !== $this->vente->getType()) {
             return 0;
         }
         $part = Fcfa::arrondir($this->basePriseEnCharge($this->vente->tarifAmo()) * ($this->vente->getTauxAmo() ?? 0) / 100);
