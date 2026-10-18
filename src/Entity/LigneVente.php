@@ -7,6 +7,7 @@ use App\Enum\TypeVente;
 use App\Repository\LigneVenteRepository;
 use App\Tenant\TenantAwareInterface;
 use App\Tenant\TenantAwareTrait;
+use App\Util\Fcfa;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -270,10 +271,30 @@ class LigneVente implements TenantAwareInterface
         return $this;
     }
 
-    /** Remise calculée sur le montant actuel de la ligne. */
+    /**
+     * Part de la ligne prise en charge par l'organisme d'une vente AMO / assurance : taux appliqué à sa base de prise en
+     * charge, sans dépasser le montant facturé. 0 hors AMO ou pour une ligne que l'organisme ne prend pas en charge.
+     */
+    public function calculerPartAmo(): int
+    {
+        if (TypeVente::Amo !== $this->vente->getType()) {
+            return 0;
+        }
+        $part = Fcfa::arrondir($this->basePriseEnCharge($this->vente->tarifAmo()) * ($this->vente->getTauxAmo() ?? 0) / 100);
+
+        return min($this->getMontantBrut(), $part);
+    }
+
+    /** Montant sur lequel porte la remise de la ligne : le montant de la ligne, ou sa part assuré sur une vente AMO (RG-09). */
+    public function baseRemise(): int
+    {
+        return $this->getMontantBrut() - $this->calculerPartAmo();
+    }
+
+    /** Remise calculée sur le montant actuel de la ligne (sa part assuré sur une vente AMO, RG-09). */
     public function calculerRemise(): int
     {
-        return $this->remiseType?->montantSur($this->getMontantBrut(), $this->remiseValeur) ?? 0;
+        return $this->remiseType?->montantSur($this->baseRemise(), $this->remiseValeur) ?? 0;
     }
 
     /** Remise figée à la validation (0 avant). */

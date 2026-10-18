@@ -142,7 +142,7 @@
                                 <th class="ps-3">Produit</th>
                                 <th class="text-end">Prix</th>
                                 <th style="width: 6rem">Qté</th>
-                                {% if remise_possible and panier.type.value != 'amo' %}<th style="width: 11rem">Remise</th>{% endif %}
+                                {% if remise_possible %}<th style="width: 11rem">Remise{% if panier.type.value == 'amo' %} <span class="fw-normal">(part assuré)</span>{% endif %}</th>{% endif %}
                                 <th class="text-end">Montant</th>
                                 <th class="pe-3"></th>
                             </tr>
@@ -184,7 +184,7 @@
                                         </form>
                                         <input type="number" form="{{ form_id }}" name="quantite" value="{{ ligne.quantite }}" min="0" class="form-control form-control-sm text-end" aria-label="Quantité de {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
                                     </td>
-                                    {% if remise_possible and panier.type.value != 'amo' %}
+                                    {% if remise_possible %}
                                         <td>
                                             <div class="input-group input-group-sm">
                                                 <input type="text" inputmode="numeric" form="{{ form_id }}" name="remise_valeur" value="{{ ligne.remiseValeur ?: '' }}" class="form-control text-end" aria-label="Remise sur {{ produit.nomCommercial }}">

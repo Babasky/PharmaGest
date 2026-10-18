@@ -109,17 +109,38 @@ final class CalculVenteTest extends TestCase
         self::assertNull($ligne->getRemiseType());
     }
 
-    public function testUneVenteAmoNAcceptePasDeRemiseParLigne(): void
+    public function testSurUneVenteAmoLaRemiseDUneLignePorteSurSaPartAssure(): void
+    {
+        $vente = $this->vente();
+        $vente->setClient($this->client(privilegie: true));
+        $rembourse = $vente->ajouterLigne($this->produit(5000, remboursable: true), 2);
+        $nonRembourse = $vente->ajouterLigne($this->produit(2000), 1);
+        $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
+        $rembourse->definirRemise(TypeRemise::Pourcentage, 10);
+        $nonRembourse->definirRemise(TypeRemise::Montant, 500);
+
+        $totaux = $vente->calculer();
+
+        self::assertSame(7000, $totaux->partAmo, 'La part AMO reste calculée sans remise (RG-09) : 10 000 × 70 %.');
+        self::assertSame(300, $rembourse->calculerRemise(), '10 % de la part assuré de la ligne (3 000), pas des 10 000.');
+        self::assertSame(500, $nonRembourse->calculerRemise(), 'Une ligne non remboursable est entièrement à la charge du client.');
+        self::assertSame(800, $totaux->remiseLignes);
+        self::assertSame(4200, $totaux->aEncaisser(), 'Part assuré 5 000 − 800 de remises.');
+        self::assertEqualsWithDelta(25.0, $totaux->tauxRemiseMaximal, 0.001, 'Taux d\'une ligne : 500 sur 2 000.');
+    }
+
+    public function testUneRemiseDeLigneSurUneVenteAmoNeDepassePasSaPartAssure(): void
     {
         $vente = $this->vente();
         $vente->setClient($this->client(privilegie: true));
         $ligne = $vente->ajouterLigne($this->produit(1000, remboursable: true), 1);
-        $ligne->definirRemise(TypeRemise::Pourcentage, 5);
-
+        $ligne->definirRemise(TypeRemise::Montant, 900);
         $vente->setType(TypeVente::Amo);
+        $vente->definirAmo((new OrganismeAmo())->setCode('INPS'), 'INPS-1', 70);
 
-        self::assertSame(0, $ligne->calculerRemise());
-        self::assertSame(0, $vente->calculer()->remiseLignes);
+        self::assertSame(300, $ligne->calculerRemise(), 'Remise saisie avant le passage en AMO, ramenée à la part assuré.');
+        self::assertSame(0, $vente->calculer()->aEncaisser());
     }
 
     public function testLaPartAmoSeCalculeSurLePrixAmoPlusBasMaisLOrdonnanceResteAuPrixDeLaPharmacie(): void
