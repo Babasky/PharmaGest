@@ -124,15 +124,15 @@ final class AssurancesTest extends AmoTestCase
         $this->encaisser(['especes' => ['remis' => '2000']]);
         self::assertSame(2000, $this->derniereVente()->getTotalBrut(), 'Hors vente AMO, le prix de la pharmacie s\'applique.');
 
-        // Le prix AMO se retire si l'on repasse la vente en vente sans ordonnance avant l'encaissement.
+        // La part AMO au prix AMO disparaît si l'on repasse la vente en vente sans ordonnance avant l'encaissement.
         $this->ajouter($this->remboursable, 1);
         $this->poster('/caisse/client', ['client' => $this->assure->getId()]);
         $this->poster('/caisse/vente', ['type' => 'amo', 'ordonnance_date' => (new \DateTimeImmutable('today'))->format('Y-m-d')]);
         $this->client->request('GET', '/caisse');
-        self::assertSelectorTextContains('#panier', 'prix AMO');
+        self::assertSelectorTextContains('#panier', 'part AMO sur');
         $this->poster('/caisse/vente', ['type' => 'sans_ordonnance']);
         $this->client->request('GET', '/caisse');
-        self::assertSelectorTextNotContains('#panier', 'prix AMO');
+        self::assertSelectorTextNotContains('#panier', 'part AMO');
         self::assertSelectorTextContains('#totaux', "1\u{00A0}000\u{00A0}FCFA");
     }
 
