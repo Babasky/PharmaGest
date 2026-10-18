@@ -29,14 +29,17 @@ class VenteHorsLigneRepository extends ServiceEntityRepository
      *
      * @return list<VenteHorsLigne>
      */
-    public function enAnomalieDe(Utilisateur $vendeur): array
+    public function enAnomalieDe(?Utilisateur $vendeur): array
     {
-        /** @var list<VenteHorsLigne> */
-        return $this->createQueryBuilder('h')
-            ->andWhere('h.vendeur = :v')->setParameter('v', $vendeur)
+        $qb = $this->createQueryBuilder('h')
             ->andWhere('h.statut = :statut')->setParameter('statut', StatutVenteHorsLigne::Anomalie)
-            ->orderBy('h.venduLe', 'ASC')->addOrderBy('h.id', 'ASC')
-            ->getQuery()->getResult();
+            ->orderBy('h.venduLe', 'ASC')->addOrderBy('h.id', 'ASC');
+        if (null !== $vendeur) {
+            $qb->andWhere('h.vendeur = :v')->setParameter('v', $vendeur);
+        }
+
+        /** @var list<VenteHorsLigne> */
+        return $qb->getQuery()->getResult();
     }
 
     public function nombreEnAnomalie(?Utilisateur $vendeur = null): int

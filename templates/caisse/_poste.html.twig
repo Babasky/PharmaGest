@@ -1,0 +1,14 @@
+{# Choix de la caisse de ce poste, proposé seulement quand la pharmacie en a plusieurs. #}
+{% if caisses|length > 1 %}
+    <form method="post" action="{{ path('app_caisse_poste') }}" class="d-flex align-items-center gap-2" id="poste-caisse">
+        <input type="hidden" name="_token" value="{{ csrf_token('caisse') }}">
+        <input type="hidden" name="retour" value="{{ retour }}">
+        <label class="small text-nowrap" for="poste-caisse-choix"><i class="bi bi-pc-display"></i> Ce poste</label>
+        <select class="form-select form-select-sm" id="poste-caisse-choix" name="caisse" onchange="this.form.requestSubmit()">
+            {% for c in caisses %}
+                <option value="{{ c.id }}"{{ c.id == caisse.id ? ' selected' }}>{{ c.libelle }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button class="btn btn-sm btn-outline-secondary" type="submit">Choisir</button></noscript>
+    </form>
+{% endif %}

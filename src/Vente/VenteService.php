@@ -331,7 +331,7 @@ class VenteService
     public function encaisser(Vente $vente, Utilisateur $vendeur, SessionCaisse $session, array $saisie, ?string $codePin): void
     {
         $this->exigerModifiable($vente);
-        $this->exigerSessionDe($session, $vendeur);
+        $this->exigerSessionOuverte($session);
         $pharmacie = $this->tenantContext->exigerPharmacie();
         [$controle, $autorisePar] = $this->autoriser($vente, $vendeur, $pharmacie, $codePin);
         $paiements = $this->analyserPaiements($saisie, $vente->calculer()->aEncaisser());
@@ -372,7 +372,7 @@ class VenteService
     public function encaisserHorsLigne(Vente $vente, Utilisateur $vendeur, SessionCaisse $session, array $saisie, \DateTimeImmutable $le, int $montantTicket): int
     {
         $this->exigerModifiable($vente);
-        $this->exigerSessionDe($session, $vendeur);
+        $this->exigerSessionOuverte($session);
         $pharmacie = $this->tenantContext->exigerPharmacie();
         $this->actualiserAmo($vente, $vente->getOrganismeAmo(), $vente->getNumeroAssure(), $le);
         $controle = $this->controler($vente, $vendeur, $pharmacie);
@@ -454,7 +454,7 @@ class VenteService
         if (!$vente->estAEncaisser()) {
             throw new VenteException(\sprintf('La vente %s n\'est plus à encaisser.', $vente->getNumero()));
         }
-        $this->exigerSessionDe($session, $caissier);
+        $this->exigerSessionOuverte($session);
         $paiements = $this->analyserPaiements($saisie, $vente->getMontantEncaisse());
 
         $this->stock->transaction(function () use ($vente, $session, $paiements): void {
@@ -624,10 +624,11 @@ class VenteService
     /**
      * @throws VenteException
      */
-    private function exigerSessionDe(SessionCaisse $session, Utilisateur $utilisateur): void
+    private function exigerSessionOuverte(SessionCaisse $session): void
     {
-        if (!$session->estOuverte() || $session->getUtilisateur()->getId() !== $utilisateur->getId()) {
-            throw new VenteException('Ouvrez votre session de caisse avant d\'encaisser.');
+        // La session est celle d'une caisse, partagée par l'équipe : peu importe qui l'a ouverte.
+        if (!$session->estOuverte() || $session->getPharmacie()?->getId() !== $this->tenantContext->exigerPharmacie()->getId()) {
+            throw new VenteException('Ouvrez la caisse avant d\'encaisser.');
         }
     }
 

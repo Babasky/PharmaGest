@@ -100,11 +100,12 @@ class HorsLigneService
     }
 
     /**
-     * Importe les ventes hors ligne en anomalie d'un vendeur, dans l'ordre où elles ont été faites.
+     * Importe les ventes hors ligne en anomalie d'un vendeur (de toute l'équipe si aucun n'est précisé),
+     * dans l'ordre où elles ont été faites.
      *
      * @return int nombre de ventes importées
      */
-    public function importerEnAttente(Utilisateur $vendeur): int
+    public function importerEnAttente(?Utilisateur $vendeur = null): int
     {
         $importees = 0;
         foreach ($this->horsLigne->enAnomalieDe($vendeur) as $vente) {
@@ -132,9 +133,10 @@ class HorsLigneService
         $vendeur = $horsLigne->getVendeur();
         $vente = null;
         try {
-            $session = $this->sessions->ouverteDe($vendeur);
+            // La caisse que le vendeur a ouverte, sinon la caisse ouverte de la pharmacie (souvent l'unique).
+            $session = $this->sessions->ouverteDe($vendeur) ?? $this->sessions->ouvertes()[0] ?? null;
             if (null === $session) {
-                throw new VenteException(\sprintf('La caisse de %s est fermée : la vente sera importée à l\'ouverture de sa caisse.', $vendeur->getNom()));
+                throw new VenteException('La caisse est fermée : la vente sera importée à l\'ouverture de la caisse.');
             }
             $vente = $this->construire($horsLigne);
             /** @var array<array-key, mixed> $paiements */

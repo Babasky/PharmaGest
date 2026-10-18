@@ -904,3 +904,22 @@ donc plus signalé tout de suite comme une rupture.
 - L'export des données de la pharmacie contient les organismes communs et les siens, jamais ceux des autres.
 - Point ouvert : un organisme créé par plusieurs pharmacies peut ensuite être rendu commun par l'éditeur ; ce n'est
   pas automatisé.
+
+## Décisions — Code PIN à chaque vente et caisse partagée (retours de tests, Modibo, 18/10/2026)
+
+- Chaque vente (« Encaisser » comme « Envoyer à la caisse ») se valide avec un code PIN, même quand l'utilisateur est
+  déjà connecté. La vente est au nom de celui dont le code est saisi. Si c'est un collègue vendeur, il prend la main
+  sur le poste (il est connecté à la place du précédent).
+- On choisit le vendeur dans une liste : l'utilisateur connecté et les vendeurs actifs qui ont un code PIN. Comme pour
+  le changement de vendeur (tests de vulnérabilité du 11/10/2026), un propriétaire ou un adjoint ne vend par PIN que
+  s'il est lui-même connecté avec son mot de passe. Sans code PIN défini, la vente ne peut pas être validée et l'écran
+  renvoie vers « Mon code PIN ». Le code PIN du propriétaire pour une remise hors plafond ou une vente sans ordonnance
+  reste un champ à part. L'encaissement d'une vente déjà validée (écran du caissier) ne redemande pas de PIN.
+- Une officine a généralement une seule caisse : chaque pharmacie a une « Caisse principale », créée d'office (et par
+  la migration pour les pharmacies existantes, qui y rattache les sessions passées). Elle est ouverte une fois avec le
+  fond de caisse, toute l'équipe y encaisse dans la même session, et tout membre de l'équipe peut la clôturer.
+- Le propriétaire peut ajouter, renommer et retirer du service des caisses (Paramètres → Caisses). Une caisse ouverte
+  et la dernière caisse en service ne se retirent pas. Avec plusieurs caisses, chaque poste choisit la sienne
+  (« Ce poste » sur l'écran de caisse), retenue dans un cookie de l'ordinateur, qui survit aux changements d'utilisateur.
+- Les ventes faites hors ligne s'importent dans la caisse ouverte par leur vendeur, sinon dans la caisse ouverte de
+  la pharmacie ; à l'ouverture d'une caisse, celles de toute l'équipe qui attendaient sont importées.

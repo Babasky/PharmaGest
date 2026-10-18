@@ -45,7 +45,7 @@ final class CodePinTest extends CaisseTestCase
     {
         $collegue = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_VENDEUR]);
         AffectationFactory::createOne(['utilisateur' => $collegue, 'pharmacie' => $this->officine->pharmacie]);
-        self::getContainer()->get(CodePin::class)->definir($collegue, '2580');
+        $this->definirPin($collegue, '2580');
         $this->ouvrirCaisse($this->officine->vendeur);
 
         for ($i = 0; $i < 5; ++$i) {

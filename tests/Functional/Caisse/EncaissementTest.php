@@ -17,8 +17,8 @@ use App\Tests\Factory\UtilisateurFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Rôle caissier : le vendeur valide la vente et l'envoie à la caisse, le caissier l'encaisse dans sa propre
- * session ; le vendeur garde le droit d'encaisser lui-même. Chacun arrive sur son écran à la connexion.
+ * Rôle caissier : le vendeur valide la vente et l'envoie à la caisse, le caissier l'encaisse dans la session de la
+ * caisse ; le vendeur garde le droit d'encaisser lui-même. Chacun arrive sur son écran à la connexion.
  */
 final class EncaissementTest extends CaisseTestCase
 {
@@ -42,7 +42,7 @@ final class EncaissementTest extends CaisseTestCase
         $this->ajouter($produit, 3);
         $this->client->followRedirect();
         self::assertSelectorNotExists('form[action="/caisse/encaisser"]');
-        $this->poster('/caisse/envoyer');
+        $this->envoyerALaCaisse();
         self::assertResponseRedirects('/caisse');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-success', 'envoyée à la caisse');
@@ -111,7 +111,7 @@ final class EncaissementTest extends CaisseTestCase
         // Une vente envoyée à la caisse par l'adjoint, encaissée par le vendeur dans sa propre session.
         $this->connecter($this->officine->adjoint);
         $this->ajouter($produit, 2);
-        $this->poster('/caisse/envoyer');
+        $this->envoyerALaCaisse();
         $vente = $this->derniereVente();
         self::assertSame(StatutVente::AEncaisser, $vente->getStatut());
 
@@ -138,7 +138,7 @@ final class EncaissementTest extends CaisseTestCase
 
         $this->connecter($this->officine->vendeur);
         $this->ajouter($produit, 2);
-        $this->poster('/caisse/envoyer');
+        $this->envoyerALaCaisse();
         $vente = $this->derniereVente();
 
         $this->ouvrirCaissier();

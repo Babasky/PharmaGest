@@ -7,6 +7,7 @@ use App\Entity\Utilisateur;
 use App\Pdf\VentePdf;
 use App\Repository\SessionCaisseRepository;
 use App\Vente\GestionCaisse;
+use App\Vente\PosteCaisse;
 use App\Vente\VenteException;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,14 +19,17 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
  * Sessions de caisse : clôture avec comptage des espèces (FI-06) et rapport Z (FI-07).
- * Chacun voit et clôture sa session ; le propriétaire et l'adjoint voient et peuvent clôturer toutes les sessions.
+ * L'équipe partage la session ouverte de la caisse et peut la clôturer ; chacun revoit aussi les sessions qu'il a
+ * ouvertes. Le propriétaire et l'adjoint voient toutes les sessions.
  */
 #[Route('/caisse/sessions')]
 #[IsGranted(Utilisateur::ROLE_CAISSIER)]
 final class SessionCaisseController extends AbstractAppController
 {
-    public function __construct(private readonly GestionCaisse $caisse)
-    {
+    public function __construct(
+        private readonly GestionCaisse $caisse,
+        private readonly PosteCaisse $poste,
+    ) {
     }
 
     #[Route('', name: 'app_session_caisse_index', methods: ['GET'])]
@@ -39,13 +43,13 @@ final class SessionCaisseController extends AbstractAppController
         ]);
     }
 
-    /** Clôture de sa propre session ouverte. */
+    /** Clôture de la caisse de ce poste. */
     #[Route('/cloture', name: 'app_caisse_cloture', methods: ['GET'])]
     public function maCloture(): Response
     {
-        $session = $this->caisse->sessionOuverte($this->utilisateur());
+        $session = $this->poste->session($this->pharmacie());
         if (null === $session) {
-            $this->addFlash('info', 'Votre caisse n\'est pas ouverte.');
+            $this->addFlash('info', 'La caisse n\'est pas ouverte.');
 
             return $this->redirectToRoute($this->isGranted(Utilisateur::ROLE_VENDEUR) ? 'app_caisse' : 'app_encaissement_index');
         }
@@ -98,7 +102,7 @@ final class SessionCaisseController extends AbstractAppController
     private function exigerAcces(SessionCaisse $session): void
     {
         $this->exigerMemePharmacie($session);
-        if (!$this->isGranted(Utilisateur::ROLE_ADJOINT) && $session->getUtilisateur()->getId() !== $this->utilisateur()->getId()) {
+        if (!$this->isGranted(Utilisateur::ROLE_ADJOINT) && !$session->estOuverte() && $session->getUtilisateur()->getId() !== $this->utilisateur()->getId()) {
             throw $this->createNotFoundException();
         }
     }

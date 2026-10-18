@@ -2,6 +2,7 @@
 
 namespace App\EventSubscriber;
 
+use App\Entity\Utilisateur;
 use App\Repository\SessionCaisseRepository;
 use App\Service\ParametresPharmacie;
 use App\Tenant\TenantContext;
@@ -11,7 +12,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * Choisit le délai d'inactivité de l'utilisateur connecté pour les requêtes suivantes : celui de la caisse, réglé
- * par le propriétaire, tant qu'il a une session de caisse ouverte ; sinon le délai général
+ * par le propriétaire, tant qu'il a ouvert une caisse encore ouverte, ou, pour un vendeur ou un caissier, tant que
+ * la caisse de la pharmacie (partagée par l'équipe) est ouverte ; sinon le délai général
  * ({@see InactiviteSessionListener}).
  */
 final class DelaiInactiviteListener
@@ -35,7 +37,9 @@ final class DelaiInactiviteListener
         $pharmacie = $this->tenantContext->getPharmacie();
         $session = $requete->getSession();
 
-        if (null !== $utilisateur && null !== $pharmacie && null !== $this->sessionsCaisse->ouverteDe($utilisateur)) {
+        $auComptoir = null !== $utilisateur && \in_array($utilisateur->getRole(), [Utilisateur::ROLE_VENDEUR, Utilisateur::ROLE_CAISSIER], true);
+        if (null !== $utilisateur && null !== $pharmacie
+            && (null !== $this->sessionsCaisse->ouverteDe($utilisateur) || ($auComptoir && [] !== $this->sessionsCaisse->ouvertes()))) {
             $session->set(InactiviteSessionListener::CLE_DELAI, $this->parametres->pour($pharmacie)->getInactiviteCaisse() * 60);
         } elseif ($session->has(InactiviteSessionListener::CLE_DELAI)) {
             $session->remove(InactiviteSessionListener::CLE_DELAI);

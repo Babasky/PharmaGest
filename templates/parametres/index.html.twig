@@ -4,7 +4,7 @@
 
 {% block content %}
     <ul class="nav nav-tabs mb-3" role="tablist">
-        {% for cle, libelle in {fiche: 'Fiche de la pharmacie', regles: 'Règles de gestion', amo: 'Taux AMO et assurances'} %}
+        {% for cle, libelle in {fiche: 'Fiche de la pharmacie', regles: 'Règles de gestion', amo: 'Taux AMO et assurances', caisses: 'Caisses'} %}
             <li class="nav-item" role="presentation">
                 <a class="nav-link{{ onglet == cle ? ' active' }}" href="{{ path('app_parametres', {onglet: cle}) }}"{% if onglet == cle %} aria-current="page"{% endif %}>{{ libelle }}</a>
             </li>
@@ -37,7 +37,7 @@
                 {{ form_end(regles) }}
             </div>
         </div>
-    {% else %}
+    {% elseif onglet == 'amo' %}
         <div class="row g-3">
             <div class="col-12 col-lg-5">
                 <div class="card shadow-sm h-100">
@@ -109,6 +109,62 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% elseif onglet == 'caisses' %}
+        {% set jeton_caisses = csrf_token('caisses') %}
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="card shadow-sm" id="liste-caisses">
+                    <div class="card-header fw-semibold"><i class="bi bi-safe"></i> Caisses de la pharmacie</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th class="ps-3">Nom</th><th>État</th><th class="text-end pe-3">Actions</th></tr></thead>
+                            <tbody>
+                                {% for ligne in caisses %}
+                                    {% set c = ligne.caisse %}
+                                    <tr class="{{ c.actif ? '' : 'text-body-secondary' }}">
+                                        <td class="ps-3">
+                                            <form method="post" action="{{ path('app_parametres_caisse_renommer', {id: c.id}) }}" class="d-flex gap-2">
+                                                <input type="hidden" name="_token" value="{{ jeton_caisses }}">
+                                                <input type="text" class="form-control form-control-sm" name="libelle" value="{{ c.libelle }}" maxlength="60" aria-label="Nom de la caisse" required>
+                                                <button class="btn btn-sm btn-outline-secondary" type="submit" title="Renommer"><i class="bi bi-check-lg"></i></button>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            {% if not c.actif %}<span class="badge text-bg-secondary">Hors service</span>
+                                            {% elseif ligne.session %}<span class="badge text-bg-success">Ouverte</span> <span class="small">par {{ ligne.session.utilisateur.nom }}</span>
+                                            {% else %}<span class="badge text-bg-light border">Fermée</span>{% endif %}
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <form method="post" action="{{ path('app_parametres_caisse_basculer', {id: c.id}) }}">
+                                                <input type="hidden" name="_token" value="{{ jeton_caisses }}">
+                                                <button class="btn btn-sm btn-outline-{{ c.actif ? 'danger' : 'success' }}" type="submit">{{ c.actif ? 'Retirer du service' : 'Remettre en service' }}</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h2 class="h6"><i class="bi bi-plus-circle"></i> Ajouter une caisse</h2>
+                        <p class="small text-body-secondary">
+                            Une seule caisse suffit le plus souvent : toute l'équipe y encaisse, chacun validant ses ventes avec son code PIN.
+                            Ajoutez-en une si la pharmacie a un deuxième tiroir-caisse, puis choisissez-la sur le poste qui l'utilise (« Ce poste » sur l'écran de caisse).
+                        </p>
+                        <form method="post" action="{{ path('app_parametres_caisse_ajouter') }}" id="ajouter-caisse">
+                            <input type="hidden" name="_token" value="{{ jeton_caisses }}">
+                            <label class="form-label" for="caisse-libelle">Nom</label>
+                            <input type="text" class="form-control mb-2" id="caisse-libelle" name="libelle" maxlength="60" placeholder="Caisse 2" required>
+                            <button class="btn btn-success" type="submit"><i class="bi bi-plus-lg"></i> Ajouter la caisse</button>
+                        </form>
                     </div>
                 </div>
             </div>

@@ -105,7 +105,7 @@ final class HorsLigneTest extends CaisseTestCase
         $vente = $this->venteHorsLigne([['produit' => $produit->getId(), 'quantite' => 2]], 2000);
         $resultats = $this->envoyer([$vente]);
         self::assertSame('anomalie', $resultats[$vente['uuid']]['statut']);
-        self::assertStringContainsString('caisse de '.$this->officine->vendeur->getNom().' est fermée', (string) $resultats[$vente['uuid']]['message']);
+        self::assertStringContainsString('La caisse est fermée', (string) $resultats[$vente['uuid']]['message']);
 
         $this->client->request('GET', '/ventes/hors-ligne');
         self::assertSelectorTextContains('tbody', 'HL-AB12-1');

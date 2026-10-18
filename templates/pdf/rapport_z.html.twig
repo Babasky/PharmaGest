@@ -25,7 +25,7 @@
             <td><h1>Rapport Z</h1><div>{{ pharmacie.nom }}</div><div class="petit">{{ pharmacie.ville }}</div></td>
             <td class="droite">
                 Session <strong>{{ session.numero }}</strong><br>
-                Caissier : {{ session.utilisateur.nom }}<br>
+                {{ session.caisse.libelle }}, ouverte par {{ session.utilisateur.nom }}<br>
                 <span class="petit">Du {{ session.ouverteLe|date('d/m/Y H:i') }} au {{ session.clotureeLe|date('d/m/Y H:i') }}{{ session.clotureePar ? ' · clôturée par ' ~ session.clotureePar.nom }}</span>
             </td>
         </tr>
