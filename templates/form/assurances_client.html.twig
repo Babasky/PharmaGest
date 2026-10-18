@@ -17,6 +17,7 @@
     <div class="row g-2 align-items-start mb-2" data-collection-target="ligne">
         <div class="col-12 col-sm-6">{{ form_widget(form.organisme, {attr: {'aria-label': 'Assurance'}}) }}{{ form_errors(form.organisme) }}</div>
         <div class="col">{{ form_widget(form.numeroAssure, {attr: {placeholder: 'N° d\'assuré', 'aria-label': 'N° d\'assuré'}}) }}{{ form_errors(form.numeroAssure) }}</div>
+        <div class="col-4 col-sm-2">{{ form_widget(form.taux, {attr: {placeholder: 'Taux %', 'aria-label': 'Taux de l\'assuré (%)', title: 'Taux propre à l\'assuré, selon son statut. Vide : taux de la pharmacie.'}}) }}{{ form_errors(form.taux) }}</div>
         <div class="col-auto"><button type="button" class="btn btn-sm btn-outline-danger" data-action="collection#retirer" aria-label="Retirer cette assurance"><i class="bi bi-trash"></i></button></div>
     </div>
 {% endblock %}

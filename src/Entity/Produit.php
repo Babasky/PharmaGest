@@ -107,6 +107,10 @@ class Produit implements TenantAwareInterface
     #[ORM\Column]
     private bool $remboursableAmo = false;
 
+    /** L'AMO ne le prend en charge qu'avec un accord préalable de l'organisme, en plus de l'ordonnance (liste CANAM « AP »). */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $accordPrealableAmo = false;
+
     /**
      * Prix de vente fixé par l'AMO pour ce médicament, sur lequel s'applique le taux de prise en charge d'un
      * organisme AMO. Vide : le prix de vente de la pharmacie sert de base.
@@ -313,6 +317,18 @@ class Produit implements TenantAwareInterface
     public function setRemboursableAmo(bool $remboursableAmo): static
     {
         $this->remboursableAmo = $remboursableAmo;
+
+        return $this;
+    }
+
+    public function isAccordPrealableAmo(): bool
+    {
+        return $this->accordPrealableAmo;
+    }
+
+    public function setAccordPrealableAmo(bool $accordPrealableAmo): static
+    {
+        $this->accordPrealableAmo = $accordPrealableAmo;
 
         return $this;
     }

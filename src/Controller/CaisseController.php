@@ -145,6 +145,12 @@ final class CaisseController extends AbstractAppController
                 $this->ventes->retirer($ligne);
             } else {
                 $quantite = $donnees->getInt('quantite', $ligne->getQuantite());
+                if ($donnees->has('accord')) {
+                    $this->ventes->accordLigne($ligne, (string) $donnees->get('accord'));
+                }
+                if ($donnees->has('prise_en_charge')) {
+                    $this->ventes->priseEnChargeLigne($ligne, $donnees->getBoolean('prise_en_charge'));
+                }
                 if ($donnees->has('remise_valeur')) {
                     $this->ventes->remiseLigne($ligne, TypeRemise::tryFrom((string) $donnees->get('remise_type')), $this->montant($donnees->get('remise_valeur'), 'Remise') ?? 0);
                 }
