@@ -130,6 +130,7 @@ final class PinEtCaissesTest extends CaisseTestCase
         $seconde = $this->derniereVente();
         self::assertSame(StatutVente::Validee, $seconde->getStatut());
         self::assertSame($premiere->getSession()?->getId(), $seconde->getSession()?->getId(), 'Une seule session pour toute l\'équipe.');
+        self::assertSame($this->collegue->getId(), $seconde->getEncaisseePar()?->getId(), 'La vente dit qui l\'a encaissée, pas qui a ouvert la caisse.');
 
         // Le caissier aussi travaille dans cette caisse, sans l'ouvrir.
         $this->connecter($caissier)->request('GET', '/encaissement');

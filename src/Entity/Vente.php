@@ -106,6 +106,11 @@ class Vente implements TenantAwareInterface
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Utilisateur $autorisePar = null;
 
+    /** Qui a encaissé la vente : le vendeur lui-même, ou le caissier pour une vente envoyée à la caisse. */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Utilisateur $encaisseePar = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $annuleeLe = null;
 
@@ -411,6 +416,7 @@ class Vente implements TenantAwareInterface
     {
         $this->figer($numero, $le, $autorisePar);
         $this->session = $session;
+        $this->encaisseePar = $this->vendeur;
         $this->statut = StatutVente::Validee;
     }
 
@@ -432,12 +438,13 @@ class Vente implements TenantAwareInterface
      *
      * @internal réservé à {@see \App\Vente\VenteService}
      */
-    public function encaisserEnCaisse(SessionCaisse $session, \DateTimeImmutable $le): void
+    public function encaisserEnCaisse(SessionCaisse $session, \DateTimeImmutable $le, Utilisateur $caissier): void
     {
         if (!$this->estAEncaisser()) {
             throw new \LogicException('Cette vente n\'attend pas d\'encaissement.');
         }
         $this->session = $session;
+        $this->encaisseePar = $caissier;
         $this->valideeLe = $le;
         $this->statut = StatutVente::Validee;
     }
@@ -571,6 +578,11 @@ class Vente implements TenantAwareInterface
     public function getAnnuleeLe(): ?\DateTimeImmutable
     {
         return $this->annuleeLe;
+    }
+
+    public function getEncaisseePar(): ?Utilisateur
+    {
+        return $this->encaisseePar;
     }
 
     public function getAnnuleePar(): ?Utilisateur

@@ -24,7 +24,7 @@
         <span class="badge fs-6 text-bg-{{ vente.statut.couleur }}" id="statut">{{ vente.statut.libelle }}</span>
         <span>{{ vente.type.libelle }}</span>
         <span class="small text-body-secondary" id="intervenants">{{ vente.valideeLe|date('d/m/Y H:i') }} · {{ vente.vendeur.nom }}
-            {%- if vente.session %} · session {{ vente.session.numero }}{% if vente.session.utilisateur.id != vente.vendeur.id %}, encaissée par {{ vente.session.utilisateur.nom }}{% endif %}
+            {%- if vente.session %} · session {{ vente.session.numero }}{% if vente.encaisseePar and vente.encaisseePar.id != vente.vendeur.id %}, encaissée par {{ vente.encaisseePar.nom }}{% endif %}
             {%- elseif vente.statut.value == 'a_encaisser' %} · envoyée à la caisse{% endif %}</span>
         {% if vente.numeroHorsLigne %}
             <span class="badge text-bg-light border" id="hors-ligne" title="Vente faite pendant une coupure d'internet"><i class="bi bi-wifi-off"></i> Ticket hors ligne {{ vente.numeroHorsLigne }}</span>

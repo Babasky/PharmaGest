@@ -457,7 +457,7 @@ class VenteService
         $this->exigerSessionOuverte($session);
         $paiements = $this->analyserPaiements($saisie, $vente->getMontantEncaisse());
 
-        $this->stock->transaction(function () use ($vente, $session, $paiements): void {
+        $this->stock->transaction(function () use ($vente, $session, $paiements, $caissier): void {
             // Deux caissiers ne peuvent pas encaisser la même vente : seul le premier change son statut.
             $pris = $this->em->createQueryBuilder()
                 ->update(Vente::class, 'v')
@@ -468,7 +468,7 @@ class VenteService
             if (1 !== $pris) {
                 throw new VenteException(\sprintf('La vente %s vient d\'être encaissée ou annulée.', $vente->getNumero()));
             }
-            $vente->encaisserEnCaisse($session, $this->horloge->now());
+            $vente->encaisserEnCaisse($session, $this->horloge->now(), $caissier);
             $this->enregistrerPaiements($vente, $paiements);
             $this->em->flush();
         });
