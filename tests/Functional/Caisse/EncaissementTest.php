@@ -93,8 +93,10 @@ final class EncaissementTest extends CaisseTestCase
 
         // Les espèces de la vente sont attendues dans la caisse du caissier, pas dans celle du vendeur.
         $this->client->request('GET', '/caisse/sessions/cloture');
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('main', "6\u{00A0}500");
+        $sessionDuCaissier = (string) $this->client->getResponse()->headers->get('Location');
+        $this->connecter($this->officine->proprietaire)->request('GET', $sessionDuCaissier);
+        self::assertSelectorTextContains('#attendues', "6\u{00A0}500");
+        $this->connecter($this->caissier);
 
         // Une deuxième tentative ne l'encaisse pas deux fois.
         $this->client->request('GET', '/encaissement');
