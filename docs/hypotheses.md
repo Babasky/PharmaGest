@@ -925,6 +925,13 @@ donc plus signalé tout de suite comme une rupture.
   et repris sur la facture, la fiche de la vente et le bordereau AMO (colonne « Accords préalables »). Une assurance
   autre que l'AMO n'exige pas d'accord. Hors ligne, le n° ne peut pas être saisi : le produit reste à la charge de
   l'assuré.
+- **Copie de l'accord préalable** (Modibo, 20/10/2026 : « le numéro seul ne suffit pas ») : au panier, à côté du
+  n° d'accord, un bouton joint la photo ou le PDF de l'accord (mêmes contrôles que la copie de l'ordonnance : JPEG,
+  PNG ou WebP recompressés, PDF vérifié, 8 Mo au plus). La copie se joint aussi, ou se remplace, depuis la fiche de
+  la vente tant que le bordereau n'est pas transmis. Elle est annexée au PDF du bordereau après l'ordonnance et
+  fournie dans l'archive « Ordonnances (ZIP) » (`01-V-…-accord-2.jpg` : accord de la 2e ligne). Choix par défaut :
+  **la prise en charge dépend toujours du n°**, la copie n'est pas exigée pour encaisser (comme la copie de
+  l'ordonnance, qui peut arriver après la vente).
 - **Taux propre à l'assuré** : chaque assurance de la fiche client peut avoir son taux (selon le statut de l'assuré) ;
   vide, le taux de la pharmacie pour cet organisme s'applique. Prévu pour les assurances autres que l'AMO, mais
   accepté aussi pour un organisme AMO.

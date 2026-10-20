@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Amo\AmoException;
 use App\Amo\CopieOrdonnance;
+use App\Entity\LigneVente;
 use App\Entity\Utilisateur;
 use App\Entity\Vente;
 use App\Enum\StatutVente;
@@ -24,7 +25,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
  * Ventes validées, à encaisser et annulées : consultation, ticket et facture (VE-06), annulation (VE-09),
- * copie de l'ordonnance (AM-01). Le caissier y retrouve les ventes pour réimprimer un ticket.
+ * copies de l'ordonnance (AM-01) et des accords préalables. Le caissier y retrouve les ventes pour réimprimer un ticket.
  */
 #[Route('/ventes')]
 #[IsGranted(Utilisateur::ROLE_CAISSIER)]
@@ -111,6 +112,51 @@ final class VenteController extends AbstractAppController
         return $this->redirectToRoute('app_vente_voir', ['id' => $vente->getId()]);
     }
 
+    #[Route('/{id}/accord/{ligne}', name: 'app_vente_accord', requirements: ['id' => '\d+', 'ligne' => '\d+'], methods: ['GET'])]
+    public function accord(Vente $vente, int $ligne, CopieOrdonnance $copies): Response
+    {
+        $this->exigerVenteEnregistree($vente);
+        $ligneVente = $this->ligne($vente, $ligne);
+        $chemin = $copies->cheminAccord($this->pharmacie(), $ligneVente) ?? throw $this->createNotFoundException();
+        $pdf = $ligneVente->copieAccordEstPdf();
+        $reponse = new BinaryFileResponse($chemin, headers: [
+            'Content-Type' => $pdf ? 'application/pdf' : 'image/jpeg',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+        $reponse->setContentDisposition('inline', 'accord-'.$vente->getNumero().'-'.$ligne.($pdf ? '.pdf' : '.jpg'));
+
+        return $reponse;
+    }
+
+    /** Copie de l'accord préalable jointe après la vente, tant que le bordereau n'est pas transmis (RG-11). */
+    #[Route('/{id}/accord/{ligne}', name: 'app_vente_accord_copie', requirements: ['id' => '\d+', 'ligne' => '\d+'], methods: ['POST'])]
+    #[IsCsrfTokenValid(new Expression('"copie-accord-" ~ args["vente"].getId()'))]
+    public function copieAccord(Vente $vente, int $ligne, Request $requete, CopieOrdonnance $copies, CreanceAmoRepository $creances): Response
+    {
+        $this->exigerVenteEnregistree($vente);
+        $ligneVente = $this->ligne($vente, $ligne);
+        if (!$ligneVente->isAccordPrealable()) {
+            throw $this->createNotFoundException();
+        }
+        $fichier = $requete->files->get('copie');
+        try {
+            if ($creances->pourVente($vente)?->getBordereau()?->estTransmis() ?? false) {
+                throw new AmoException('Le bordereau de cette vente est transmis : la copie de l\'accord ne change plus.');
+            }
+            if (!$fichier instanceof UploadedFile) {
+                throw new AmoException('Choisissez la photo ou le PDF de l\'accord préalable.');
+            }
+            $copies->enregistrerAccord($this->pharmacie(), $ligneVente, $fichier);
+            $this->entityManager->flush();
+            $this->addFlash('success', 'Copie de l\'accord préalable enregistrée.');
+        } catch (AmoException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_vente_voir', ['id' => $vente->getId()]);
+    }
+
     #[Route('/{id}/ticket', name: 'app_vente_ticket', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function ticket(Vente $vente, VentePdf $pdf): Response
     {
@@ -151,6 +197,17 @@ final class VenteController extends AbstractAppController
         if ($vente->estAEncaisser()) {
             throw $this->createNotFoundException();
         }
+    }
+
+    private function ligne(Vente $vente, int $id): LigneVente
+    {
+        foreach ($vente->getLignes() as $ligne) {
+            if ($ligne->getId() === $id) {
+                return $ligne;
+            }
+        }
+
+        throw $this->createNotFoundException();
     }
 
     /** Un panier ou une vente en attente n'est pas une vente : introuvable ici. */

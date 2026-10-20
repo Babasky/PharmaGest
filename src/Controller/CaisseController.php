@@ -158,6 +158,10 @@ final class CaisseController extends AbstractAppController
                 if ($donnees->has('accord')) {
                     $this->ventes->accordLigne($ligne, (string) $donnees->get('accord'));
                 }
+                $copieAccord = self::fichier($requete, 'accord_copie');
+                if (null !== $copieAccord) {
+                    $this->ventes->copieAccordLigne($ligne, $copieAccord);
+                }
                 if ($donnees->has('prise_en_charge')) {
                     $this->ventes->priseEnChargeLigne($ligne, $donnees->getBoolean('prise_en_charge'));
                 }

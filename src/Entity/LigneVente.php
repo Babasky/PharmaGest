@@ -53,6 +53,10 @@ class LigneVente implements TenantAwareInterface
     #[ORM\Column(length: 40, nullable: true)]
     private ?string $numeroAccord = null;
 
+    /** Photo ou PDF de l'accord préalable, remis avec le bordereau AMO (nom du fichier dans le stockage de la pharmacie). */
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $copieAccord = null;
+
     /**
      * Assurance autre que l'AMO : la ligne est-elle prise en charge (cochée au panier) ? Null : selon que le produit
      * est remboursable.
@@ -177,6 +181,23 @@ class LigneVente implements TenantAwareInterface
         $this->numeroAccord = '' === $numeroAccord ? null : mb_substr($numeroAccord, 0, 40);
 
         return $this;
+    }
+
+    public function getCopieAccord(): ?string
+    {
+        return $this->copieAccord;
+    }
+
+    public function setCopieAccord(?string $copieAccord): static
+    {
+        $this->copieAccord = $copieAccord;
+
+        return $this;
+    }
+
+    public function copieAccordEstPdf(): bool
+    {
+        return null !== $this->copieAccord && str_ends_with($this->copieAccord, '.pdf');
     }
 
     /** Coche du panier pour une assurance autre que l'AMO (null : selon que le produit est remboursable). */
