@@ -18,6 +18,8 @@ class AuditLogger
     public const UTILISATEUR_MODIFIE = 'utilisateur.modifie';
     public const UTILISATEUR_DESACTIVE = 'utilisateur.desactive';
     public const UTILISATEUR_REACTIVE = 'utilisateur.reactive';
+    public const PROPRIETAIRE_AJOUTE = 'proprietaire.ajoute';
+    public const PROPRIETAIRE_RETIRE = 'proprietaire.retire';
     public const PHARMACIE_CREEE = 'pharmacie.creee';
     public const PHARMACIE_SUSPENDUE = 'pharmacie.suspendue';
     public const PHARMACIE_REACTIVEE = 'pharmacie.reactivee';
@@ -57,7 +59,7 @@ class AuditLogger
     public const ACTIONS_PLATEFORME = [
         self::PHARMACIE_CREEE, self::PHARMACIE_SUSPENDUE, self::PHARMACIE_REACTIVEE, self::PHARMACIE_ARCHIVEE,
         self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT, self::OFFRE_MODIFIEE, self::SUPPORT_MODIFIE,
-        self::SUPER_ADMIN_CREE,
+        self::SUPER_ADMIN_CREE, self::PROPRIETAIRE_AJOUTE, self::PROPRIETAIRE_RETIRE,
     ];
 
     public const LIBELLES = [
@@ -65,6 +67,8 @@ class AuditLogger
         self::UTILISATEUR_MODIFIE => 'Utilisateur modifié',
         self::UTILISATEUR_DESACTIVE => 'Utilisateur désactivé',
         self::UTILISATEUR_REACTIVE => 'Utilisateur réactivé',
+        self::PROPRIETAIRE_AJOUTE => 'Propriétaire associé ajouté',
+        self::PROPRIETAIRE_RETIRE => 'Propriétaire associé retiré',
         self::PHARMACIE_CREEE => 'Pharmacie créée',
         self::PHARMACIE_SUSPENDUE => 'Pharmacie suspendue',
         self::PHARMACIE_REACTIVEE => 'Pharmacie réactivée',

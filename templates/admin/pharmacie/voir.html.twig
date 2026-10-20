@@ -44,23 +44,65 @@
                                 <div class="fw-semibold">{{ membre.nom }}</div>
                                 <div class="small text-body-secondary text-break">{{ membre.email }} · {{ membre.libelleRole }}</div>
                             </div>
-                            {% if not affectation.accesOuvert %}
-                                <span class="badge text-bg-secondary">Désactivé</span>
-                            {% elseif not membre.active %}
-                                <span class="badge text-bg-warning">Activation en attente</span>
-                            {% endif %}
+                            <div class="d-flex align-items-center gap-2 text-nowrap">
+                                {% if not affectation.accesOuvert %}
+                                    <span class="badge text-bg-secondary">Désactivé</span>
+                                {% elseif not membre.active %}
+                                    <span class="badge text-bg-warning">Activation en attente</span>
+                                {% endif %}
+                                {% if membre.proprietaire %}
+                                    {% if affectation.actif and affectation.accesOuvert and proprietaires_actifs > 1 %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#retirer-proprietaire-{{ affectation.id }}">Retirer</button>
+                                    {% elseif not affectation.actif %}
+                                        <form method="post" action="{{ path('admin_pharmacie_reactiver_proprietaire', {id: pharmacie.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ jeton }}">
+                                            <input type="hidden" name="affectation" value="{{ affectation.id }}">
+                                            <button class="btn btn-sm btn-outline-success">Réactiver</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
                         </li>
                     {% endfor %}
                 </ul>
-                {% if equipe|filter(a => a.utilisateur.proprietaire and not a.utilisateur.active)|length > 0 %}
+                <div class="card-body border-top">
+                    <div class="fw-semibold small mb-2">Ajouter un propriétaire associé</div>
+                    <p class="small text-body-secondary">Plusieurs pharmaciens peuvent détenir la pharmacie ensemble ; ils ont tous les droits du propriétaire. Un membre de l'équipe (adjoint…) peut aussi devenir propriétaire.</p>
+                    {{ form_start(formulaire_associe) }}
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">{{ form_row(formulaire_associe.nom) }}</div>
+                        <div class="col-12 col-md-6">{{ form_row(formulaire_associe.email) }}</div>
+                    </div>
+                    <button class="btn btn-sm btn-success" type="submit"><i class="bi bi-person-plus"></i> Ajouter le propriétaire</button>
+                    {{ form_end(formulaire_associe) }}
+                </div>
+                {% if equipe|filter(a => a.utilisateur.proprietaire and a.actif and not a.utilisateur.active)|length > 0 %}
                     <div class="card-footer bg-body">
                         <form method="post" action="{{ path('admin_pharmacie_renvoyer_activation', {id: pharmacie.id}) }}">
                             <input type="hidden" name="_token" value="{{ jeton }}">
-                            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-envelope"></i> Renvoyer le lien d'activation au propriétaire</button>
+                            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-envelope"></i> Renvoyer le lien d'activation aux propriétaires</button>
                         </form>
                     </div>
                 {% endif %}
             </div>
+            {% if proprietaires_actifs > 1 %}
+                {% for affectation in equipe|filter(a => a.utilisateur.proprietaire and a.actif and a.accesOuvert) %}
+                    {% embed 'layout/_confirmation.html.twig' with {
+                        id: 'retirer-proprietaire-' ~ affectation.id,
+                        titre: 'Retirer ce propriétaire ?',
+                        action: path('admin_pharmacie_retirer_proprietaire', {id: pharmacie.id}),
+                        jeton: jeton,
+                        bouton: 'Oui, retirer',
+                        icone: 'bi-person-x',
+                    } %}
+                        {% block message %}
+                            <input type="hidden" name="affectation" value="{{ affectation.id }}">
+                            <p>Vous allez retirer <strong>{{ affectation.utilisateur.nom }}</strong> ({{ affectation.utilisateur.email }}) des propriétaires de <strong>{{ pharmacie.nom }}</strong>.</p>
+                            <p class="mb-0 text-body-secondary">Il ne pourra plus se connecter à cette pharmacie ; ses autres pharmacies ne changent pas. Son historique est conservé et vous pourrez le réactiver.</p>
+                        {% endblock %}
+                    {% endembed %}
+                {% endfor %}
+            {% endif %}
 
             <div class="card shadow-sm border-danger-subtle">
                 <div class="card-header bg-body fw-semibold">Accès</div>

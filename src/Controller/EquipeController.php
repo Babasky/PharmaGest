@@ -4,11 +4,14 @@ namespace App\Controller;
 
 use App\Entity\Affectation;
 use App\Entity\Utilisateur;
+use App\Form\AssocieType;
 use App\Form\MembreEquipeType;
+use App\Form\Model\NouvelAssocie;
 use App\Repository\AffectationRepository;
 use App\Security\Voter\EquipeVoter;
 use App\Service\GestionEquipe;
 use App\Service\GestionEquipeException;
+use App\Service\GestionProprietaires;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -64,6 +67,35 @@ final class EquipeController extends AbstractAppController
         return $this->render('equipe/formulaire.html.twig', [
             'formulaire' => $formulaire,
             'titre' => 'Ajouter un membre',
+            'places_restantes' => $this->equipe->placesRestantes($this->pharmacie()),
+        ], self::reponseRefusSiSoumis($formulaire));
+    }
+
+    /** Un autre pharmacien devient propriétaire associé, avec les mêmes droits. */
+    #[Route('/associe', name: 'app_equipe_associe', methods: ['GET', 'POST'])]
+    public function associe(Request $requete, GestionProprietaires $proprietaires): Response
+    {
+        $associe = new NouvelAssocie();
+        $formulaire = $this->createForm(AssocieType::class, $associe);
+        $formulaire->handleRequest($requete);
+
+        if ($formulaire->isSubmitted() && $formulaire->isValid()) {
+            try {
+                /** @var string|null $motDePasse */
+                $motDePasse = $formulaire->get('motDePasseInitial')->getData();
+                $compte = $proprietaires->ajouter($this->pharmacie(), (string) $associe->email, (string) $associe->nom, $motDePasse)->getUtilisateur();
+                $this->addFlash('success', $compte->isActive()
+                    ? \sprintf('%s est maintenant propriétaire associé de la pharmacie.', $compte->getNom())
+                    : \sprintf('%s est propriétaire associé. Un lien d\'activation a été envoyé à %s.', $compte->getNom(), $compte->getEmail()));
+
+                return $this->redirectToRoute('app_equipe_index');
+            } catch (GestionEquipeException $e) {
+                $this->addFlash('danger', $e->getMessage());
+            }
+        }
+
+        return $this->render('equipe/associe.html.twig', [
+            'formulaire' => $formulaire,
             'places_restantes' => $this->equipe->placesRestantes($this->pharmacie()),
         ], self::reponseRefusSiSoumis($formulaire));
     }
@@ -133,7 +165,7 @@ final class EquipeController extends AbstractAppController
     public function renvoyerActivation(Affectation $affectation): Response
     {
         $this->exigerMemePharmacie($affectation);
-        $this->denyAccessUnlessGranted(EquipeVoter::GERER, $affectation);
+        $this->denyAccessUnlessGranted(EquipeVoter::RELANCER, $affectation);
 
         $this->equipe->renvoyerLienActivation($affectation);
         $this->addFlash('success', \sprintf('Nouveau lien d\'activation envoyé à %s.', $affectation->getUtilisateur()->getEmail()));

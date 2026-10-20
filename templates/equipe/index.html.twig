@@ -4,10 +4,13 @@
 
 {% block page_actions %}
     {% if not ecriture_autorisee() %}
+        <button class="btn btn-outline-success" disabled title="Abonnement expiré : lecture seule"><i class="bi bi-people"></i> Ajouter un associé</button>
         <button class="btn btn-success" disabled title="Abonnement expiré : lecture seule"><i class="bi bi-person-plus"></i> Ajouter un membre</button>
     {% elseif places_restantes is same as(0) %}
+        <button class="btn btn-outline-success" disabled title="Limite de l'offre atteinte"><i class="bi bi-people"></i> Ajouter un associé</button>
         <button class="btn btn-success" disabled title="Limite de l'offre atteinte"><i class="bi bi-person-plus"></i> Ajouter un membre</button>
     {% else %}
+        <a class="btn btn-outline-success" href="{{ path('app_equipe_associe') }}" title="Un autre pharmacien propriétaire de la pharmacie"><i class="bi bi-people"></i> Ajouter un associé</a>
         <a class="btn btn-success" href="{{ path('app_equipe_nouveau') }}"><i class="bi bi-person-plus"></i> Ajouter un membre</a>
     {% endif %}
 {% endblock %}
@@ -18,7 +21,7 @@
         {% if offre.maxUtilisateurs is null %}
             utilisateurs illimités.
         {% else %}
-            {{ offre.maxUtilisateurs }} utilisateurs actifs au maximum, propriétaire compris —
+            {{ offre.maxUtilisateurs }} utilisateurs actifs au maximum, propriétaires compris —
             <strong>{{ places_restantes }} place{{ places_restantes > 1 ? 's' }} disponible{{ places_restantes > 1 ? 's' }}</strong>.
         {% endif %}
     </p>
@@ -55,6 +58,12 @@
                                 {% endif %}
                             </td>
                             <td class="pe-3 text-end text-nowrap">
+                                {% if ecriture_autorisee() and membre.proprietaire and affectation.actif and not membre.active and is_granted('EQUIPE_RELANCER', affectation) %}
+                                    <form method="post" action="{{ path('app_equipe_renvoyer_activation', {id: affectation.id}) }}" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('equipe-' ~ affectation.id) }}">
+                                        <button class="btn btn-sm btn-outline-secondary" title="Renvoyer le lien d'activation"><i class="bi bi-envelope"></i><span class="visually-hidden">Renvoyer le lien</span></button>
+                                    </form>
+                                {% endif %}
                                 {% if ecriture_autorisee() and is_granted('EQUIPE_GERER', affectation) %}
                                     <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_equipe_modifier', {id: affectation.id}) }}" title="Modifier"><i class="bi bi-pencil"></i><span class="visually-hidden">Modifier</span></a>
                                     {% if affectation.actif %}

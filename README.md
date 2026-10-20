@@ -24,6 +24,7 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 |---|---|---|
 | `admin@pharmagest.ml` | Super admin | Espace plateforme |
 | `a.traore@fleuve.ml` | Propriétaire | Pharmacie du Fleuve, abonnement actif, équipe complète, catalogue de 10 produits avec stock (une alerte de chaque type) |
+| `b.diallo@fleuve.ml` | Propriétaire associé | Pharmacie du Fleuve : deuxième propriétaire, mêmes droits qu'Aminata Traoré |
 | `f.keita@fleuve.ml` | Adjoint | Pharmacie du Fleuve |
 | `m.coulibaly@fleuve.ml` / `s.diarra@fleuve.ml` | Vendeur | Pharmacie du Fleuve : arrive sur l'écran de vente (**Caisse**) |
 | `a.konate@fleuve.ml` | Caissier | Pharmacie du Fleuve : arrive sur l'**Encaissement**, caisse déjà ouverte, une vente à encaisser |
@@ -35,7 +36,7 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 
 Codes PIN de la Pharmacie du Fleuve (validation de chaque vente, remise hors plafond, vente sans ordonnance, changement de vendeur) :
 Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**,
-Awa Konaté **4826** (caissière).
+Awa Konaté **4826** (caissière), Bakary Diallo **6047** (propriétaire associé).
 Moussa a une session de caisse clôturée avec cinq ventes (dont trois AMO et une annulée).
 
 **Vente et encaissement.** Chacun arrive sur son écran à la connexion : le vendeur sur la **Caisse** (écran de vente),
@@ -63,6 +64,11 @@ lot périmé et bordereau INPS impayé pour la Pharmacie du Fleuve ; échéance 
 les autres officines. Le **Journal d'audit** (propriétaire) liste les actions sensibles de la démo, et
 « Mon abonnement › Exporter toutes mes données » télécharge l'export complet (ZIP). Le super admin consulte le
 journal de la plateforme (espace plateforme, construit avec EasyAdmin).
+
+**Plusieurs propriétaires.** Des pharmaciens associés peuvent détenir ensemble une pharmacie : tous ont les droits du
+propriétaire. Un propriétaire ajoute un associé depuis **Équipe › Ajouter un associé** (nouveau compte, propriétaire
+d'une autre pharmacie dans la limite de l'offre, ou membre de l'équipe promu) ; le super admin le fait depuis la fiche
+de la pharmacie, et lui seul retire un associé (la pharmacie garde toujours au moins un propriétaire actif).
 
 **Transferts de stock entre officines.** Le menu **Stock › Transferts** (propriétaire et adjoint) n'est utile qu'à
 un pharmacien qui détient plusieurs officines : le transfert n'est possible qu'entre officines du même propriétaire.

@@ -2,10 +2,13 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Affectation;
 use App\Entity\Offre;
 use App\Entity\Pharmacie;
 use App\Entity\Utilisateur;
+use App\Form\AssocieType;
 use App\Form\Model\NouveauPaiement;
+use App\Form\Model\NouvelAssocie;
 use App\Form\Model\NouvellePharmacie;
 use App\Form\NouvellePharmacieType;
 use App\Form\PaiementType;
@@ -16,6 +19,8 @@ use App\Repository\OffreRepository;
 use App\Service\AbonnementService;
 use App\Service\CreationPharmacie;
 use App\Service\CreationPharmacieException;
+use App\Service\GestionEquipeException;
+use App\Service\GestionProprietaires;
 use App\Tenant\TenantContext;
 use App\Util\Telephone;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
@@ -53,6 +58,7 @@ final class PharmacieCrudController extends AbstractCrudController
         private readonly AbonnementRepository $paiements,
         private readonly AffectationRepository $affectations,
         private readonly TenantContext $tenantContext,
+        private readonly GestionProprietaires $proprietaires,
     ) {
     }
 
@@ -117,7 +123,7 @@ final class PharmacieCrudController extends AbstractCrudController
         if (Crud::PAGE_DETAIL === $responseParameters->get('pageName')) {
             /** @var Pharmacie $pharmacie */
             $pharmacie = $responseParameters->get('entity')->getInstance();
-            foreach ($this->fiche($pharmacie, $this->formulairePaiement($pharmacie)) as $cle => $valeur) {
+            foreach ($this->fiche($pharmacie, $this->formulairePaiement($pharmacie), $this->formulaireAssocie($pharmacie)) as $cle => $valeur) {
                 $responseParameters->set($cle, $valeur);
             }
         }
@@ -173,7 +179,62 @@ final class PharmacieCrudController extends AbstractCrudController
             return $this->redirectToFiche($pharmacie);
         }
 
-        return $this->render('admin/pharmacie/voir.html.twig', $this->fiche($pharmacie, $formulaire), new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
+        return $this->render('admin/pharmacie/voir.html.twig', $this->fiche($pharmacie, $formulaire, $this->formulaireAssocie($pharmacie)), new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
+    }
+
+    /** Ajoute un propriétaire associé : nouveau compte, propriétaire existant ou membre de l'équipe promu. */
+    #[AdminRoute('/{id}/proprietaires', name: 'ajouter_proprietaire', options: ['methods' => ['POST'], 'requirements' => ['id' => '\d+']])]
+    public function ajouterProprietaire(Pharmacie $pharmacie, Request $requete): Response
+    {
+        $formulaire = $this->formulaireAssocie($pharmacie);
+        $formulaire->handleRequest($requete);
+
+        if ($formulaire->isSubmitted() && $formulaire->isValid()) {
+            /** @var NouvelAssocie $associe */
+            $associe = $formulaire->getData();
+            try {
+                $compte = $this->proprietaires->ajouter($pharmacie, (string) $associe->email, (string) $associe->nom)->getUtilisateur();
+                $this->addFlash('success', htmlspecialchars($compte->isActive()
+                    ? \sprintf('%s est maintenant propriétaire de la pharmacie.', $compte->getNom())
+                    : \sprintf('%s est propriétaire de la pharmacie. Un lien d\'activation a été envoyé à %s.', $compte->getNom(), $compte->getEmail())));
+
+                return $this->redirectToFiche($pharmacie);
+            } catch (GestionEquipeException $e) {
+                $this->addFlash('danger', htmlspecialchars($e->getMessage()));
+            }
+        }
+
+        return $this->render('admin/pharmacie/voir.html.twig', $this->fiche($pharmacie, $this->formulairePaiement($pharmacie), $formulaire), new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
+    }
+
+    #[AdminRoute('/{id}/proprietaires/retirer', name: 'retirer_proprietaire', options: ['methods' => ['POST'], 'requirements' => ['id' => '\d+']])]
+    #[IsCsrfTokenValid(new Expression('"pharmacie-" ~ args["pharmacie"].getId()'))]
+    public function retirerProprietaire(Pharmacie $pharmacie, Request $requete): Response
+    {
+        $affectation = $this->affectationDe($pharmacie, $requete);
+        try {
+            $this->proprietaires->retirer($affectation);
+            $this->addFlash('success', htmlspecialchars(\sprintf('%s n\'a plus accès à la pharmacie.', $affectation->getUtilisateur()->getNom())));
+        } catch (GestionEquipeException $e) {
+            $this->addFlash('danger', htmlspecialchars($e->getMessage()));
+        }
+
+        return $this->redirectToFiche($pharmacie);
+    }
+
+    #[AdminRoute('/{id}/proprietaires/reactiver', name: 'reactiver_proprietaire', options: ['methods' => ['POST'], 'requirements' => ['id' => '\d+']])]
+    #[IsCsrfTokenValid(new Expression('"pharmacie-" ~ args["pharmacie"].getId()'))]
+    public function reactiverProprietaire(Pharmacie $pharmacie, Request $requete): Response
+    {
+        $affectation = $this->affectationDe($pharmacie, $requete);
+        try {
+            $this->proprietaires->reactiver($affectation);
+            $this->addFlash('success', htmlspecialchars(\sprintf('%s a de nouveau accès à la pharmacie.', $affectation->getUtilisateur()->getNom())));
+        } catch (GestionEquipeException $e) {
+            $this->addFlash('danger', htmlspecialchars($e->getMessage()));
+        }
+
+        return $this->redirectToFiche($pharmacie);
     }
 
     #[AdminRoute('/{id}/suspendre', name: 'suspendre', options: ['methods' => ['POST'], 'requirements' => ['id' => '\d+']])]
@@ -222,7 +283,11 @@ final class PharmacieCrudController extends AbstractCrudController
                 ++$envoyes;
             }
         }
-        $this->addFlash($envoyes > 0 ? 'success' : 'info', $envoyes > 0 ? 'Lien d\'activation renvoyé au propriétaire.' : 'Le compte du propriétaire est déjà activé.');
+        $this->addFlash($envoyes > 0 ? 'success' : 'info', match (true) {
+            $envoyes > 1 => \sprintf('Lien d\'activation renvoyé à %d propriétaires.', $envoyes),
+            1 === $envoyes => 'Lien d\'activation renvoyé au propriétaire.',
+            default => 'Les comptes des propriétaires sont déjà activés.',
+        });
 
         return $this->redirectToFiche($pharmacie);
     }
@@ -252,13 +317,37 @@ final class PharmacieCrudController extends AbstractCrudController
     }
 
     /**
-     * Données de la fiche : état de l'abonnement, prochaine période, paiements, équipe et formulaire de paiement.
+     * @return FormInterface<NouvelAssocie>
+     */
+    private function formulaireAssocie(Pharmacie $pharmacie): FormInterface
+    {
+        return $this->createForm(AssocieType::class, new NouvelAssocie(), [
+            'action' => $this->generateUrl('admin_pharmacie_ajouter_proprietaire', ['id' => $pharmacie->getId()]),
+            'mot_de_passe' => false,
+        ]);
+    }
+
+    /** Affectation désignée dans le formulaire, refusée si elle n'appartient pas à la pharmacie. */
+    private function affectationDe(Pharmacie $pharmacie, Request $requete): Affectation
+    {
+        $id = $requete->request->getInt('affectation');
+        $affectation = $this->tenantContext->sansFiltre(fn () => $this->affectations->find($id));
+        if (null === $affectation || $affectation->getPharmacie()?->getId() !== $pharmacie->getId()) {
+            throw $this->createNotFoundException();
+        }
+
+        return $affectation;
+    }
+
+    /**
+     * Données de la fiche : état de l'abonnement, prochaine période, paiements, équipe, formulaires de paiement et d'associé.
      *
      * @param FormInterface<NouveauPaiement> $formulaire
+     * @param FormInterface<NouvelAssocie>   $formulaireAssocie
      *
      * @return array<string, mixed>
      */
-    private function fiche(Pharmacie $pharmacie, FormInterface $formulaire): array
+    private function fiche(Pharmacie $pharmacie, FormInterface $formulaire, FormInterface $formulaireAssocie): array
     {
         return [
             'pharmacie' => $pharmacie,
@@ -267,6 +356,8 @@ final class PharmacieCrudController extends AbstractCrudController
             'paiements' => $this->paiements->historique($pharmacie),
             'equipe' => $this->affectations->equipe($pharmacie),
             'formulaire' => $formulaire->createView(),
+            'formulaire_associe' => $formulaireAssocie->createView(),
+            'proprietaires_actifs' => \count($this->tenantContext->sansFiltre(fn () => $this->affectations->proprietaires($pharmacie))),
         ];
     }
 
