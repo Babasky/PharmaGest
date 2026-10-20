@@ -25,6 +25,7 @@ class ParametrePharmacie implements TenantAwareInterface
     public const JOURS_ANALYSE_VENTES_PAR_DEFAUT = 30;
     public const JOURS_COUVERTURE_PAR_DEFAUT = 15;
     public const JOURS_AVANT_RUPTURE_PAR_DEFAUT = 5;
+    public const HEURE_COMMANDES_PAR_DEFAUT = 21;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -81,6 +82,18 @@ class ParametrePharmacie implements TenantAwareInterface
      */
     #[ORM\Column(options: ['default' => false])]
     private bool $envoiAutomatiqueCommandes = false;
+
+    /** Heure des commandes automatiques chez les fournisseurs qui n'ont pas leur propre heure (Bamako). */
+    #[ORM\Column(options: ['default' => self::HEURE_COMMANDES_PAR_DEFAUT])]
+    #[Assert\Range(min: 0, max: 23)]
+    private int $heureCommandesAutomatiques = self::HEURE_COMMANDES_PAR_DEFAUT;
+
+    /** Dernier passage de l'envoi automatique pour cette pharmacie : il montre que la tâche planifiée tourne. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $dernierPassageCommandes = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $bilanCommandesAutomatiques = null;
 
     public function getId(): ?int
     {
@@ -193,5 +206,33 @@ class ParametrePharmacie implements TenantAwareInterface
         $this->envoiAutomatiqueCommandes = $envoiAutomatique;
 
         return $this;
+    }
+
+    public function getHeureCommandesAutomatiques(): int
+    {
+        return $this->heureCommandesAutomatiques;
+    }
+
+    public function setHeureCommandesAutomatiques(int $heure): static
+    {
+        $this->heureCommandesAutomatiques = $heure;
+
+        return $this;
+    }
+
+    public function getDernierPassageCommandes(): ?\DateTimeImmutable
+    {
+        return $this->dernierPassageCommandes;
+    }
+
+    public function getBilanCommandesAutomatiques(): ?string
+    {
+        return $this->bilanCommandesAutomatiques;
+    }
+
+    public function noterPassageCommandes(\DateTimeImmutable $le, string $bilan): void
+    {
+        $this->dernierPassageCommandes = $le;
+        $this->bilanCommandesAutomatiques = mb_substr($bilan, 0, 255);
     }
 }

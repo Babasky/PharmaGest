@@ -6,13 +6,16 @@ use App\Achat\AchatException;
 use App\Achat\SuggestionsCommande;
 use App\Achat\TransmissionCommandes;
 use App\Entity\Commande;
+use App\Entity\Fournisseur;
 use App\Entity\Pharmacie;
 use App\Kernel;
+use App\Repository\FournisseurRepository;
 use App\Repository\PharmacieRepository;
 use App\Service\AbonnementService;
 use App\Service\GenerateurNotifications;
 use App\Service\ParametresPharmacie;
 use App\Tenant\TenantContext;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -21,8 +24,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Transmission automatique des commandes aux grossistes (à la manière de winAutopilote), pour les pharmacies qui l'ont
- * activée dans leurs paramètres : à l'heure et aux jours choisis sur la fiche de chaque fournisseur, la commande
- * suggérée selon les tendances de vente lui est envoyée par email.
+ * activée dans leurs paramètres : à l'heure et aux jours choisis sur la fiche de chaque fournisseur (à défaut, à
+ * l'heure des commandes automatiques de la pharmacie), la commande suggérée selon les tendances de vente lui est
+ * transmise par son canal (Pharma-ML ou email).
  *
  * Garde-fou : une commande qui contient une quantité inhabituelle (plus de trois fois le dernier achat du produit)
  * reste en brouillon, à vérifier. Les responsables sont prévenus de chaque passage.
@@ -42,6 +46,8 @@ final class CommandesAutomatiquesCommand
         private readonly GenerateurNotifications $notifications,
         private readonly TenantContext $tenantContext,
         private readonly ClockInterface $horloge,
+        private readonly FournisseurRepository $fournisseurs,
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
@@ -66,8 +72,13 @@ final class CommandesAutomatiquesCommand
             $precedente = $this->tenantContext->getPharmacie();
             $this->tenantContext->forcer($pharmacie);
             try {
-                if ($this->parametres->pour($pharmacie)->isEnvoiAutomatiqueCommandes()) {
-                    $envoyees += $this->traiter($pharmacie, $instant, $io);
+                $parametres = $this->parametres->pour($pharmacie);
+                if ($parametres->isEnvoiAutomatiqueCommandes()) {
+                    [$nombre, $bilan] = $this->traiter($pharmacie, $parametres->getHeureCommandesAutomatiques(), $instant, $io);
+                    $envoyees += $nombre;
+                    // Trace du passage, visible dans les suggestions : elle montre que la tâche planifiée tourne.
+                    $parametres->noterPassageCommandes($this->horloge->now(), $bilan);
+                    $this->em->flush();
                 }
             } finally {
                 $this->tenantContext->forcer($precedente);
@@ -78,15 +89,23 @@ final class CommandesAutomatiquesCommand
         return Command::SUCCESS;
     }
 
-    private function traiter(Pharmacie $pharmacie, \DateTimeImmutable $instant, SymfonyStyle $io): int
+    /**
+     * @return array{0: int, 1: string} nombre de commandes envoyées et bilan du passage
+     */
+    private function traiter(Pharmacie $pharmacie, int $heureParDefaut, \DateTimeImmutable $instant, SymfonyStyle $io): array
     {
+        $heure = $instant->format('G').' h';
+        $prevus = array_filter($this->fournisseurs->findBy(['actif' => true]), static fn (Fournisseur $f) => $f->commandeAutomatiquePrevue($instant, $heureParDefaut));
+        if ([] === $prevus) {
+            return [0, \sprintf('%s : aucun fournisseur à commander à cette heure.', $heure)];
+        }
         /** @var list<Suggestion> $suggestions */
         $suggestions = array_values(array_filter(
             $this->suggestions->selonTendances(),
-            static fn (array $s) => null !== $s['fournisseur'] && $s['fournisseur']->commandeAutomatiquePrevue($instant),
+            static fn (array $s) => null !== $s['fournisseur'] && \in_array($s['fournisseur'], $prevus, true),
         ));
         if ([] === $suggestions) {
-            return 0;
+            return [0, \sprintf('%s : rien à commander chez %s.', $heure, implode(', ', array_map(static fn (Fournisseur $f) => $f->getNom(), $prevus)))];
         }
         $inhabituels = [];
         foreach ($suggestions as $s) {
@@ -113,16 +132,17 @@ final class CommandesAutomatiquesCommand
             $phrases[] = \sprintf('À vérifier avant envoi, quantité inhabituelle chez %s : %s.', $commande->getFournisseur()->getNom(), implode(', ', $inhabituels[(int) $commande->getFournisseur()->getId()]));
         }
         if ([] !== $bilan['sans_email']) {
-            $phrases[] = \sprintf('Brouillon à transmettre à la main (fournisseur sans email) : %s.', implode(', ', array_map(static fn (Commande $c) => $c->getFournisseur()->getNom(), $bilan['sans_email'])));
+            $phrases[] = \sprintf('Brouillon à transmettre à la main (fournisseur sans email ni Pharma-ML) : %s.', implode(', ', array_map(static fn (Commande $c) => $c->getFournisseur()->getNom(), $bilan['sans_email'])));
         }
         if ([] !== $bilan['echecs']) {
             $phrases[] = \sprintf('%d envoi(s) en échec : voir les brouillons.', \count($bilan['echecs']));
         }
-        if ([] !== $phrases) {
-            $message = mb_substr(implode(' ', $phrases), 0, 255);
-            $this->notifications->commandesAutomatiques($pharmacie, $message, 'commandes-auto-'.$instant->format('Y-m-d-H'));
+        if ([] === $phrases) {
+            return [0, \sprintf('%s : rien à commander.', $heure)];
         }
+        $message = mb_substr(implode(' ', $phrases), 0, 255);
+        $this->notifications->commandesAutomatiques($pharmacie, $message, 'commandes-auto-'.$instant->format('Y-m-d-H'));
 
-        return \count($bilan['envoyees']);
+        return [\count($bilan['envoyees']), $heure.' : '.$message];
     }
 }

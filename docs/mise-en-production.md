@@ -119,6 +119,12 @@ exécute les tâches planifiées de `App\Schedule` :
 | 3 h 00 | `app:pharmacies:archiver` : annonce 30 jours avant, puis archivage 12 mois après l'échéance avec envoi de l'export complet |
 | 7 h 30 | `app:notifications:generer` : notifications du jour (ruptures, péremptions, échéances, bordereaux impayés) |
 | 7 h 50 | `app:abonnements:rappels` : emails J-30, J-15, J-7 |
+| Toutes les heures | `app:commandes:automatiques` : commandes envoyées aux grossistes des pharmacies en envoi automatique |
+
+Sans le worker, **aucune** de ces tâches ne passe (notamment l'envoi automatique des commandes). Après chaque
+déploiement, vérifier que `php bin/console debug:scheduler` liste bien les quatre tâches et que
+`sudo supervisorctl status pharmagest-messenger` est `RUNNING`. Dans l'application, la page Commandes › Suggestions
+affiche le dernier passage des commandes automatiques, et une alerte s'il n'y en a pas eu depuis plus de deux heures.
 
 ```bash
 sudo cp deploy/supervisor-messenger.conf /etc/supervisor/conf.d/pharmagest.conf

@@ -6,6 +6,7 @@ use App\Achat\AchatException;
 use App\Achat\CommandeService;
 use App\Achat\EmailCommande;
 use App\Achat\ExportCommandeExcel;
+use App\Achat\PharmaMl\PharmaMlEnAttente;
 use App\Entity\Commande;
 use App\Entity\EnvoiCommande;
 use App\Entity\Utilisateur;
@@ -55,7 +56,7 @@ final class EnvoiCommandeTest extends KernelTestCase
                 parent::envoyer($commande, $expediteur);
             }
         };
-        $service = new CommandeService($em, $conteneur->get(Numeroteur::class), $enPanne, $conteneur->get(AuditLogger::class), $tenant, $conteneur->get(ClockInterface::class));
+        $service = new CommandeService($em, $conteneur->get(Numeroteur::class), $enPanne, $conteneur->get(AuditLogger::class), $tenant, $conteneur->get(ClockInterface::class), new PharmaMlEnAttente());
 
         $commande = $service->creer($fournisseur, [[$produit, 12]]);
         try {

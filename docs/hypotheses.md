@@ -758,8 +758,8 @@ uniquement si les officines appartiennent au même pharmacien ».
   fournisseur sans email garde un brouillon, à transmettre par téléphone, WhatsApp ou bon imprimé.
 - **Envoi automatique**, inspiré de winAutopilote (WinPharma) : désactivé par défaut (une commande envoyée ne se
   reprend pas). Le propriétaire l'active dans Paramètres › Règles de gestion, puis choisit sur la fiche de chaque
-  fournisseur l'**heure** et les **jours** de sa commande (aucun jour coché : tous les jours ; pas d'heure : pas de
-  commande automatique chez lui). Toutes les heures, les commandes suggérées selon les tendances partent aux
+  fournisseur l'**heure** et les **jours** de sa commande (aucun jour coché : tous les jours ; pas d'heure : celle
+  de la pharmacie, depuis le 20/10/2026). Toutes les heures, les commandes suggérées selon les tendances partent aux
   fournisseurs dont c'est l'heure et qui ont un email, dans de nouvelles commandes (les brouillons en cours ne sont
   pas touchés). Le propriétaire et l'adjoint reçoivent une notification avec le bilan. Une pharmacie en lecture
   seule (abonnement expiré) n'envoie rien. `app:commandes:automatiques --heure=21` rattrape un passage manqué.
@@ -770,6 +770,26 @@ uniquement si les officines appartiennent au même pharmacien ».
   fournisseur, contrôle des commandes à vérifier. Pas repris pour l'instant, faute de données des grossistes
   maliens : bascule automatique vers un autre grossiste ou un générique équivalent en cas de manquant, réception
   automatique et rapprochement des factures.
+## Décisions — Commandes automatiques non envoyées et Pharma-ML (remarque de Modibo, 20/10/2026)
+
+- **Cause** : le planificateur (Symfony Scheduler) ne démarrait pas, faute du paquet des expressions cron
+  (`dragonmantank/cron-expression`). Aucune tâche planifiée ne passait : commandes automatiques, mais aussi
+  notifications du matin, rappels d'abonnement et archivage. Le paquet est ajouté ; en production il faut en plus le
+  worker Messenger supervisé (`messenger:consume async scheduler_default`, voir la mise en production).
+- **Heure de la pharmacie** : un fournisseur sans heure sur sa fiche était exclu de l'envoi automatique. Il reçoit
+  désormais la commande à l'**heure des commandes automatiques** de la pharmacie (Paramètres › Règles de gestion,
+  21 h par défaut). Une case « Recevoir les commandes automatiques » (cochée par défaut) sur la fiche du
+  fournisseur permet de l'exclure.
+- **Suivi** : chaque passage est enregistré (date et bilan) et affiché dans Commandes › Suggestions ; sans passage
+  depuis plus de deux heures, une alerte dit que la tâche planifiée du serveur ne tourne pas.
+- **Pharma-ML** : sur la fiche du fournisseur, « Transmission des commandes » : email ou Pharma-ML, avec l'adresse du
+  serveur, l'identifiant de l'officine (code client), le code répartiteur et la clé (jamais réaffichée), fournis par
+  le répartiteur. La norme Pharma-ML (messages XML de la Chambre syndicale de la répartition pharmaceutique) n'est
+  diffusée aux éditeurs que sous accord de confidentialité : tant que SoftPharm ne l'a pas, la transmission
+  Pharma-ML n'est pas active et la commande part **par email** (le message le dit). Un fournisseur Pharma-ML sans
+  email garde sa commande en brouillon. À obtenir : la spécification Pharma-ML utilisée par les répartiteurs
+  maliens (Laborex, PPM, autres) et un compte de test.
+
 ## Décisions — Retour du code-barres (demande de Modibo, 13/10/2026)
 
 - Le **code-barres** revient sur le produit : **facultatif**, **unique dans une pharmacie** (deux pharmacies peuvent

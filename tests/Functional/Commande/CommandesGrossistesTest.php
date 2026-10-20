@@ -9,6 +9,7 @@ use App\Entity\MouvementStock;
 use App\Entity\Notification;
 use App\Entity\ParametrePharmacie;
 use App\Entity\Produit;
+use App\Enum\CanalTransmission;
 use App\Enum\StatutCommande;
 use App\Enum\StatutEnvoi;
 use App\Enum\TypeMouvement;
@@ -190,10 +191,105 @@ final class CommandesGrossistesTest extends CommandeTestCase
     {
         $fournisseur = (new Fournisseur())->setHeureCommande(9)->setJoursCommande([3, 1, 1]);
         self::assertSame([1, 3], $fournisseur->getJoursCommande());
-        self::assertTrue($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-12 09:00')), 'Lundi 9 h.');
-        self::assertFalse($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-13 09:00')), 'Mardi.');
-        self::assertFalse($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-14 10:00')), 'Mercredi, mauvaise heure.');
+        self::assertTrue($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-12 09:00'), 21), 'Lundi 9 h.');
+        self::assertFalse($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-13 09:00'), 21), 'Mardi.');
+        self::assertFalse($fournisseur->commandeAutomatiquePrevue(new \DateTimeImmutable('2026-10-14 10:00'), 21), 'Mercredi, mauvaise heure.');
         self::assertSame([], $fournisseur->setJoursCommande(range(1, 7))->getJoursCommande(), 'Tous les jours.');
+    }
+
+    public function testLePlanificateurConnaitLesCommandesAutomatiques(): void
+    {
+        // Sans le paquet des expressions cron, le Scheduler refusait de démarrer : aucune tâche planifiée ne passait.
+        \assert(null !== self::$kernel);
+        $commande = new CommandTester((new Application(self::$kernel))->find('debug:scheduler'));
+        $commande->execute([]);
+        $commande->assertCommandIsSuccessful();
+        self::assertStringContainsString('app:commandes:automatiques', $commande->getDisplay(true));
+    }
+
+    public function testFournisseurSansHeureCommandeALHeureDeLaPharmacie(): void
+    {
+        $this->connecter($this->officine->proprietaire)->request('GET', '/fournisseurs/'.$this->laborex->getId().'/modifier');
+        $this->client->submitForm('Enregistrer', ['fournisseur[commandeAutomatique]' => false]);
+        self::assertResponseRedirects();
+        $this->client->request('GET', '/parametres?onglet=regles');
+        $this->client->submitForm('Enregistrer les règles', [
+            'parametres[envoiAutomatiqueCommandes]' => '1',
+            'parametres[heureCommandesAutomatiques]' => '19',
+        ]);
+        self::assertResponseRedirects();
+
+        $this->client->request('GET', '/commandes/suggestions');
+        self::assertSelectorTextContains('#etat-commandes-automatiques.alert-warning', 'ne tourne pas');
+
+        self::assertStringContainsString('0 commande(s) envoyée(s)', $this->executer(21));
+        self::assertStringContainsString('1 commande(s) envoyée(s)', $this->executer(19), 'PPM n\'a pas d\'heure : celle de la pharmacie.');
+        $ppm = $this->commandesDe($this->ppm);
+        self::assertCount(1, $ppm);
+        self::assertSame(StatutCommande::Envoyee, $ppm[0]->getStatut());
+        self::assertSame([], $this->commandesDe($this->laborex), 'Laborex exclu de l\'envoi automatique.');
+
+        $this->client->request('GET', '/commandes/suggestions?fournisseur='.$this->ppm->getId());
+        self::assertSelectorNotExists('#etat-commandes-automatiques.alert-warning');
+        self::assertSelectorTextContains('#etat-commandes-automatiques', '19 h : 1 commande(s) envoyée(s) automatiquement');
+        self::assertSelectorTextContains('#formulaire-suggestions', 'Commande automatique à 19 h, tous les jours');
+
+        // Plus de passage depuis trois heures : la tâche planifiée s'est arrêtée.
+        self::getContainer()->get(EntityManagerInterface::class)->getConnection()->executeStatement(
+            'UPDATE parametre_pharmacie SET dernier_passage_commandes = ? WHERE pharmacie_id = ?',
+            [(new \DateTimeImmutable('-3 hours'))->format('Y-m-d H:i:s'), $this->officine->pharmacie->getId()],
+        );
+        $this->client->request('GET', '/commandes/suggestions');
+        self::assertSelectorTextContains('#etat-commandes-automatiques.alert-warning', 'ne tourne pas');
+    }
+
+    public function testTransmissionPharmaMlAvecRepliSurEmail(): void
+    {
+        $url = '/fournisseurs/'.$this->ppm->getId().'/modifier';
+        $this->connecter($this->officine->proprietaire)->request('GET', $url);
+        $this->client->submitForm('Enregistrer', ['fournisseur[canalTransmission]' => 'pharmaml']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form', 'Obligatoire pour Pharma-ML');
+
+        $this->client->submitForm('Enregistrer', [
+            'fournisseur[canalTransmission]' => 'pharmaml',
+            'fournisseur[pharmaMlUrl]' => 'https://pharmaml.ppm.example/commande',
+            'fournisseur[pharmaMlIdentifiant]' => 'OFF-0042',
+            'fournisseur[pharmaMlCodeRepartiteur]' => 'PPM',
+            'fournisseur[pharmaMlCle]' => 'secret-ppm',
+        ]);
+        self::assertResponseRedirects();
+        // La clé n'est jamais réaffichée ; laissée vide, elle est conservée.
+        $this->client->request('GET', $url);
+        self::assertSelectorNotExists('input[value="secret-ppm"]');
+        $this->client->submitForm('Enregistrer');
+        self::assertResponseRedirects();
+        $ppm = $this->sansFiltre(fn (EntityManagerInterface $em) => $em->find(Fournisseur::class, $this->ppm->getId()));
+        self::assertNotNull($ppm);
+        self::assertSame(['secret-ppm', true], [$ppm->getPharmaMlCle(), $ppm->pharmaMlParametre()]);
+
+        $this->connecter($this->officine->adjoint);
+        $brouillon = $this->creerBrouillon($this->ppm, [[$this->doliprane, 4]]);
+        $this->client->request('GET', '/commandes/'.$brouillon);
+        $this->client->submitForm('Transmettre par Pharma-ML');
+        self::assertResponseRedirects();
+        self::assertEmailCount(1, null, 'Pharma-ML pas encore actif : la commande part par email.');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', 'Pharma-ML n\'est pas encore active dans SoftPharm. Envoi par email à la place.');
+        self::assertSame(StatutCommande::Envoyee, $this->commandesDe($this->ppm)[0]->getStatut());
+
+        // Fournisseur Pharma-ML sans email : la commande reste en brouillon.
+        $this->sansFiltre(function (EntityManagerInterface $em): void {
+            $em->find(Fournisseur::class, $this->laborex->getId())?->setCanalTransmission(CanalTransmission::PharmaMl)
+                ->setPharmaMlUrl('https://pharmaml.laborex.example')->setPharmaMlIdentifiant('OFF-7')->setPharmaMlCle('cle');
+            $em->flush();
+        });
+        $brouillon = $this->creerBrouillon($this->laborex, [[$this->smecta, 3]]);
+        $this->client->request('GET', '/commandes/'.$brouillon);
+        $this->client->submitForm('Transmettre par Pharma-ML');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-danger', 'Le fournisseur Laborex Mali n\'a pas d\'email');
+        self::assertTrue($this->commandesDe($this->laborex)[0]->estBrouillon());
     }
 
     private function executer(int $heure): string
