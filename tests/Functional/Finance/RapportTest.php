@@ -152,10 +152,14 @@ final class RapportTest extends AmoTestCase
             self::assertSelectorNotExists('#indicateur-'.$absent);
         }
 
-        $this->connecter($this->officine->adjoint)->request('GET', '/');
+        // Une vente AMO de 2 000 dont 1 400 à la charge de l'organisme : c'est l'encours AMO.
+        $this->ouvrirCaisse($this->officine->adjoint);
+        $this->vendreAmo(2);
+        $this->client->request('GET', '/');
         foreach (['ca-jour', 'ca-mois', 'panier', 'encours-amo', 'valeur-stock'] as $present) {
             self::assertSelectorExists('#indicateur-'.$present);
         }
+        self::assertSelectorTextContains('#indicateur-encours-amo', "1\u{00A0}400\u{00A0}FCFA");
         self::assertSelectorNotExists('#indicateur-recettes-mois');
         self::assertSelectorNotExists('#indicateur-depenses-mois');
         self::assertSelectorNotExists('#graphique-mois');

@@ -2,13 +2,13 @@
 
 namespace App\Reporting;
 
-use App\Amo\SuiviAmo;
 use App\Entity\LigneVente;
 use App\Entity\Paiement;
 use App\Entity\Vente;
 use App\Enum\ModePaiement;
 use App\Enum\StatutVente;
 use App\Enum\TypeVente;
+use App\Repository\CreanceAmoRepository;
 use App\Repository\DepenseRepository;
 use App\Repository\LotRepository;
 use App\Repository\RecetteRepository;
@@ -28,7 +28,7 @@ class Indicateurs
         private readonly RecetteRepository $recettes,
         private readonly DepenseRepository $depenses,
         private readonly LotRepository $lots,
-        private readonly SuiviAmo $suiviAmo,
+        private readonly CreanceAmoRepository $creances,
         private readonly ClockInterface $horloge,
     ) {
     }
@@ -79,7 +79,7 @@ class Indicateurs
     /** Créances AMO ni réglées ni rejetées, à ce jour. */
     public function encoursAmo(): int
     {
-        return $this->suiviAmo->tableau()['total']['encours'];
+        return $this->creances->encours();
     }
 
     /** Valeur du stock disponible (lots non périmés) au prix d'achat, à ce jour (ST-07). */

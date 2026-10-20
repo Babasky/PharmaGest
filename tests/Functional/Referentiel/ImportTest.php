@@ -7,6 +7,7 @@ use App\Entity\Client;
 use App\Entity\Fournisseur;
 use App\Entity\Produit;
 use App\Import\ExemplesImport;
+use App\Tests\Factory\CategorieFactory;
 use App\Tests\Factory\ProduitFactory;
 use App\Tests\Support\AppWebTestCase;
 use App\Tests\Support\Officine;
@@ -97,6 +98,36 @@ final class ImportTest extends AppWebTestCase
         self::assertSame('Paracétamol', $produit?->getDci());
         self::assertSame(1250, $produit->getPrixVente());
         self::assertSame(1, $this->compter(Produit::class));
+    }
+
+    public function testLesCategoriesExistantesSontReutiliseesSansConfondreLesNiveaux(): void
+    {
+        $divers = CategorieFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nom' => 'Divers']);
+
+        $this->connecter($this->officine->adjoint)->request('GET', '/imports/produits');
+        $this->client->submitForm('Vérifier le fichier', ['fichier' => $this->xlsx([
+            ['nom_commercial', 'categorie', 'prix_vente'],
+            ['Coton', 'Divers', 300],
+            ['Savon', 'Hygiène > Divers', 500],
+            ['Gants', 'Divers', 800],
+            ['Brosse', 'Hygiène > Divers', 700],
+        ])]);
+        $this->client->submitForm('Importer les 4 lignes valides');
+
+        // « Divers » de premier niveau existe déjà ; « Hygiène › Divers » est une autre catégorie, créée une fois.
+        self::assertSame(3, $this->compter(Categorie::class));
+        $categories = $this->sansFiltre(static function (EntityManagerInterface $em): array {
+            $noms = [];
+            foreach ($em->getRepository(Produit::class)->findAll() as $produit) {
+                $noms[$produit->getNomCommercial()] = [$produit->getCategorie()?->getId(), $produit->getCategorie()?->getNomComplet()];
+            }
+
+            return $noms;
+        });
+        self::assertSame([$divers->getId(), 'Divers'], $categories['Coton']);
+        self::assertSame([$divers->getId(), 'Divers'], $categories['Gants']);
+        self::assertSame('Hygiène › Divers', $categories['Savon'][1]);
+        self::assertSame($categories['Savon'], $categories['Brosse']);
     }
 
     public function testDeuxConditionnementsDuMemeProduitSontDeuxProduits(): void
