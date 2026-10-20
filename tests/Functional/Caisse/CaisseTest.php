@@ -6,19 +6,16 @@ use App\Entity\JournalAudit;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
 use App\Entity\OrganismeAmo;
-use App\Entity\Utilisateur;
 use App\Entity\Vente;
 use App\Enum\ModePaiement;
 use App\Enum\PolitiqueSansOrdonnance;
 use App\Enum\StatutVente;
 use App\Enum\TypeMouvement;
 use App\Enum\TypeVente;
-use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\ClientFactory;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\PharmacieFactory;
 use App\Tests\Factory\ProduitFactory;
-use App\Tests\Factory\UtilisateurFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -428,43 +425,33 @@ final class CaisseTest extends CaisseTestCase
         self::assertSame(0, (int) $sessions);
     }
 
-    public function testChangementRapideDeVendeurParCodePin(): void
-    {
-        $collegue = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_VENDEUR, 'nom' => 'Collègue Vendeur']);
-        AffectationFactory::createOne(['utilisateur' => $collegue, 'pharmacie' => $this->officine->pharmacie]);
-        $this->definirPin($collegue, '2580');
-
-        $this->ouvrirCaisse($this->officine->vendeur);
-        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '0852']);
-        self::assertStringContainsString('Code PIN incorrect', $this->erreur());
-
-        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '2580']);
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-success', 'Bonjour Collègue Vendeur');
-        self::assertSelectorNotExists('form[action="/caisse/ouvrir"]', 'La caisse est partagée : le collègue encaisse dans la session ouverte.');
-        self::assertSelectorTextContains('header', 'Collègue Vendeur');
-    }
-
     /**
      * Tests de vulnérabilité (11/10/2026) : un vendeur qui connaît ou devine le PIN du propriétaire ou d'un adjoint
-     * ne prend pas leur compte ; ils ne sont même pas proposés dans la liste.
+     * ne vend pas à leur nom et ne prend pas leur compte ; ils ne sont même pas proposés dans la liste.
      */
     public function testLeCodePinNOuvrePasLeCompteDuProprietaireNiDUnAdjoint(): void
     {
         $this->definirPin($this->officine->proprietaire, '2580');
         $this->definirPin($this->officine->adjoint, '3691');
+        $this->definirPin($this->officine->vendeur, self::PIN);
+        $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1000]);
+        LotFactory::createOne(['produit' => $produit]);
 
         $this->ouvrirCaisse($this->officine->vendeur);
+        $this->ajouter($produit);
         $this->client->request('GET', '/caisse');
-        $proposes = $this->client->getCrawler()->filter('#changer-utilisateur option')->each(static fn ($o) => $o->text());
+        self::assertSelectorNotExists('#changer-utilisateur', 'Le PIN demandé à chaque vente remplace « Changer de vendeur ».');
+        $proposes = $this->client->getCrawler()->filter('#vente-vendeur option')->each(static fn ($o) => $o->text());
         self::assertNotContains($this->officine->proprietaire->getNom(), $proposes);
         self::assertNotContains($this->officine->adjoint->getNom(), $proposes);
 
         foreach ([[$this->officine->proprietaire, '2580'], [$this->officine->adjoint, '3691']] as [$cible, $pin]) {
-            $this->poster('/caisse/changer-vendeur', ['utilisateur' => $cible->getId(), 'code_pin' => $pin]);
-            self::assertStringContainsString('Code PIN incorrect', $this->erreur());
+            $this->poster('/caisse/encaisser', ['vendeur' => $cible->getId(), 'pin_vendeur' => $pin]);
+            self::assertStringContainsString('Code PIN du vendeur incorrect', $this->erreur());
             self::assertSelectorTextContains('header', $this->officine->vendeur->getNom());
         }
+        $this->client->request('POST', '/caisse/changer-vendeur', ['_token' => $this->jeton()]);
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testR01LesVentesDUneAutrePharmacieSontIntrouvables(): void

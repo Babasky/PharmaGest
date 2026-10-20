@@ -21,6 +21,7 @@ use App\Security\CodePinException;
 use App\Service\ParametresPharmacie;
 use App\Stock\StockService;
 use App\Util\Fcfa;
+use App\Vente\AccordProprietaire;
 use App\Vente\GestionCaisse;
 use App\Vente\PosteCaisse;
 use App\Vente\VenteException;
@@ -105,10 +106,6 @@ final class CaisseController extends AbstractAppController
             'a_encaisser' => $ventesRepo->aEncaisser(),
             'types' => TypeVente::cases(),
             'organismes' => $organismes->actifs(),
-            'vendeurs' => array_filter(
-                $this->equipeActive(),
-                static fn (Utilisateur $u) => self::peutPrendreLaCaisseParPin($u) && $u->aUnCodePin() && $u->getId() !== $utilisateur->getId(),
-            ),
         ]);
     }
 
@@ -288,6 +285,27 @@ final class CaisseController extends AbstractAppController
         return $this->redirectToRoute('app_caisse');
     }
 
+    /**
+     * Demande l'accord du propriétaire pour le panier : il répond depuis son propre compte, sans donner son code PIN.
+     */
+    #[Route('/accord', name: 'app_caisse_accord', methods: ['POST'])]
+    #[IsCsrfTokenValid(self::CSRF)]
+    public function demanderAccord(AccordProprietaire $accords): Response
+    {
+        $vente = $this->ventes->panier($this->utilisateur());
+        try {
+            if (null === $vente) {
+                throw new VenteException('Le panier est vide.');
+            }
+            $accords->demander($vente, $this->utilisateur(), $this->pharmacie());
+            $this->addFlash('success', 'Demande envoyée au propriétaire : dès qu\'il a répondu depuis son compte, validez la vente (sans son code PIN).');
+        } catch (VenteException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_caisse');
+    }
+
     #[Route('/abandonner', name: 'app_caisse_abandonner', methods: ['POST'])]
     #[IsCsrfTokenValid(self::CSRF)]
     public function abandonner(): Response
@@ -359,47 +377,10 @@ final class CaisseController extends AbstractAppController
     }
 
     /**
-     * Changement rapide de vendeur au comptoir par code PIN (PH-04).
-     */
-    #[Route('/changer-vendeur', name: 'app_caisse_changer_vendeur', methods: ['POST'])]
-    #[IsCsrfTokenValid(self::CSRF)]
-    public function changerVendeur(Request $requete, CodePin $codePin, Security $security): Response
-    {
-        $id = $requete->getPayload()->getInt('utilisateur');
-        $cible = null;
-        foreach ($this->equipeActive() as $membre) {
-            if ($membre->getId() === $id && self::peutPrendreLaCaisseParPin($membre)) {
-                $cible = $membre;
-            }
-        }
-        try {
-            if (null === $cible || !$codePin->verifier($cible, (string) $requete->getPayload()->get('code_pin'))) {
-                throw new CodePinException('Code PIN incorrect.');
-            }
-        } catch (CodePinException $e) {
-            $this->addFlash('error', $e->getMessage());
-
-            return $this->redirectToRoute('app_caisse');
-        }
-
-        $security->login($cible, 'form_login', 'main');
-        $this->addFlash('success', \sprintf('Bonjour %s : la caisse est à vous.', $cible->getNom()));
-
-        return $this->redirectToRoute(Utilisateur::ROLE_CAISSIER === $cible->getRole() ? 'app_encaissement_index' : 'app_caisse');
-    }
-
-    /**
-     * Un code PIN à 4 chiffres ne doit pas ouvrir les droits du propriétaire ou d'un adjoint (finances, équipe, export) :
-     * par PIN, on ne prend que le compte d'un vendeur ou d'un caissier. Les autres se connectent avec leur mot de passe.
-     */
-    private static function peutPrendreLaCaisseParPin(Utilisateur $utilisateur): bool
-    {
-        return \in_array($utilisateur->getRole(), [Utilisateur::ROLE_VENDEUR, Utilisateur::ROLE_CAISSIER], true);
-    }
-
-    /**
      * Qui peut valider une vente par son code PIN à ce poste : l'utilisateur connecté et les vendeurs de l'équipe.
-     * Le propriétaire et l'adjoint ne sont proposés que s'ils sont eux-mêmes connectés (avec leur mot de passe).
+     * Le propriétaire et l'adjoint ne sont proposés que s'ils sont eux-mêmes connectés (avec leur mot de passe) :
+     * un code PIN à 4 chiffres ne doit pas ouvrir leurs droits (finances, équipe, export). Le code PIN demandé à chaque
+     * vente remplace l'ancien bouton « Changer de vendeur ».
      *
      * @return list<Utilisateur>
      */

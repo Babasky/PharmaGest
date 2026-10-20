@@ -106,6 +106,31 @@ class Vente implements TenantAwareInterface
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Utilisateur $autorisePar = null;
 
+    /**
+     * Accord du propriétaire demandé depuis la caisse (vente sans ordonnance d'un produit qui l'exige, remise hors
+     * plafond) : le propriétaire le donne depuis son propre compte, sans communiquer son code PIN.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $accordDemandeLe = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Utilisateur $accordDemandePar = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $accordReponduLe = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Utilisateur $accordReponduPar = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?bool $accordDonne = null;
+
+    /** Empreinte du panier au moment de la demande : l'accord ne vaut que pour ce panier-là. */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $accordEmpreinte = null;
+
     /** Qui a encaissé la vente : le vendeur lui-même, ou le caissier pour une vente envoyée à la caisse. */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -545,6 +570,85 @@ class Vente implements TenantAwareInterface
     public function getValideeLe(): ?\DateTimeImmutable
     {
         return $this->valideeLe;
+    }
+
+    /**
+     * @internal réservé à {@see \App\Vente\AccordProprietaire}
+     */
+    public function demanderAccord(Utilisateur $par, \DateTimeImmutable $le): void
+    {
+        $this->accordDemandeLe = $le;
+        $this->accordDemandePar = $par;
+        $this->accordReponduLe = null;
+        $this->accordReponduPar = null;
+        $this->accordDonne = null;
+        $this->accordEmpreinte = $this->empreinte();
+    }
+
+    /**
+     * @internal réservé à {@see \App\Vente\AccordProprietaire}
+     */
+    public function repondreAccord(bool $donne, Utilisateur $proprietaire, \DateTimeImmutable $le): void
+    {
+        $this->accordDonne = $donne;
+        $this->accordReponduPar = $proprietaire;
+        $this->accordReponduLe = $le;
+    }
+
+    public function getAccordDemandeLe(): ?\DateTimeImmutable
+    {
+        return $this->accordDemandeLe;
+    }
+
+    public function getAccordDemandePar(): ?Utilisateur
+    {
+        return $this->accordDemandePar;
+    }
+
+    public function getAccordReponduLe(): ?\DateTimeImmutable
+    {
+        return $this->accordReponduLe;
+    }
+
+    public function getAccordReponduPar(): ?Utilisateur
+    {
+        return $this->accordReponduPar;
+    }
+
+    /** Une demande attend la réponse du propriétaire, pour le panier tel qu'il est. */
+    public function accordEnAttente(): bool
+    {
+        return null !== $this->accordDemandeLe && null === $this->accordDonne && $this->panierInchange();
+    }
+
+    public function accordRefuse(): bool
+    {
+        return false === $this->accordDonne && $this->panierInchange();
+    }
+
+    /** Propriétaire qui a donné son accord, tant que le panier n'a pas changé depuis la demande. */
+    public function accordValide(): ?Utilisateur
+    {
+        return true === $this->accordDonne && $this->panierInchange() ? $this->accordReponduPar : null;
+    }
+
+    public function panierInchange(): bool
+    {
+        return null !== $this->accordEmpreinte && hash_equals($this->accordEmpreinte, $this->empreinte());
+    }
+
+    /**
+     * Ce que le propriétaire approuve : type de vente, client, produits, quantités et remises.
+     */
+    private function empreinte(): string
+    {
+        $lignes = [];
+        foreach ($this->lignes as $ligne) {
+            $lignes[] = [$ligne->getProduit()->getId(), $ligne->getQuantite(), $ligne->getRemiseType()?->value, $ligne->getRemiseValeur()];
+        }
+        sort($lignes);
+
+        return hash('sha256', (string) json_encode([$this->type->value, $this->client?->getId(), $this->remiseType?->value, $this->remiseValeur, $lignes]));
     }
 
     public function getAutorisePar(): ?Utilisateur

@@ -6,8 +6,8 @@
     <div class="card shadow-sm" style="max-width: 32rem">
         <div class="card-body">
             <p class="small text-body-secondary">
-                Le code PIN à 4 chiffres permet de prendre la caisse rapidement (« Changer de vendeur »)
-                {%- if is_granted('ROLE_PROPRIETAIRE') %} et d'autoriser au comptoir une remise au-delà du plafond ou une vente sans ordonnance{% endif %}.
+                Le code PIN à 4 chiffres valide chacune de vos ventes à la caisse : celui qui le saisit fait la vente et prend la main
+                {%- if is_granted('ROLE_PROPRIETAIRE') %} et d'autoriser au comptoir une remise au-delà du plafond ou une vente sans ordonnance (vous pouvez aussi l'accorder depuis votre compte, sans donner votre code){% endif %}.
                 Ne le communiquez à personne.
                 {% if a_un_code %}<br><strong>Un code est déjà enregistré :</strong> le nouveau le remplacera.{% endif %}
             </p>

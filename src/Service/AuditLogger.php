@@ -33,6 +33,8 @@ class AuditLogger
     public const VENTE_ANNULEE = 'vente.annulee';
     public const VENTE_REMISE_HORS_PLAFOND = 'vente.remise_hors_plafond';
     public const VENTE_SANS_ORDONNANCE = 'vente.sans_ordonnance';
+    public const VENTE_ACCORD_DONNE = 'vente.accord_donne';
+    public const VENTE_ACCORD_REFUSE = 'vente.accord_refuse';
     public const VENTE_HORS_LIGNE_ECART = 'vente.hors_ligne_ecart';
     public const VENTE_HORS_LIGNE_REJETEE = 'vente.hors_ligne_rejetee';
     public const CAISSE_ECART = 'caisse.ecart';
@@ -80,6 +82,8 @@ class AuditLogger
         self::VENTE_ANNULEE => 'Vente annulée',
         self::VENTE_REMISE_HORS_PLAFOND => 'Remise au-delà du plafond',
         self::VENTE_SANS_ORDONNANCE => 'Vente sans ordonnance autorisée',
+        self::VENTE_ACCORD_DONNE => 'Accord du propriétaire donné à distance',
+        self::VENTE_ACCORD_REFUSE => 'Accord du propriétaire refusé',
         self::VENTE_HORS_LIGNE_ECART => 'Écart sur une vente hors ligne',
         self::VENTE_HORS_LIGNE_REJETEE => 'Vente hors ligne rejetée',
         self::CAISSE_ECART => 'Écart de caisse',
