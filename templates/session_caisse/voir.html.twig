@@ -34,7 +34,7 @@
                 <table class="table table-sm mb-0">
                     <thead class="table-light small"><tr><th class="ps-3">Mode</th><th class="text-end">Encaissé</th><th class="text-end">Remboursé</th><th class="text-end pe-3">Net</th></tr></thead>
                     <tbody>
-                        {% for mode in synthese.modes|filter(m => voit_especes or m.value != 'especes') %}
+                        {% for mode in synthese.modes %}
                             <tr>
                                 <td class="ps-3">{{ mode.libelle }}</td>
                                 <td class="montant">{{ synthese.encaissements[mode.value]|fcfa }}</td>
@@ -52,15 +52,12 @@
                 <div class="card-body">
                     <dl class="row mb-3">
                         <dt class="col-7 fw-normal">Fond de caisse</dt><dd class="col-5 montant">{{ session.fondCaisse|fcfa }}</dd>
-                        {# Hors propriétaire, le tiroir se compte à l'aveugle : rien ne permet de retrouver le montant attendu. #}
-                        {% if voit_especes %}
-                            <dt class="col-7 fw-normal">+ Encaissements espèces</dt><dd class="col-5 montant">{{ synthese.encaissements.especes|fcfa }}</dd>
-                            <dt class="col-7 fw-normal">− Remboursements espèces</dt><dd class="col-5 montant">{{ synthese.decaissements.especes|fcfa }}</dd>
-                            <dt class="col-7">Espèces attendues</dt><dd class="col-5 montant fw-bold" id="attendues">{{ (session.estOuverte ? synthese.especesAttendues : session.especesAttendues)|fcfa }}</dd>
-                        {% endif %}
+                        <dt class="col-7 fw-normal">+ Encaissements espèces</dt><dd class="col-5 montant">{{ synthese.encaissements.especes|fcfa }}</dd>
+                        <dt class="col-7 fw-normal">− Remboursements espèces</dt><dd class="col-5 montant">{{ synthese.decaissements.especes|fcfa }}</dd>
+                        <dt class="col-7">Espèces attendues</dt><dd class="col-5 montant fw-bold" id="attendues">{{ (session.estOuverte ? synthese.especesAttendues : session.especesAttendues)|fcfa }}</dd>
                         {% if not session.estOuverte %}
                             <dt class="col-7">Espèces comptées</dt><dd class="col-5 montant fw-bold" id="comptees">{{ session.especesComptees|fcfa }}</dd>
-                            {% if voit_especes %}<dt class="col-7">Écart</dt><dd class="col-5 montant fw-bold {{ session.ecart != 0 ? 'text-danger' : 'text-success' }}" id="ecart">{{ session.ecart|fcfa }}</dd>{% endif %}
+                            <dt class="col-7">Écart</dt><dd class="col-5 montant fw-bold {{ session.ecart != 0 ? 'text-danger' : 'text-success' }}" id="ecart">{{ session.ecart|fcfa }}</dd>
                             {% if session.justification %}<dt class="col-12 fw-normal small text-body-secondary">Justification : {{ session.justification }}</dt>{% endif %}
                         {% endif %}
                     </dl>
@@ -68,7 +65,7 @@
                     {% if session.estOuverte and ecriture_autorisee() %}
                         <form method="post" action="{{ path('app_session_caisse_cloturer', {id: session.id}) }}" id="cloture">
                             <input type="hidden" name="_token" value="{{ csrf_token('cloture-' ~ session.id) }}">
-                            <p class="small text-body-secondary">Comptez les billets et pièces du tiroir. L'écart (RG-13) est calculé à la validation ; s'il n'est pas nul, une justification est obligatoire.{% if not voit_especes %} Les montants attendus ne sont visibles que par le propriétaire.{% endif %}</p>
+                            <p class="small text-body-secondary">Comptez les billets et pièces du tiroir. L'écart (RG-13) est calculé à la validation ; s'il n'est pas nul, une justification est obligatoire.</p>
                             <div class="row g-2">
                                 {% for cle, coupure in coupures %}
                                     <div class="col-6 col-md-4">

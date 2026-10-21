@@ -18,6 +18,8 @@ class AuditLogger
     public const UTILISATEUR_MODIFIE = 'utilisateur.modifie';
     public const UTILISATEUR_DESACTIVE = 'utilisateur.desactive';
     public const UTILISATEUR_REACTIVE = 'utilisateur.reactive';
+    public const PROPRIETAIRE_AJOUTE = 'proprietaire.ajoute';
+    public const PROPRIETAIRE_RETIRE = 'proprietaire.retire';
     public const PHARMACIE_CREEE = 'pharmacie.creee';
     public const PHARMACIE_SUSPENDUE = 'pharmacie.suspendue';
     public const PHARMACIE_REACTIVEE = 'pharmacie.reactivee';
@@ -33,6 +35,8 @@ class AuditLogger
     public const VENTE_ANNULEE = 'vente.annulee';
     public const VENTE_REMISE_HORS_PLAFOND = 'vente.remise_hors_plafond';
     public const VENTE_SANS_ORDONNANCE = 'vente.sans_ordonnance';
+    public const VENTE_ACCORD_DONNE = 'vente.accord_donne';
+    public const VENTE_ACCORD_REFUSE = 'vente.accord_refuse';
     public const VENTE_HORS_LIGNE_ECART = 'vente.hors_ligne_ecart';
     public const VENTE_HORS_LIGNE_REJETEE = 'vente.hors_ligne_rejetee';
     public const CAISSE_ECART = 'caisse.ecart';
@@ -57,7 +61,7 @@ class AuditLogger
     public const ACTIONS_PLATEFORME = [
         self::PHARMACIE_CREEE, self::PHARMACIE_SUSPENDUE, self::PHARMACIE_REACTIVEE, self::PHARMACIE_ARCHIVEE,
         self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT, self::OFFRE_MODIFIEE, self::SUPPORT_MODIFIE,
-        self::SUPER_ADMIN_CREE,
+        self::SUPER_ADMIN_CREE, self::PROPRIETAIRE_AJOUTE, self::PROPRIETAIRE_RETIRE,
     ];
 
     public const LIBELLES = [
@@ -65,6 +69,8 @@ class AuditLogger
         self::UTILISATEUR_MODIFIE => 'Utilisateur modifié',
         self::UTILISATEUR_DESACTIVE => 'Utilisateur désactivé',
         self::UTILISATEUR_REACTIVE => 'Utilisateur réactivé',
+        self::PROPRIETAIRE_AJOUTE => 'Propriétaire associé ajouté',
+        self::PROPRIETAIRE_RETIRE => 'Propriétaire associé retiré',
         self::PHARMACIE_CREEE => 'Pharmacie créée',
         self::PHARMACIE_SUSPENDUE => 'Pharmacie suspendue',
         self::PHARMACIE_REACTIVEE => 'Pharmacie réactivée',
@@ -80,6 +86,8 @@ class AuditLogger
         self::VENTE_ANNULEE => 'Vente annulée',
         self::VENTE_REMISE_HORS_PLAFOND => 'Remise au-delà du plafond',
         self::VENTE_SANS_ORDONNANCE => 'Vente sans ordonnance autorisée',
+        self::VENTE_ACCORD_DONNE => 'Accord du propriétaire donné à distance',
+        self::VENTE_ACCORD_REFUSE => 'Accord du propriétaire refusé',
         self::VENTE_HORS_LIGNE_ECART => 'Écart sur une vente hors ligne',
         self::VENTE_HORS_LIGNE_REJETEE => 'Vente hors ligne rejetée',
         self::CAISSE_ECART => 'Écart de caisse',

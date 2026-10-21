@@ -1,0 +1,31 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Accords demandés{% endblock %}
+
+{% block content %}
+    <p class="small text-body-secondary">
+        Un vendeur demande votre accord pour une vente sans ordonnance d'un produit qui l'exige, ou pour une remise au-delà
+        du plafond. Vous répondez d'ici, sans donner votre code PIN ; l'accord ne vaut que pour le panier présenté.
+    </p>
+    <div class="card shadow-sm" id="accords">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th class="ps-3">Demandé à</th><th>Vendeur</th><th>Produits</th><th class="text-end pe-3"></th></tr>
+                </thead>
+                <tbody>
+                    {% for vente in ventes %}
+                        <tr>
+                            <td class="ps-3 text-nowrap">{{ vente.accordDemandeLe|date('d/m H:i') }}</td>
+                            <td>{{ vente.accordDemandePar ? vente.accordDemandePar.nom : vente.vendeur.nom }}</td>
+                            <td class="small">{% for ligne in vente.lignes %}{{ ligne.produit.nomCommercial }} × {{ ligne.quantite }}{{ not loop.last ? ', ' }}{% endfor %}</td>
+                            <td class="text-end pe-3"><a class="btn btn-sm btn-success" href="{{ path('app_accord_voir', {id: vente.id}) }}">Examiner</a></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-body-secondary py-4">Aucune demande en attente.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

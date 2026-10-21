@@ -1,0 +1,27 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Ajouter un associé{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm" style="max-width: 40rem">
+        <div class="card-body">
+            <p class="text-body-secondary">
+                Un associé est un autre pharmacien propriétaire de la pharmacie. Il a les mêmes droits que vous :
+                finances, paramètres, équipe, abonnement et autorisations par code PIN.
+                Il compte parmi les utilisateurs de l'offre. Seul le support SoftPharm peut retirer un associé.
+            </p>
+            {% if places_restantes is same as(0) %}
+                <div class="alert alert-warning">La limite d'utilisateurs de votre offre est atteinte : désactivez un compte avant d'ajouter un associé.</div>
+            {% endif %}
+            {{ form_start(formulaire) }}
+                {{ form_row(formulaire.nom) }}
+                {{ form_row(formulaire.email) }}
+                {{ form_row(formulaire.motDePasseInitial) }}
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" type="submit">Ajouter l'associé</button>
+                    <a class="btn btn-outline-secondary" href="{{ path('app_equipe_index') }}">Annuler</a>
+                </div>
+            {{ form_end(formulaire) }}
+        </div>
+    </div>
+{% endblock %}

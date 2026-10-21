@@ -5,6 +5,8 @@ namespace App\Tests\Functional\Caisse;
 use App\Entity\Utilisateur;
 use App\Security\CodePin;
 use App\Tests\Factory\AffectationFactory;
+use App\Tests\Factory\LotFactory;
+use App\Tests\Factory\ProduitFactory;
 use App\Tests\Factory\UtilisateurFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -46,13 +48,16 @@ final class CodePinTest extends CaisseTestCase
         $collegue = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_VENDEUR]);
         AffectationFactory::createOne(['utilisateur' => $collegue, 'pharmacie' => $this->officine->pharmacie]);
         $this->definirPin($collegue, '2580');
+        $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1000]);
+        LotFactory::createOne(['produit' => $produit]);
         $this->ouvrirCaisse($this->officine->vendeur);
+        $this->ajouter($produit);
 
         for ($i = 0; $i < 5; ++$i) {
-            $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '000'.$i]);
-            self::assertStringContainsString('Code PIN incorrect', $this->erreur());
+            $this->poster('/caisse/encaisser', ['vendeur' => $collegue->getId(), 'pin_vendeur' => '000'.$i]);
+            self::assertStringContainsString('Code PIN du vendeur incorrect', $this->erreur());
         }
-        $this->poster('/caisse/changer-vendeur', ['utilisateur' => $collegue->getId(), 'code_pin' => '2580']);
+        $this->poster('/caisse/encaisser', ['vendeur' => $collegue->getId(), 'pin_vendeur' => '2580']);
         self::assertStringContainsString('Trop d\'essais', $this->erreur(), 'Même le bon code est refusé pendant le blocage.');
     }
 }

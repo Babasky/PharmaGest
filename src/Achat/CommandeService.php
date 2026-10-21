@@ -2,6 +2,8 @@
 
 namespace App\Achat;
 
+use App\Achat\PharmaMl\ClientPharmaMl;
+use App\Achat\PharmaMl\PharmaMlIndisponible;
 use App\Entity\Commande;
 use App\Entity\EnvoiCommande;
 use App\Entity\Fournisseur;
@@ -32,6 +34,7 @@ class CommandeService
         private readonly AuditLogger $audit,
         private readonly TenantContext $tenantContext,
         private readonly ClockInterface $horloge,
+        private readonly ClientPharmaMl $pharmaMl,
     ) {
     }
 
@@ -183,6 +186,47 @@ class CommandeService
             $this->em->flush();
 
             throw new AchatException(\sprintf('L\'email n\'a pas pu être envoyé à %s : %s La commande n\'a pas changé ; réessayez plus tard ou passez-la sans email.', $destinataire, rtrim($e->getMessage(), '.').'.'), previous: $e);
+        }
+    }
+
+    /**
+     * Transmission par le canal du fournisseur : Pharma-ML quand il est paramétré, sinon (ou si Pharma-ML est
+     * indisponible) l'email du bon de commande.
+     *
+     * @return array{0: EnvoiCommande, 1: string|null} l'envoi, et la raison du repli sur l'email s'il y en a eu un
+     *
+     * @throws AchatException
+     */
+    public function transmettre(Commande $commande): array
+    {
+        $fournisseur = $commande->getFournisseur();
+        if (!$fournisseur->pharmaMlParametre() || (!$commande->estBrouillon() && !$commande->estReceptionnable())) {
+            return [$this->envoyer($commande), null];
+        }
+        if ($commande->estBrouillon()) {
+            $this->exigerPassable($commande);
+        }
+        $utilisateur = $this->tenantContext->getUtilisateur();
+        $destinataire = mb_substr('Pharma-ML '.$fournisseur->getPharmaMlUrl(), 0, 180);
+        try {
+            return [$this->transaction(function () use ($commande, $destinataire, $utilisateur): EnvoiCommande {
+                if ($commande->estBrouillon()) {
+                    $this->attribuerNumero($commande);
+                }
+                $reference = $this->pharmaMl->transmettre($commande);
+                $envoi = new EnvoiCommande($commande, $this->horloge->now(), $destinataire, StatutEnvoi::Envoye, $utilisateur, mb_substr('Réf. répartiteur '.$reference, 0, 255));
+                $this->em->persist($envoi);
+                $this->em->flush();
+
+                return $envoi;
+            }), null];
+        } catch (PharmaMlIndisponible $e) {
+            $this->em->refresh($commande);
+            if (null === $fournisseur->getEmail()) {
+                throw new AchatException(\sprintf('%s Le fournisseur %s n\'a pas d\'email : la commande reste en brouillon, transmettez-la autrement.', $e->getMessage(), $fournisseur->getNom()), previous: $e);
+            }
+
+            return [$this->envoyer($commande), $e->getMessage()];
         }
     }
 

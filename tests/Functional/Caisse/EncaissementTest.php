@@ -94,10 +94,8 @@ final class EncaissementTest extends CaisseTestCase
 
         // Les espèces de la vente sont attendues dans la caisse du caissier, pas dans celle du vendeur.
         $this->client->request('GET', '/caisse/sessions/cloture');
-        $sessionDuCaissier = (string) $this->client->getResponse()->headers->get('Location');
-        $this->connecter($this->officine->proprietaire)->request('GET', $sessionDuCaissier);
+        $this->client->followRedirect();
         self::assertSelectorTextContains('#attendues', "6\u{00A0}500");
-        $this->connecter($this->caissier);
 
         // Une deuxième tentative ne l'encaisse pas deux fois.
         $this->client->request('GET', '/encaissement');
@@ -163,6 +161,34 @@ final class EncaissementTest extends CaisseTestCase
 
         $this->client->request('GET', '/encaissement/'.$vente->getId());
         self::assertResponseRedirects('/ventes/'.$vente->getId());
+    }
+
+    public function testUneVenteEnCaisseDepuisLaVeilleSAnnuleEncore(): void
+    {
+        $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1000]);
+        $lot = LotFactory::createOne(['produit' => $produit, 'quantiteInitiale' => 5]);
+
+        $this->connecter($this->officine->vendeur);
+        $this->ajouter($produit, 2);
+        $this->envoyerALaCaisse();
+        $vente = $this->derniereVente();
+        // Le client n'est jamais passé payer : la vente attend depuis la veille.
+        $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getConnection()->executeStatement(
+            'UPDATE vente SET validee_le = ? WHERE id = ?',
+            [(new \DateTimeImmutable('-1 day'))->format('Y-m-d H:i:s'), $vente->getId()],
+        ));
+
+        $this->ouvrirCaissier();
+        $this->client->request('GET', '/encaissement/'.$vente->getId());
+        $this->client->submitForm('Annuler la vente', ['motif' => 'Client jamais revenu']);
+        self::assertResponseRedirects('/encaissement');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', 'revenus en stock');
+
+        $this->sansFiltre(static function (EntityManagerInterface $em) use ($lot, $vente): void {
+            self::assertSame(5, $em->find(Lot::class, $lot->getId())?->getQuantiteRestante());
+            self::assertSame(StatutVente::Annulee, $em->find(Vente::class, $vente->getId())?->getStatut());
+        });
     }
 
     public function testLeCaissierNAccedeQuALEncaissementEtAuxVentes(): void

@@ -215,6 +215,25 @@ class VenteService
     }
 
     /**
+     * Photo ou PDF de l'accord préalable de l'organisme, joint à la ligne au panier.
+     *
+     * @throws VenteException
+     */
+    public function copieAccordLigne(LigneVente $ligne, UploadedFile $fichier): void
+    {
+        $this->exigerModifiable($ligne->getVente());
+        if (!$ligne->isAccordPrealable()) {
+            throw new VenteException(\sprintf('%s ne demande pas d\'accord préalable.', $ligne->getProduit()->getNomCommercial()));
+        }
+        try {
+            $this->copies->enregistrerAccord($this->tenantContext->exigerPharmacie(), $ligne, $fichier);
+        } catch (AmoException $e) {
+            throw new VenteException($e->getMessage(), 0, $e);
+        }
+        $this->em->flush();
+    }
+
+    /**
      * Assurance autre que l'AMO : produit pris en charge ou non, coché au panier d'après l'ordonnance.
      *
      * @throws VenteException
@@ -521,8 +540,9 @@ class VenteService
         if ('' === $motif) {
             throw new VenteException('Le motif de l\'annulation est obligatoire.');
         }
-        // Une vente envoyée à la caisse et jamais payée s'annule tant qu'elle attend : rien n'a été encaissé.
-        if ($vente->estValidee() && !($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d')) {
+        // Une vente envoyée à la caisse et jamais payée s'annule tant qu'elle attend, même les jours suivants :
+        // rien n'a été encaissé, et ses produits doivent revenir en stock.
+        if ($vente->estValidee() && (!($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d'))) {
             throw new VenteException('Une vente ne s\'annule que le jour même, avant la clôture de sa session de caisse. Au-delà, il faut établir un avoir.');
         }
         $creance = $this->creances->pourVente($vente);
@@ -572,7 +592,10 @@ class VenteService
         }
 
         $autorisePar = null;
-        if ($controle->exigeCodePin()) {
+        if ($controle->exigeCodePin() && null !== $vente->accordValide() && (null === $codePin || '' === trim($codePin))) {
+            // Accord donné à distance par le propriétaire, pour ce panier tel quel.
+            $autorisePar = $vente->accordValide();
+        } elseif ($controle->exigeCodePin()) {
             try {
                 $autorisePar = $this->codePin->autorisationProprietaire($pharmacie, $codePin);
             } catch (CodePinException $e) {

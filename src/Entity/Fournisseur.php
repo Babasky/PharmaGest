@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\CanalTransmission;
 use App\Referentiel\ArchivableTrait;
 use App\Repository\FournisseurRepository;
 use App\Tenant\TenantAwareInterface;
@@ -60,7 +61,7 @@ class Fournisseur implements TenantAwareInterface
 
     /**
      * Heure (0 à 23, heure de Bamako) à laquelle la commande suggérée part d'elle-même chez ce fournisseur,
-     * quand la pharmacie a activé l'envoi automatique. Vide : pas de commande automatique chez lui.
+     * quand la pharmacie a activé l'envoi automatique. Vide : l'heure des commandes automatiques de la pharmacie.
      */
     #[ORM\Column(nullable: true)]
     #[Assert\Range(min: 0, max: 23)]
@@ -69,6 +70,34 @@ class Fournisseur implements TenantAwareInterface
     /** Jours de la commande automatique (1 = lundi … 7 = dimanche, séparés par des virgules) ; vide : tous les jours. */
     #[ORM\Column(length: 13, nullable: true)]
     private ?string $joursCommande = null;
+
+    /** Faux : ce fournisseur ne reçoit jamais de commande automatique (on lui commande à la main). */
+    #[ORM\Column(options: ['default' => true])]
+    private bool $commandeAutomatique = true;
+
+    #[ORM\Column(length: 20, enumType: CanalTransmission::class, options: ['default' => 'email'])]
+    private CanalTransmission $canalTransmission = CanalTransmission::Email;
+
+    /** Pharma-ML : adresse du serveur du répartiteur, fournie par lui. */
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Url(requireTld: true)]
+    #[Assert\Length(max: 255)]
+    private ?string $pharmaMlUrl = null;
+
+    /** Pharma-ML : identifiant de l'officine chez le répartiteur (code client). */
+    #[ORM\Column(length: 60, nullable: true)]
+    #[Assert\Length(max: 60)]
+    private ?string $pharmaMlIdentifiant = null;
+
+    /** Pharma-ML : identifiant du répartiteur (code de l'agence). */
+    #[ORM\Column(length: 60, nullable: true)]
+    #[Assert\Length(max: 60)]
+    private ?string $pharmaMlCodeRepartiteur = null;
+
+    /** Pharma-ML : clé ou mot de passe remis par le répartiteur. */
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Length(max: 255)]
+    private ?string $pharmaMlCle = null;
 
     public function getId(): ?int
     {
@@ -201,15 +230,113 @@ class Fournisseur implements TenantAwareInterface
         return $this;
     }
 
-    /** La commande automatique part-elle chez ce fournisseur à cet instant (même heure, jour prévu) ? */
-    public function commandeAutomatiquePrevue(\DateTimeImmutable $instant): bool
+    /**
+     * La commande automatique part-elle chez ce fournisseur à cet instant ? Même heure (la sienne, à défaut celle de
+     * la pharmacie) et jour prévu.
+     */
+    public function commandeAutomatiquePrevue(\DateTimeImmutable $instant, int $heureParDefaut): bool
     {
-        if (null === $this->heureCommande || $this->heureCommande !== (int) $instant->format('G')) {
+        if (!$this->commandeAutomatique || ($this->heureCommande ?? $heureParDefaut) !== (int) $instant->format('G')) {
             return false;
         }
         $jours = $this->getJoursCommande();
 
         return [] === $jours || \in_array((int) $instant->format('N'), $jours, true);
+    }
+
+    public function isCommandeAutomatique(): bool
+    {
+        return $this->commandeAutomatique;
+    }
+
+    public function setCommandeAutomatique(bool $commandeAutomatique): static
+    {
+        $this->commandeAutomatique = $commandeAutomatique;
+
+        return $this;
+    }
+
+    public function getCanalTransmission(): CanalTransmission
+    {
+        return $this->canalTransmission;
+    }
+
+    public function setCanalTransmission(CanalTransmission $canal): static
+    {
+        $this->canalTransmission = $canal;
+
+        return $this;
+    }
+
+    public function getPharmaMlUrl(): ?string
+    {
+        return $this->pharmaMlUrl;
+    }
+
+    public function setPharmaMlUrl(?string $url): static
+    {
+        $this->pharmaMlUrl = self::nettoyer($url);
+
+        return $this;
+    }
+
+    public function getPharmaMlIdentifiant(): ?string
+    {
+        return $this->pharmaMlIdentifiant;
+    }
+
+    public function setPharmaMlIdentifiant(?string $identifiant): static
+    {
+        $this->pharmaMlIdentifiant = self::nettoyer($identifiant);
+
+        return $this;
+    }
+
+    public function getPharmaMlCodeRepartiteur(): ?string
+    {
+        return $this->pharmaMlCodeRepartiteur;
+    }
+
+    public function setPharmaMlCodeRepartiteur(?string $code): static
+    {
+        $this->pharmaMlCodeRepartiteur = self::nettoyer($code);
+
+        return $this;
+    }
+
+    public function getPharmaMlCle(): ?string
+    {
+        return $this->pharmaMlCle;
+    }
+
+    /** Une clé vide laisse la clé enregistrée (le formulaire ne la réaffiche jamais). */
+    public function setPharmaMlCle(?string $cle): static
+    {
+        if (null !== $cle = self::nettoyer($cle)) {
+            $this->pharmaMlCle = $cle;
+        }
+
+        return $this;
+    }
+
+    /** Pharma-ML choisi et paramètres du répartiteur renseignés. */
+    public function pharmaMlParametre(): bool
+    {
+        return CanalTransmission::PharmaMl === $this->canalTransmission
+            && null !== $this->pharmaMlUrl && null !== $this->pharmaMlIdentifiant && null !== $this->pharmaMlCle;
+    }
+
+    #[Assert\Callback]
+    public function validerPharmaMl(ExecutionContextInterface $contexte): void
+    {
+        if (CanalTransmission::PharmaMl !== $this->canalTransmission) {
+            return;
+        }
+        foreach (['pharmaMlUrl' => $this->pharmaMlUrl, 'pharmaMlIdentifiant' => $this->pharmaMlIdentifiant, 'pharmaMlCle' => $this->pharmaMlCle] as $champ => $valeur) {
+            if (null === $valeur) {
+                $contexte->buildViolation('Obligatoire pour Pharma-ML : à demander au répartiteur.')->atPath($champ)->addViolation();
+            }
+        }
     }
 
     public function __toString(): string

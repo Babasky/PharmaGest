@@ -156,7 +156,11 @@
                 {% if responsable and commande.lignes is not empty %}
                     <form method="post" action="{{ path('app_commande_envoyer', {id: commande.id}) }}">
                         <input type="hidden" name="_token" value="{{ jeton }}">
-                        <button class="btn btn-success" type="submit"{{ fournisseur.email ? '' : ' disabled' }} data-turbo-confirm="Envoyer la commande à {{ fournisseur.email }} ? Elle recevra son numéro et ne sera plus modifiable."><i class="bi bi-envelope"></i> Envoyer par email</button>
+                        {% if fournisseur.pharmaMlParametre %}
+                            <button class="btn btn-success" type="submit" data-turbo-confirm="Transmettre la commande à {{ fournisseur.nom }} par Pharma-ML ? Elle recevra son numéro et ne sera plus modifiable."><i class="bi bi-send"></i> Transmettre par Pharma-ML</button>
+                        {% else %}
+                            <button class="btn btn-success" type="submit"{{ fournisseur.email ? '' : ' disabled' }} data-turbo-confirm="Envoyer la commande à {{ fournisseur.email }} ? Elle recevra son numéro et ne sera plus modifiable."><i class="bi bi-envelope"></i> Envoyer par email</button>
+                        {% endif %}
                     </form>
                     <form method="post" action="{{ path('app_commande_passer', {id: commande.id}) }}">
                         <input type="hidden" name="_token" value="{{ jeton }}">

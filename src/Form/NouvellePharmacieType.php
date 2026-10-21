@@ -38,7 +38,7 @@ final class NouvellePharmacieType extends AbstractType
             ->add('nomProprietaire', TextType::class, ['label' => 'Nom du pharmacien titulaire'])
             ->add('emailProprietaire', EmailType::class, [
                 'label' => 'Email du pharmacien titulaire',
-                'help' => 'Il recevra un lien pour activer son compte. Si l\'email correspond déjà à un propriétaire, la pharmacie lui est ajoutée.',
+                'help' => 'Il recevra un lien pour activer son compte. Si l\'email correspond déjà à un propriétaire, la pharmacie lui est ajoutée. Les associés s\'ajoutent ensuite depuis la fiche de la pharmacie.',
             ]);
     }
 

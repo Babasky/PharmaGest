@@ -146,12 +146,11 @@ class GestionCaisse
     }
 
     /**
-     * @param array<array-key, mixed> $saisie       nombre de billets et pièces par clé de {@see SessionCaisse::COUPURES}
-     * @param bool                    $montrerEcart faux pour un comptage à l'aveugle : le message ne donne pas le montant de l'écart
+     * @param array<array-key, mixed> $saisie nombre de billets et pièces par clé de {@see SessionCaisse::COUPURES}
      *
      * @throws VenteException
      */
-    public function cloturer(SessionCaisse $session, array $saisie, ?string $justification, bool $montrerEcart = true): SyntheseSession
+    public function cloturer(SessionCaisse $session, array $saisie, ?string $justification): SyntheseSession
     {
         if (!$session->estOuverte()) {
             throw new VenteException(\sprintf('La session %s est déjà clôturée.', $session->getNumero()));
@@ -173,7 +172,7 @@ class GestionCaisse
         $synthese = $this->synthese($session);
         $ecart = SessionCaisse::totalComptage($comptage) - $synthese->especesAttendues();
         if (0 !== $ecart && null === $justification) {
-            throw new VenteException($montrerEcart ? \sprintf('Écart de %s : la justification est obligatoire.', \App\Util\Fcfa::format($ecart)) : 'Le comptage ne correspond pas aux espèces attendues : recomptez le tiroir ou justifiez l\'écart.');
+            throw new VenteException(\sprintf('Écart de %s : la justification est obligatoire.', \App\Util\Fcfa::format($ecart)));
         }
 
         $this->stock->transaction(function () use ($session, $comptage, $synthese, $justification): void {

@@ -6,6 +6,7 @@ use App\Entity\ParametrePharmacie;
 use App\Enum\PolitiqueSansOrdonnance;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -60,9 +61,14 @@ final class ParametresType extends AbstractType
                 'help' => 'La quantité suggérée couvre le délai de livraison du grossiste, puis ce nombre de jours de ventes.',
                 'attr' => ['min' => 1, 'max' => 180],
             ])
+            ->add('heureCommandesAutomatiques', ChoiceType::class, [
+                'label' => 'Commandes automatiques : heure d\'envoi',
+                'choices' => array_combine(array_map(static fn (int $h) => \sprintf('%d h', $h), range(0, 23)), range(0, 23)),
+                'help' => 'Pour les fournisseurs qui n\'ont pas leur propre heure sur leur fiche.',
+            ])
             ->add('envoiAutomatiqueCommandes', CheckboxType::class, [
                 'label' => 'Envoyer automatiquement les commandes suggérées aux grossistes',
-                'help' => 'À l\'heure et aux jours choisis sur la fiche de chaque fournisseur (il lui faut une adresse email). Une commande avec une quantité inhabituelle (plus de trois fois le dernier achat) reste en brouillon, à vérifier. Sans cette case, un responsable vérifie les commandes préparées avant de les envoyer.',
+                'help' => 'À l\'heure ci-dessus, ou à celle choisie sur la fiche du fournisseur (il lui faut un email ou Pharma-ML). Une commande avec une quantité inhabituelle (plus de trois fois le dernier achat) reste en brouillon, à vérifier. Sans cette case, un responsable vérifie les commandes préparées avant de les envoyer.',
                 'required' => false,
             ]);
     }

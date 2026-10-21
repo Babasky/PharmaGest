@@ -35,6 +35,25 @@ class VenteRepository extends ServiceEntityRepository
     }
 
     /**
+     * Paniers dont le vendeur attend l'accord du propriétaire, les plus anciennes demandes d'abord.
+     *
+     * @return list<Vente>
+     */
+    public function accordsEnAttente(): array
+    {
+        /** @var list<Vente> $ventes */
+        $ventes = $this->createQueryBuilder('v')
+            ->join('v.vendeur', 'u')->addSelect('u')
+            ->andWhere('v.statut IN (:statuts)')->setParameter('statuts', [StatutVente::EnCours, StatutVente::EnAttente])
+            ->andWhere('v.accordDemandeLe IS NOT NULL')
+            ->andWhere('v.accordReponduLe IS NULL')
+            ->orderBy('v.accordDemandeLe', 'ASC')
+            ->getQuery()->getResult();
+
+        return array_values(array_filter($ventes, static fn (Vente $v) => $v->accordEnAttente()));
+    }
+
+    /**
      * Ventes mises en attente dans la pharmacie (VE-07), les plus anciennes d'abord.
      *
      * @return list<Vente>

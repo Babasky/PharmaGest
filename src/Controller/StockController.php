@@ -106,7 +106,7 @@ final class StockController extends AbstractAppController
         $formulaire->handleRequest($requete);
         if ($formulaire->isSubmitted() && $formulaire->isValid()) {
             try {
-                $lot = $this->stock->entrer($produit, (string) $entree->numero, $entree->datePeremption ?? new \DateTimeImmutable(), (int) $entree->quantite, (int) $entree->prixAchat, $entree->fournisseur, motif: $entree->motif);
+                $lot = $this->stock->entrer($produit, (string) $entree->numero, $entree->datePeremption, (int) $entree->quantite, (int) $entree->prixAchat, $entree->fournisseur, motif: $entree->motif);
                 $this->addFlash('success', \sprintf('%d unité(s) de %s entrée(s) en stock (lot %s).', $lot->getQuantiteInitiale(), $produit->getNomCommercial(), $lot->getNumero()));
 
                 return $this->redirectToRoute('app_produit_voir', ['id' => $produit->getId()]);
