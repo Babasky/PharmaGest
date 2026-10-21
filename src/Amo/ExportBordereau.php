@@ -4,6 +4,7 @@ namespace App\Amo;
 
 use App\Entity\BordereauAmo;
 use App\Entity\CreanceAmo;
+use App\Entity\LigneVente;
 use App\Entity\Pharmacie;
 use App\Pdf\GenerateurPdf;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -16,7 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Exports du bordereau AMO (AM-07) : classeur Excel, et PDF unique avec les copies des ordonnances en annexe.
+ * Exports du bordereau AMO (AM-07) : classeur Excel, et PDF unique avec les copies des ordonnances et des accords
+ * préalables en annexe.
  */
 class ExportBordereau
 {
@@ -143,7 +145,10 @@ class ExportBordereau
                 $sansCopie[] = $creance;
             } else {
                 // Une copie PDF ne s'insère pas dans le PDF du bordereau : son annexe renvoie au fichier, fourni dans le ZIP.
-                $annexes[] = ['numero' => $n + 1, 'creance' => $creance, 'image' => $this->copies->dataUri($pharmacie, $ordonnance), 'fichier' => $this->nomCopie($n + 1, $creance)];
+                $annexes[] = ['numero' => $n + 1, 'creance' => $creance, 'image' => $this->copies->dataUri($pharmacie, $ordonnance), 'fichier' => $this->nomCopie($n + 1, $creance), 'accord' => null];
+            }
+            foreach ($this->accords($creance) as $k => $ligne) {
+                $annexes[] = ['numero' => $n + 1, 'creance' => $creance, 'image' => $this->copies->dataUriAccord($pharmacie, $ligne), 'fichier' => $this->nomAccord($n + 1, $creance, $k, $ligne), 'accord' => $ligne];
             }
         }
 
@@ -161,7 +166,7 @@ class ExportBordereau
     }
 
     /**
-     * Archive ZIP des copies d'ordonnances du bordereau (photos et PDF), nommées par n° de ligne et de vente,
+     * Archive ZIP des copies d'ordonnances et d'accords préalables du bordereau (photos et PDF), nommées par n° de ligne et de vente,
      * à remettre à l'organisme avec le bordereau. Fichier temporaire, supprimé après l'envoi.
      */
     public function reponseCopies(BordereauAmo $bordereau): Response
@@ -178,6 +183,9 @@ class ExportBordereau
             if (null !== $copie) {
                 $zip->addFile($copie, $this->nomCopie($n + 1, $creance));
             }
+            foreach ($this->accords($creance) as $k => $ligne) {
+                $zip->addFile((string) $this->copies->cheminAccord($pharmacie, $ligne), $this->nomAccord($n + 1, $creance, $k, $ligne));
+            }
         }
         $zip->close();
 
@@ -193,6 +201,29 @@ class ExportBordereau
         $copie = (string) $creance->getVente()->getOrdonnance()?->getCopie();
 
         return \sprintf('%02d-%s.%s', $rang, $creance->getVente()->getNumero(), pathinfo($copie, \PATHINFO_EXTENSION));
+    }
+
+    /**
+     * Lignes prises en charge avec la copie de leur accord préalable, indexées par rang dans la vente (à partir de 1).
+     *
+     * @return array<int, LigneVente>
+     */
+    private function accords(CreanceAmo $creance): array
+    {
+        $accords = [];
+        foreach (array_values($creance->getVente()->getLignes()->toArray()) as $i => $ligne) {
+            if ($ligne->isAccordPrealable() && null !== $ligne->getCopieAccord() && $ligne->isCouverte()) {
+                $accords[$i + 1] = $ligne;
+            }
+        }
+
+        return $accords;
+    }
+
+    /** « 03-V-2026-000012-accord-2.pdf » : accord de la 2e ligne de la vente. */
+    private function nomAccord(int $rang, CreanceAmo $creance, int $ligne, LigneVente $accord): string
+    {
+        return \sprintf('%02d-%s-accord-%d.%s', $rang, $creance->getVente()->getNumero(), $ligne, pathinfo((string) $accord->getCopieAccord(), \PATHINFO_EXTENSION));
     }
 
     private function nomFichier(BordereauAmo $bordereau): string

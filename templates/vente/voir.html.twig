@@ -59,6 +59,24 @@
                                                 {{ ligne.couverte ? 'Pris en charge' : 'Non pris en charge' }}
                                             </span>
                                             {% if ligne.numeroAccord %}<span class="small text-body-secondary">Accord préalable n° {{ ligne.numeroAccord }}</span>{% endif %}
+                                            {% if ligne.accordPrealable %}
+                                                <div class="small accord-ligne">
+                                                    {% if ligne.copieAccord %}
+                                                        <a href="{{ path('app_vente_accord', {id: vente.id, ligne: ligne.id}) }}" target="_blank" class="copie-accord"><i class="bi {{ ligne.copieAccordEstPdf ? 'bi-file-earmark-pdf' : 'bi-image' }}"></i> Voir l'accord</a>
+                                                    {% else %}
+                                                        <span class="text-body-secondary">Copie de l'accord non jointe.</span>
+                                                    {% endif %}
+                                                    {% if copie_modifiable and ecriture_autorisee() %}
+                                                        <form method="post" action="{{ path('app_vente_accord_copie', {id: vente.id, ligne: ligne.id}) }}" enctype="multipart/form-data" class="d-inline">
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('copie-accord-' ~ vente.id) }}">
+                                                            <label class="btn btn-link btn-sm p-0 align-baseline">
+                                                                {{ ligne.copieAccord ? 'Remplacer' : 'Joindre' }}
+                                                                <input type="file" name="copie" accept="image/jpeg,image/png,image/webp,application/pdf" class="d-none" onchange="this.form.requestSubmit()" aria-label="Photo ou PDF de l'accord préalable pour {{ ligne.produit.nomCommercial }}">
+                                                            </label>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
                                         {% endif %}
                                         <div class="small text-body-secondary">
                                             {% for ll in ligne.lots %}

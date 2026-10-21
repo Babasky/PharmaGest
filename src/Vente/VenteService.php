@@ -215,6 +215,25 @@ class VenteService
     }
 
     /**
+     * Photo ou PDF de l'accord préalable de l'organisme, joint à la ligne au panier.
+     *
+     * @throws VenteException
+     */
+    public function copieAccordLigne(LigneVente $ligne, UploadedFile $fichier): void
+    {
+        $this->exigerModifiable($ligne->getVente());
+        if (!$ligne->isAccordPrealable()) {
+            throw new VenteException(\sprintf('%s ne demande pas d\'accord préalable.', $ligne->getProduit()->getNomCommercial()));
+        }
+        try {
+            $this->copies->enregistrerAccord($this->tenantContext->exigerPharmacie(), $ligne, $fichier);
+        } catch (AmoException $e) {
+            throw new VenteException($e->getMessage(), 0, $e);
+        }
+        $this->em->flush();
+    }
+
+    /**
      * Assurance autre que l'AMO : produit pris en charge ou non, coché au panier d'après l'ordonnance.
      *
      * @throws VenteException

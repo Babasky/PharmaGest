@@ -11,6 +11,7 @@ use App\Tests\Factory\ClientFactory;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\ProduitFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
  * Retours des pharmacies du 18/10/2026 : part AMO sur le prix le plus bas (l'ordonnance reste au prix de la pharmacie),
@@ -59,6 +60,75 @@ final class AccordEtPriseEnChargeTest extends AmoTestCase
 
         $this->client->request('GET', '/ventes/'.$vente->getId());
         self::assertSelectorTextContains('main', 'Accord préalable n° AP-2026-0412');
+    }
+
+    public function testCopieDeLAccordAuPanierALaVenteEtDansLeBordereau(): void
+    {
+        $augmentin = ProduitFactory::createOne([
+            'pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Augmentin', 'prixVente' => 6800, 'prixVenteAmo' => 6000,
+            'remboursableAmo' => true, 'accordPrealableAmo' => true,
+        ]);
+        LotFactory::createOne(['produit' => $augmentin, 'quantiteInitiale' => 20]);
+
+        $this->ouvrirCaisse($this->officine->adjoint);
+        $this->ajouter($augmentin, 1);
+        $this->poster('/caisse/client', ['client' => $this->assure->getId()]);
+        $this->client->request('POST', '/caisse/vente', [
+            '_token' => $this->jeton(), 'type' => 'amo', 'ordonnance_date' => (new \DateTimeImmutable('today'))->format('Y-m-d'),
+        ], ['ordonnance_copie' => self::photo()]);
+        $ligne = $this->ligne($augmentin);
+
+        // Au panier, l'accord se joint à côté de son n° : photo ou PDF, rien d'autre.
+        $this->client->request('GET', '/caisse');
+        self::assertSelectorExists('#panier .accord-prealable input[type=file][name=accord_copie]');
+        self::assertSelectorExists('#ligne-'.$ligne->getId().'[enctype="multipart/form-data"]');
+        $texte = (string) tempnam(sys_get_temp_dir(), 'acc');
+        file_put_contents($texte, 'pas une image');
+        $this->client->request('POST', '/caisse/ligne/'.$ligne->getId(), ['_token' => $this->jeton(), 'quantite' => '1'], ['accord_copie' => new UploadedFile($texte, 'accord.txt', 'text/plain', null, true)]);
+        self::assertStringContainsString('La copie de l\'accord préalable doit être une photo (JPEG, PNG ou WebP) ou un PDF.', $this->erreur());
+
+        $this->client->request('POST', '/caisse/ligne/'.$ligne->getId(), ['_token' => $this->jeton(), 'quantite' => '1', 'accord' => 'AP-2026-0500'], ['accord_copie' => self::pdf()]);
+        self::assertResponseRedirects('/caisse');
+        $this->client->request('GET', '/caisse');
+        self::assertSelectorExists('#panier .copie-accord .bi-paperclip');
+        self::assertSelectorTextContains('#panier', 'Copie de l\'accord jointe.');
+
+        $this->encaisser(['especes' => ['remis' => '2600']]);
+        self::assertResponseRedirects();
+        $vente = (int) $this->derniereVente()->getId();
+        $numero = (string) $this->derniereVente()->getNumero();
+
+        // Sur la vente, l'accord s'ouvre et se remplace tant que le bordereau n'est pas transmis.
+        $crawler = $this->client->request('GET', '/ventes/'.$vente);
+        self::assertSelectorExists('.accord-ligne a.copie-accord .bi-file-earmark-pdf');
+        $this->client->request('GET', '/ventes/'.$vente.'/accord/'.$ligne->getId());
+        self::assertResponseHeaderSame('Content-Type', 'application/pdf');
+        $jeton = (string) $crawler->filter('.accord-ligne form input[name=_token]')->attr('value');
+        $this->client->request('POST', '/ventes/'.$vente.'/accord/'.$ligne->getId(), ['_token' => $jeton], ['copie' => self::photo()]);
+        self::assertResponseRedirects('/ventes/'.$vente);
+        $this->client->request('GET', '/ventes/'.$vente.'/accord/'.$ligne->getId());
+        self::assertResponseHeaderSame('Content-Type', 'image/jpeg');
+        $this->client->request('GET', '/ventes/'.$vente.'/accord/999999');
+        self::assertResponseStatusCodeSame(404);
+
+        // Le bordereau l'annexe après l'ordonnance, et l'archive le fournit à l'organisme.
+        $this->creerBordereau();
+        $bordereau = $this->bordereau();
+        $this->client->request('GET', '/amo/bordereaux/'.$bordereau->getId().'/pdf');
+        self::assertSame(3, preg_match_all('#/Type\s*/Page[^s]#', (string) $this->client->getResponse()->getContent()), 'Le relevé, l\'ordonnance, puis l\'accord.');
+        $this->client->request('GET', '/amo/bordereaux/'.$bordereau->getId().'/ordonnances');
+        self::assertResponseIsSuccessful();
+        $archive = (string) tempnam(sys_get_temp_dir(), 'zip');
+        file_put_contents($archive, $this->client->getInternalResponse()->getContent());
+        $zip = new \ZipArchive();
+        self::assertTrue($zip->open($archive));
+        $noms = [];
+        for ($i = 0; $i < $zip->numFiles; ++$i) {
+            $noms[] = (string) $zip->getNameIndex($i);
+        }
+        sort($noms);
+        self::assertSame(['01-'.$numero.'-accord-1.jpg', '01-'.$numero.'.jpg'], $noms);
+        $zip->close();
     }
 
     public function testAutreAssuranceTauxDeLAssureEtProduitsCoches(): void

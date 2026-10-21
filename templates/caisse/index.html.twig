@@ -173,14 +173,20 @@
                                             <div class="input-group input-group-sm mt-1 accord-prealable" style="max-width: 20rem">
                                                 <span class="input-group-text">Accord préalable n°</span>
                                                 <input type="text" form="{{ form_id }}" name="accord" value="{{ ligne.numeroAccord }}" maxlength="40" class="form-control" aria-label="N° d'accord préalable pour {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
+                                                {# Photo ou PDF de l'accord, remis à l'organisme avec le bordereau. #}
+                                                <label class="btn btn-outline-secondary mb-0 copie-accord" title="{{ ligne.copieAccord ? 'Remplacer' : 'Joindre' }} la photo ou le PDF de l'accord">
+                                                    <i class="bi {{ ligne.copieAccord ? 'bi-paperclip text-success' : 'bi-camera' }}"></i><span class="visually-hidden">{{ ligne.copieAccord ? 'Remplacer' : 'Joindre' }} la copie de l'accord</span>
+                                                    <input type="file" form="{{ form_id }}" name="accord_copie" accept="image/jpeg,image/png,image/webp,application/pdf" class="d-none" onchange="this.form.requestSubmit()">
+                                                </label>
                                             </div>
+                                            {% if ligne.copieAccord %}<div class="small text-success">Copie de l'accord jointe.</div>{% endif %}
                                             {% if ligne.attendAccord(true) %}<div class="small text-warning-emphasis">Sans le n° d'accord de l'organisme, ce produit reste à la charge de l'assuré.</div>{% endif %}
                                         {% endif %}
                                         <div class="small text-body-secondary">{{ produit.etagere ? 'Étagère ' ~ produit.etagere.code ~ ' · ' }}{{ stocks[produit.id].stock ?? 0 }} en stock</div>
                                     </td>
                                     <td class="montant small">{{ ligne.prixUnitaire|fcfa }}{% if ligne.estPriseEnCharge(true) and ligne.baseAuPrixAmo(tarif_amo) %}<div class="text-body-secondary prix-amo" title="Le taux AMO s'applique sur le prix AMO ; la différence est à la charge de l'assuré">part AMO sur {{ ligne.prixPriseEnCharge(true)|fcfa }}</div>{% endif %}</td>
                                     <td>
-                                        <form method="post" action="{{ path('app_caisse_ligne', {id: ligne.id}) }}" id="{{ form_id }}">
+                                        <form method="post" action="{{ path('app_caisse_ligne', {id: ligne.id}) }}" id="{{ form_id }}" enctype="multipart/form-data">
                                             <input type="hidden" name="_token" value="{{ token }}">
                                         </form>
                                         <input type="number" form="{{ form_id }}" name="quantite" value="{{ ligne.quantite }}" min="0" class="form-control form-control-sm text-end" aria-label="Quantité de {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
