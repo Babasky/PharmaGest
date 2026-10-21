@@ -540,8 +540,9 @@ class VenteService
         if ('' === $motif) {
             throw new VenteException('Le motif de l\'annulation est obligatoire.');
         }
-        // Une vente envoyée à la caisse et jamais payée s'annule tant qu'elle attend : rien n'a été encaissé.
-        if ($vente->estValidee() && !($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d')) {
+        // Une vente envoyée à la caisse et jamais payée s'annule tant qu'elle attend, même les jours suivants :
+        // rien n'a été encaissé, et ses produits doivent revenir en stock.
+        if ($vente->estValidee() && (!($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d'))) {
             throw new VenteException('Une vente ne s\'annule que le jour même, avant la clôture de sa session de caisse. Au-delà, il faut établir un avoir.');
         }
         $creance = $this->creances->pourVente($vente);

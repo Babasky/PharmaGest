@@ -25,6 +25,12 @@ final class ImportProduits extends AbstractDefinitionImport
     /** @var array<string, Categorie|Etagere|Fournisseur> éléments créés pendant l'import */
     private array $crees = [];
 
+    /**
+     * @var array<string, Categorie|Etagere|Fournisseur> éléments déjà en base, retrouvés une fois par import :
+     *                                                   un catalogue de milliers de lignes repasse sans cesse par les mêmes
+     */
+    private array $trouves = [];
+
     /** @var array<string, FormeGalenique>|null */
     private ?array $formes = null;
 
@@ -78,6 +84,7 @@ final class ImportProduits extends AbstractDefinitionImport
     {
         parent::reinitialiser();
         $this->crees = [];
+        $this->trouves = [];
         $this->formes = null;
     }
 
@@ -176,7 +183,7 @@ final class ImportProduits extends AbstractDefinitionImport
         $parent = null;
         foreach (\array_slice($morceaux, 0, 2) as $niveau => $nom) {
             $cle = 'categorie:'.mb_strtolower((null === $parent ? '' : $parent->getNom().'>').$nom);
-            $existante = $this->crees[$cle] ?? (0 === $niveau
+            $existante = $this->crees[$cle] ?? $this->trouver('categorie:'.$niveau.':'.$parent?->getId().'>'.$nom, fn () => 0 === $niveau
                 ? $this->categories->findOneBy(['nom' => $nom, 'parent' => null])
                 : (null !== $parent->getId() ? $this->categories->findOneBy(['nom' => $nom, 'parent' => $parent]) : null));
             if (!$existante instanceof Categorie) {
@@ -197,7 +204,7 @@ final class ImportProduits extends AbstractDefinitionImport
     {
         $code = mb_strtoupper(trim($code));
         $cle = 'etagere:'.$code;
-        $etagere = $this->crees[$cle] ?? $this->etageres->findOneBy(['code' => $code]);
+        $etagere = $this->crees[$cle] ?? $this->trouver($cle, fn () => $this->etageres->findOneBy(['code' => $code]));
         if (!$etagere instanceof Etagere) {
             $etagere = (new Etagere())->setCode($code)->setLibelle($code);
             $this->creer($cle, $etagere, $simulation);
@@ -213,7 +220,7 @@ final class ImportProduits extends AbstractDefinitionImport
     private function fournisseur(string $nom, bool $simulation, array &$remarques): Fournisseur
     {
         $cle = 'fournisseur:'.mb_strtolower($nom);
-        $fournisseur = $this->crees[$cle] ?? $this->fournisseurs->findOneBy(['nom' => $nom]);
+        $fournisseur = $this->crees[$cle] ?? $this->trouver('fournisseur:'.$nom, fn () => $this->fournisseurs->findOneBy(['nom' => $nom]));
         if (!$fournisseur instanceof Fournisseur) {
             $fournisseur = (new Fournisseur())->setNom($nom);
             $this->creer($cle, $fournisseur, $simulation);
@@ -221,6 +228,18 @@ final class ImportProduits extends AbstractDefinitionImport
         }
 
         return $fournisseur;
+    }
+
+    /**
+     * @param callable(): (Categorie|Etagere|Fournisseur|null) $recherche
+     */
+    private function trouver(string $cle, callable $recherche): Categorie|Etagere|Fournisseur|null
+    {
+        if (!isset($this->trouves[$cle]) && null !== ($trouve = $recherche())) {
+            $this->trouves[$cle] = $trouve;
+        }
+
+        return $this->trouves[$cle] ?? null;
     }
 
     private function creer(string $cle, Categorie|Etagere|Fournisseur $entite, bool $simulation): void

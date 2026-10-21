@@ -83,6 +83,16 @@ class CreanceAmoRepository extends ServiceEntityRepository
             ->getQuery()->getResult();
     }
 
+    /** Total de l'encours AMO (AM-10) calculé en base : le tableau de bord n'a pas à charger chaque créance. */
+    public function encours(): int
+    {
+        return (int) $this->createQueryBuilder('c')
+            ->select('COALESCE(SUM(c.montant - c.montantRegle), 0)')
+            ->where('c.statut IN (:ouverts)')
+            ->setParameter('ouverts', StatutCreance::ouverts())
+            ->getQuery()->getSingleScalarResult();
+    }
+
     /**
      * Par organisme : montant transmis (créances sorties de l'attente) et montant rejeté (AM-10).
      *
