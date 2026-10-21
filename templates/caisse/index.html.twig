@@ -10,25 +10,6 @@
             <i class="bi bi-safe"></i> {{ caisse.libelle }} · session {{ session.numero }} · ouverte par {{ session.utilisateur.nom }} à {{ session.ouverteLe|date('H:i') }}
         </span>
     {% endif %}
-    {% if vendeurs is not empty %}
-        <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-people"></i> Changer de vendeur
-            </button>
-            <form method="post" action="{{ path('app_caisse_changer_vendeur') }}" class="dropdown-menu dropdown-menu-end p-3" style="min-width: 16rem">
-                <input type="hidden" name="_token" value="{{ csrf_token('caisse') }}">
-                <label class="form-label small" for="changer-utilisateur">Vendeur</label>
-                <select class="form-select form-select-sm mb-2" id="changer-utilisateur" name="utilisateur">
-                    {% for v in vendeurs %}
-                        <option value="{{ v.id }}">{{ v.nom }}</option>
-                    {% endfor %}
-                </select>
-                <label class="form-label small" for="changer-pin">Son code PIN</label>
-                <input class="form-control form-control-sm mb-2" type="password" inputmode="numeric" maxlength="4" id="changer-pin" name="code_pin" autocomplete="off">
-                <button class="btn btn-sm btn-success w-100" type="submit">Prendre la caisse</button>
-            </form>
-        </div>
-    {% endif %}
     {% if session %}
         <a class="btn btn-outline-danger" href="{{ path('app_session_caisse_voir', {id: session.id}) }}"><i class="bi bi-lock"></i> Clôturer la caisse</a>
     {% endif %}
@@ -449,9 +430,22 @@
                                 </div>
                             {% endif %}
                             {% if controle and controle.exigeCodePin %}
-                                <div class="mb-2">
-                                    <label class="form-label small mb-1" for="code-pin">Code PIN du propriétaire</label>
-                                    <input type="password" inputmode="numeric" maxlength="4" class="form-control" id="code-pin" name="code_pin" autocomplete="off">
+                                {# Le propriétaire confirme avec son code PIN au comptoir, ou à distance depuis son compte. #}
+                                <div class="mb-2" id="accord-proprietaire">
+                                    {% if panier.accordValide %}
+                                        <div class="alert alert-success py-2 small mb-0"><i class="bi bi-shield-check"></i> Accord donné par {{ panier.accordValide.nom }} : validez la vente.</div>
+                                    {% else %}
+                                        {% if panier.accordEnAttente %}
+                                            <div class="alert alert-info py-2 small mb-2"><i class="bi bi-hourglass-split"></i> Accord demandé au propriétaire à {{ panier.accordDemandeLe|date('H:i') }}, en attente de sa réponse. <a href="{{ path('app_caisse') }}">Actualiser</a></div>
+                                        {% elseif panier.accordRefuse %}
+                                            <div class="alert alert-danger py-2 small mb-2"><i class="bi bi-x-octagon"></i> {{ panier.accordReponduPar ? panier.accordReponduPar.nom : 'Le propriétaire' }} a refusé cette vente.</div>
+                                        {% endif %}
+                                        <label class="form-label small mb-1" for="code-pin">Code PIN du propriétaire</label>
+                                        <input type="password" inputmode="numeric" maxlength="4" class="form-control mb-2" id="code-pin" name="code_pin" autocomplete="off">
+                                        {% if not panier.accordEnAttente %}
+                                            <button class="btn btn-sm btn-outline-primary w-100" type="submit" formaction="{{ path('app_caisse_accord') }}" formnovalidate><i class="bi bi-send-check"></i> Demander l'accord du propriétaire (sans son code PIN)</button>
+                                        {% endif %}
+                                    {% endif %}
                                 </div>
                             {% endif %}
                             {% if session %}

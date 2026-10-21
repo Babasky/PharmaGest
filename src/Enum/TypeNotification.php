@@ -14,6 +14,7 @@ enum TypeNotification: string
     case Bordereau = 'bordereau';
     case Transfert = 'transfert';
     case Commande = 'commande';
+    case Accord = 'accord';
 
     public function libelle(): string
     {
@@ -25,6 +26,7 @@ enum TypeNotification: string
             self::Bordereau => 'Bordereau AMO impayé',
             self::Transfert => 'Transfert à réceptionner',
             self::Commande => 'Commande automatique',
+            self::Accord => 'Accord demandé à la caisse',
         };
     }
 
@@ -38,13 +40,14 @@ enum TypeNotification: string
             self::Bordereau => 'shield-exclamation',
             self::Transfert => 'arrow-left-right',
             self::Commande => 'truck',
+            self::Accord => 'shield-check',
         };
     }
 
     public function couleur(): string
     {
         return match ($this) {
-            self::Rupture, self::Abonnement => 'warning',
+            self::Rupture, self::Abonnement, self::Accord => 'warning',
             self::Peremption, self::Bordereau, self::Transfert, self::Commande => 'primary',
             self::Perime => 'danger',
         };

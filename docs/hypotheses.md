@@ -978,3 +978,19 @@ donc plus signalé tout de suite comme une rupture.
   (« Ce poste » sur l'écran de caisse), retenue dans un cookie de l'ordinateur, qui survit aux changements d'utilisateur.
 - Les ventes faites hors ligne s'importent dans la caisse ouverte par leur vendeur, sinon dans la caisse ouverte de
   la pharmacie ; à l'ouverture d'une caisse, celles de toute l'équipe qui attendaient sont importées.
+
+## Décisions — « Changer de vendeur » et accord du propriétaire sans code PIN (Modibo, 20/10/2026)
+
+- Le bouton « Changer de vendeur » de l'écran de caisse est retiré : le code PIN demandé à chaque vente fait déjà
+  passer la main (celui qui saisit son code fait la vente et prend le poste). L'adresse `/caisse/changer-vendeur`
+  n'existe plus.
+- Quand une vente demande la confirmation du propriétaire (produit à ordonnance obligatoire vendu sans ordonnance,
+  remise au-delà du plafond), le vendeur peut « Demander l'accord du propriétaire » au lieu de lui demander son code.
+  Chaque propriétaire actif de la pharmacie reçoit une notification et répond depuis son propre compte (« Accords
+  demandés » dans le menu Comptoir) : il voit le panier et donne son accord ou refuse. Le vendeur valide ensuite la
+  vente avec son seul code PIN ; la vente garde le propriétaire comme auteur de l'autorisation.
+- L'accord ne vaut que pour le panier présenté : changer un produit, une quantité, une remise, le client ou le type de
+  vente l'annule, et il faut le redemander (ou saisir le code PIN du propriétaire, toujours possible au comptoir).
+- Accord donné et refus sont tracés dans le journal d'audit (`vente.accord_donne`, `vente.accord_refuse`), en plus de
+  la trace habituelle de la vente sans ordonnance ou de la remise. Seul un propriétaire de la pharmacie répond ;
+  l'adjoint ne le peut pas, comme pour le code PIN.

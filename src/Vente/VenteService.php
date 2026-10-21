@@ -591,7 +591,10 @@ class VenteService
         }
 
         $autorisePar = null;
-        if ($controle->exigeCodePin()) {
+        if ($controle->exigeCodePin() && null !== $vente->accordValide() && (null === $codePin || '' === trim($codePin))) {
+            // Accord donné à distance par le propriétaire, pour ce panier tel quel.
+            $autorisePar = $vente->accordValide();
+        } elseif ($controle->exigeCodePin()) {
             try {
                 $autorisePar = $this->codePin->autorisationProprietaire($pharmacie, $codePin);
             } catch (CodePinException $e) {
