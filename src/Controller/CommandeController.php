@@ -19,7 +19,9 @@ use App\Repository\CommandeRepository;
 use App\Repository\FournisseurRepository;
 use App\Repository\LotRepository;
 use App\Repository\ProduitRepository;
+use App\Service\ParametresPharmacie;
 use App\Stock\StockService;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -101,6 +103,8 @@ final class CommandeController extends AbstractAppController
     public function suggestions(
         SuggestionsCommande $suggestions,
         StockService $stock,
+        ParametresPharmacie $parametres,
+        ClockInterface $horloge,
         #[MapQueryParameter] ?string $fournisseur = null,
         #[MapQueryParameter] ?string $base = null,
         #[MapQueryParameter] ?string $date = null,
@@ -127,7 +131,15 @@ final class CommandeController extends AbstractAppController
             }
         }
 
+        // Envoi automatique activé mais aucun passage depuis plus de deux heures : la tâche planifiée ne tourne pas.
+        $reglages = $parametres->pour($this->pharmacie());
+        $dernierPassage = $reglages->getDernierPassageCommandes();
+        $passageEnRetard = $reglages->isEnvoiAutomatiqueCommandes()
+            && (null === $dernierPassage || $dernierPassage < $horloge->now()->modify('-2 hours'));
+
         return $this->render('commande/suggestions.html.twig', [
+            'reglages' => $reglages,
+            'passage_en_retard' => $passageEnRetard,
             'base' => $base,
             'jour' => $jour,
             'aujourdhui' => $stock->aujourdhui(),
@@ -336,9 +348,9 @@ final class CommandeController extends AbstractAppController
         $renvoi = !$commande->estBrouillon();
 
         return $this->agir($commande, function () use ($commande, $renvoi): string {
-            $envoi = $this->commandes->envoyer($commande);
+            [$envoi, $repli] = $this->commandes->transmettre($commande);
 
-            return \sprintf($renvoi ? 'Commande %s renvoyée à %s.' : 'Commande %s envoyée à %s avec le bon de commande Excel.', $commande->getNumero(), $envoi->getDestinataire());
+            return (null !== $repli ? $repli.' Envoi par email à la place. ' : '').\sprintf($renvoi ? 'Commande %s renvoyée à %s.' : 'Commande %s envoyée à %s avec le bon de commande Excel.', $commande->getNumero(), $envoi->getDestinataire());
         });
     }
 

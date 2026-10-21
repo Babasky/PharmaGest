@@ -65,8 +65,8 @@ class TransmissionCommandes
     }
 
     /**
-     * Envoie chaque brouillon par email à son fournisseur. Un fournisseur sans email garde son brouillon ;
-     * un envoi en échec aussi (l'échec est historisé par {@see CommandeService::envoyer()}).
+     * Transmet chaque brouillon à son fournisseur, par Pharma-ML ou par email ({@see CommandeService::transmettre()}).
+     * Un fournisseur sans email ni Pharma-ML garde son brouillon ; un envoi en échec aussi.
      *
      * @param list<Commande> $brouillons
      *
@@ -76,12 +76,12 @@ class TransmissionCommandes
     {
         $bilan = ['envoyees' => [], 'sans_email' => [], 'echecs' => []];
         foreach ($brouillons as $commande) {
-            if (null === $commande->getFournisseur()->getEmail()) {
+            if (null === $commande->getFournisseur()->getEmail() && !$commande->getFournisseur()->pharmaMlParametre()) {
                 $bilan['sans_email'][] = $commande;
                 continue;
             }
             try {
-                $this->commandes->envoyer($commande);
+                $this->commandes->transmettre($commande);
                 $bilan['envoyees'][] = $commande;
             } catch (AchatException $e) {
                 $bilan['echecs'][] = $e->getMessage();

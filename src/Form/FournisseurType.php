@@ -3,12 +3,17 @@
 namespace App\Form;
 
 use App\Entity\Fournisseur;
+use App\Enum\CanalTransmission;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -80,9 +85,9 @@ final class FournisseurType extends AbstractType
             ->add('heureCommande', ChoiceType::class, [
                 'label' => 'Commande automatique à',
                 'required' => false,
-                'placeholder' => 'Pas de commande automatique',
+                'placeholder' => 'Heure de la pharmacie (paramètres)',
                 'choices' => array_combine(array_map(static fn (int $h) => \sprintf('%d h', $h), range(0, 23)), range(0, 23)),
-                'help' => 'Si l\'envoi automatique est activé dans les paramètres, la commande suggérée part chez ce fournisseur à cette heure (il lui faut une adresse email).',
+                'help' => 'Si l\'envoi automatique est activé dans les paramètres, la commande suggérée part chez ce fournisseur à cette heure (il lui faut un email ou Pharma-ML).',
             ])
             ->add('joursCommande', ChoiceType::class, [
                 'label' => 'Jours de commande',
@@ -92,6 +97,37 @@ final class FournisseurType extends AbstractType
                 'choices' => ['Lun' => 1, 'Mar' => 2, 'Mer' => 3, 'Jeu' => 4, 'Ven' => 5, 'Sam' => 6, 'Dim' => 7],
                 'help' => 'Aucun jour coché : tous les jours.',
                 'label_attr' => ['class' => 'checkbox-inline'],
+            ])
+            ->add('commandeAutomatique', CheckboxType::class, [
+                'label' => 'Recevoir les commandes automatiques',
+                'required' => false,
+                'help' => 'Décochez pour toujours commander à la main chez ce fournisseur.',
+            ])
+            ->add('canalTransmission', EnumType::class, [
+                'label' => 'Transmission des commandes',
+                'class' => CanalTransmission::class,
+                'choice_label' => static fn (CanalTransmission $c) => $c->libelle(),
+                'expanded' => true,
+                'help' => 'Pharma-ML : paramètres à demander au répartiteur. Tant que la liaison Pharma-ML n\'est pas active dans SoftPharm, la commande part par email.',
+            ])
+            ->add('pharmaMlUrl', UrlType::class, [
+                'label' => 'Pharma-ML : adresse du serveur',
+                'required' => false,
+                'default_protocol' => 'https',
+                'attr' => ['placeholder' => 'https://…'],
+            ])
+            ->add('pharmaMlIdentifiant', TextType::class, [
+                'label' => 'Pharma-ML : identifiant de l\'officine (code client)',
+                'required' => false,
+            ])
+            ->add('pharmaMlCodeRepartiteur', TextType::class, [
+                'label' => 'Pharma-ML : code répartiteur',
+                'required' => false,
+            ])
+            ->add('pharmaMlCle', PasswordType::class, [
+                'label' => 'Pharma-ML : clé ou mot de passe',
+                'required' => false,
+                'help' => 'Laissez vide pour garder la clé déjà enregistrée.',
             ]);
     }
 
