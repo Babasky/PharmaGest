@@ -39,8 +39,7 @@ class VentePdf
         return $this->generateur->rendre('pdf/facture_vente.html.twig', $this->contexte($vente) + ['logo' => $this->logo($this->pharmacie($vente))]);
     }
 
-    /** @param bool $voitEspeces faux hors propriétaire : le rapport tait les montants en espèces attendus */
-    public function rapportZ(SyntheseSession $synthese, bool $voitEspeces = true): string
+    public function rapportZ(SyntheseSession $synthese): string
     {
         $session = $synthese->session;
 
@@ -49,7 +48,6 @@ class VentePdf
             'session' => $session,
             'pharmacie' => $session->getPharmacie(),
             'coupures' => \App\Entity\SessionCaisse::COUPURES,
-            'voit_especes' => $voitEspeces,
         ]);
     }
 
@@ -63,9 +61,9 @@ class VentePdf
         return GenerateurPdf::reponse($this->facture($vente), 'facture-'.$vente->getNumero().'.pdf');
     }
 
-    public function reponseRapportZ(SyntheseSession $synthese, bool $voitEspeces = true): Response
+    public function reponseRapportZ(SyntheseSession $synthese): Response
     {
-        return GenerateurPdf::reponse($this->rapportZ($synthese, $voitEspeces), 'rapport-z-'.$synthese->session->getNumero().'.pdf');
+        return GenerateurPdf::reponse($this->rapportZ($synthese), 'rapport-z-'.$synthese->session->getNumero().'.pdf');
     }
 
     /**
