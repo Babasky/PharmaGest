@@ -79,6 +79,8 @@ final class AppStory extends Story
             ['m.coulibaly@fleuve.ml', 'Moussa Coulibaly', Utilisateur::ROLE_VENDEUR],
             ['s.diarra@fleuve.ml', 'Seydou Diarra', Utilisateur::ROLE_VENDEUR],
             ['a.konate@fleuve.ml', 'Awa Konaté', Utilisateur::ROLE_CAISSIER],
+            // Pharmacien associé : deuxième propriétaire, mêmes droits que la titulaire.
+            ['b.diallo@fleuve.ml', 'Bakary Diallo', Utilisateur::ROLE_PROPRIETAIRE],
         ]);
         $this->abonnements->enregistrerPaiement($fleuve, $fleuve->getOffre(), 180000, MoyenPaiement::OrangeMoney, 'OM-2026-55871', new \DateTimeImmutable('today'), null);
         // Les actions de la démo sont faites au nom de la titulaire : le journal d'audit les lui attribue.
@@ -255,7 +257,7 @@ final class AppStory extends Story
     private function caisse(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
     {
         $equipe = [];
-        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590', 'a.konate@fleuve.ml' => '4826'] as $email => $pin) {
+        foreach (['a.traore@fleuve.ml' => '2580', 'f.keita@fleuve.ml' => '3690', 'm.coulibaly@fleuve.ml' => '1470', 's.diarra@fleuve.ml' => '1590', 'a.konate@fleuve.ml' => '4826', 'b.diallo@fleuve.ml' => '6047'] as $email => $pin) {
             $utilisateur = \Zenstruck\Foundry\Persistence\repository(Utilisateur::class)->findOneBy(['email' => $email]);
             \assert($utilisateur instanceof Utilisateur);
             $this->codePin->definir($utilisateur, $pin);

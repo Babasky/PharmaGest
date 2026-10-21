@@ -32,7 +32,16 @@ laisse un point ouvert (livrable § 10.2). Chaque entrée peut être remise en c
   Le super admin n'hérite d'aucun rôle d'officine.
 - **Désactiver un membre** = désactiver son affectation : il ne peut plus se connecter à cette pharmacie, ses données
   et son historique restent (RG-15). Le compte du propriétaire ne se gère pas depuis l'écran « Équipe ».
-- **Limite d'utilisateurs** : on compte les affectations actives de la pharmacie, **propriétaire compris**
+- **Plusieurs propriétaires (associés)** (demande de Modibo du 20/10/2026) : plusieurs pharmaciens peuvent s'associer
+  pour ouvrir une pharmacie. Tous les propriétaires ont **les mêmes droits** (finances, paramètres, équipe, abonnement,
+  autorisations par PIN, transferts). Un propriétaire ajoute un associé depuis « Équipe › Ajouter un associé » ; le
+  super admin le fait depuis la fiche de la pharmacie. Email inconnu : compte propriétaire créé (lien d'activation ou
+  mot de passe initial) ; email d'un propriétaire existant : la pharmacie s'ajoute à ses pharmacies, dans la limite de
+  pharmacies de l'offre ; email d'un membre de cette seule pharmacie (adjoint…) : il devient propriétaire.
+  **Un associé ne peut pas retirer un autre associé** (pour éviter qu'un associé en écarte un autre) : seul le super
+  admin retire ou réactive un propriétaire, et la pharmacie garde toujours au moins un propriétaire actif. Traces
+  « Propriétaire associé ajouté / retiré », visibles aussi dans le journal de la plateforme.
+- **Limite d'utilisateurs** : on compte les affectations actives de la pharmacie, **propriétaires compris**
   (Essentiel = propriétaire + 2 personnes).
 - **Limite de pharmacies** : appliquée quand le super admin rattache une nouvelle pharmacie à un propriétaire existant,
   selon l'offre choisie pour cette nouvelle pharmacie.
