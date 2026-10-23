@@ -51,7 +51,7 @@
                             <tr{% if s.stock == 0 %} class="pg-stock-nul"{% endif %}>
                                 <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_produit_voir', {id: produit.id}) }}">{{ produit.nomCommercial }}</a>
                                     <div class="small text-body-secondary">{{ [produit.dci, produit.dosage]|filter(v => v)|join(' · ') }}</div></td>
-                                <td class="text-end fw-semibold">{{ s.stock|number_format }}{% if s.rupture %} <span class="badge text-bg-danger ms-1" title="Stock à zéro depuis le {{ s.aZeroDepuis|date('d/m/Y') }}">Rupture</span>{% endif %}</td>
+                                <td class="text-end fw-semibold">{{ s.stock|number_format }}{% if s.rupture %} <span class="badge text-bg-danger ms-1" title="Stock à zéro depuis le {{ s.aZeroDepuis|date('d/m/Y') }}">Rupture</span>{% endif %}{% include 'stock/_en_entrepot.html.twig' with {quantite: s.entrepots, produit: produit} only %}</td>
                                 <td class="text-end text-body-secondary">{{ produit.seuilAlerte }}</td>
                                 <td class="d-none d-md-table-cell pe-3">{{ produit.fournisseurHabituel ?? '—' }}</td>
                             </tr>

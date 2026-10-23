@@ -60,6 +60,7 @@
                             <td class="text-end fw-semibold">
                                 {{ s.stock|number_format }}
                                 {% if s.rupture %}<span class="badge text-bg-danger ms-1" title="Stock à zéro depuis le {{ s.aZeroDepuis|date('d/m/Y') }}">Rupture</span>{% elseif s.stock > 0 and s.stock <= produit.seuilAlerte %}<span class="badge text-bg-warning ms-1">Seuil</span>{% endif %}
+                                {% if s.stock <= produit.seuilAlerte %}{% include 'stock/_en_entrepot.html.twig' with {quantite: s.entrepots, produit: produit} only %}{% endif %}
                             </td>
                             <td class="text-end d-none d-md-table-cell text-body-secondary">{{ produit.seuilAlerte }}</td>
                             <td class="text-end">{{ s.perime > 0 ? s.perime|number_format : '—' }}</td>

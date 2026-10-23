@@ -46,6 +46,7 @@ final class Navigation
                 ['libelle' => 'État du stock', 'icone' => 'box-seam', 'route' => 'app_stock_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Commandes', 'icone' => 'truck', 'route' => 'app_commande_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Transferts', 'icone' => 'arrow-left-right', 'route' => 'app_transfert_index', 'role' => TransfertVoter::ACCES],
+                ['libelle' => 'Entrepôts', 'icone' => 'buildings', 'route' => 'app_entrepot_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Fournisseurs', 'icone' => 'building', 'route' => 'app_fournisseur_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Catégories', 'icone' => 'diagram-3', 'route' => 'app_categorie_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Étagères', 'icone' => 'bookshelf', 'route' => 'app_etagere_index', 'role' => 'ROLE_ADJOINT'],

@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Categorie;
+use App\Entity\Entrepot;
 use App\Entity\Etagere;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
@@ -19,6 +20,9 @@ use Doctrine\Persistence\ManagerRegistry;
  * Un lot est « disponible » si sa date de péremption est postérieure au jour donné (RG-05),
  * ou s'il n'a pas de date de péremption (réception sans date : le lot sort en dernier).
  *
+ * Sauf mention contraire, les requêtes ne voient que le stock de l'officine (lots sans entrepôt) : c'est lui qu'on
+ * vend, qu'on surveille (alertes, rupture) et qu'on inventorie. Le stock des entrepôts se lit à part.
+ *
  * @extends ServiceEntityRepository<Lot>
  */
 class LotRepository extends ServiceEntityRepository
@@ -32,14 +36,14 @@ class LotRepository extends ServiceEntityRepository
     }
 
     /**
-     * Lots encore en stock d'un produit, du premier au dernier périmé.
+     * Lots encore en stock d'un produit dans l'officine (ou dans l'entrepôt donné), du premier au dernier périmé.
      *
      * @return list<Lot>
      */
-    public function enStock(Produit $produit): array
+    public function enStock(Produit $produit, ?Entrepot $entrepot = null): array
     {
         /** @var list<Lot> */
-        return $this->createQueryBuilder('l')
+        return self::dans($this->createQueryBuilder('l'), $entrepot)
             ->leftJoin('l.fournisseur', 'f')->addSelect('f')
             ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
             ->andWhere('l.quantiteRestante > 0')
@@ -48,14 +52,52 @@ class LotRepository extends ServiceEntityRepository
     }
 
     /**
-     * Lots vendables d'un produit dans l'ordre FEFO (RG-04), verrouillés jusqu'à la fin de la transaction.
+     * Lots d'un produit encore présents dans les entrepôts, entrepôt par entrepôt puis du premier au dernier périmé.
      *
      * @return list<Lot>
      */
-    public function verrouillerDisponibles(Produit $produit, \DateTimeImmutable $jour): array
+    public function enEntrepots(Produit $produit): array
     {
         /** @var list<Lot> */
         return $this->createQueryBuilder('l')
+            ->join('l.entrepot', 'e')->addSelect('e')
+            ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
+            ->andWhere('l.quantiteRestante > 0')
+            ->addSelect(self::SANS_DATE)->orderBy('e.nom', 'ASC')->addOrderBy('sansDate', 'ASC')->addOrderBy('l.datePeremption', 'ASC')->addOrderBy('l.id', 'ASC')
+            ->getQuery()->getResult();
+    }
+
+    /**
+     * Lot d'un emplacement qui a les mêmes numéro, péremption et prix d'achat qu'un lot transféré : il le reçoit
+     * au lieu d'une copie (un lot qui fait l'aller-retour entre l'officine et un entrepôt reste une seule ligne).
+     */
+    public function memeLotDans(Lot $lot, ?Entrepot $entrepot): ?Lot
+    {
+        $qb = self::dans($this->createQueryBuilder('l'), $entrepot)
+            ->andWhere('l.produit = :produit')->setParameter('produit', $lot->getProduit())
+            ->andWhere('l.numero = :numero')->setParameter('numero', $lot->getNumero())
+            ->andWhere('l.prixAchat = :prix')->setParameter('prix', $lot->getPrixAchat())
+            ->orderBy('l.id', 'ASC')->setMaxResults(1);
+        if (null === $lot->getDatePeremption()) {
+            $qb->andWhere('l.datePeremption IS NULL');
+        } else {
+            $qb->andWhere('l.datePeremption = :peremption')->setParameter('peremption', $lot->getDatePeremption(), Types::DATE_IMMUTABLE);
+        }
+
+        /** @var Lot|null */
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * Lots vendables d'un produit dans l'ordre FEFO (RG-04), verrouillés jusqu'à la fin de la transaction.
+     * Sans entrepôt : ceux de l'officine.
+     *
+     * @return list<Lot>
+     */
+    public function verrouillerDisponibles(Produit $produit, \DateTimeImmutable $jour, ?Entrepot $entrepot = null): array
+    {
+        /** @var list<Lot> */
+        return self::dans($this->createQueryBuilder('l'), $entrepot)
             ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
             ->andWhere('l.quantiteRestante > 0')
             ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
@@ -72,11 +114,11 @@ class LotRepository extends ServiceEntityRepository
     }
 
     /**
-     * RG-03 : stock = somme des quantités restantes des lots non périmés.
+     * RG-03 : stock = somme des quantités restantes des lots non périmés, dans l'officine (ou l'entrepôt donné).
      */
-    public function stockDisponible(Produit $produit, \DateTimeImmutable $jour): int
+    public function stockDisponible(Produit $produit, \DateTimeImmutable $jour, ?Entrepot $entrepot = null): int
     {
-        return (int) $this->createQueryBuilder('l')
+        return (int) self::dans($this->createQueryBuilder('l'), $entrepot)
             ->select('COALESCE(SUM(l.quantiteRestante), 0)')
             ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
             ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
@@ -124,7 +166,8 @@ class LotRepository extends ServiceEntityRepository
     }
 
     /**
-     * Valeur du stock au prix d'achat des lots (ST-07), par catégorie principale.
+     * Valeur du stock au prix d'achat des lots (ST-07), par catégorie principale : officine et entrepôts ensemble,
+     * car c'est tout le stock que possède la pharmacie.
      *
      * @return list<array{categorie: string|null, disponible: int, perime: int, quantite: int}>
      */
@@ -157,10 +200,12 @@ class LotRepository extends ServiceEntityRepository
      * Pour un produit dont le stock est à zéro, « aZeroDepuis » donne le moment où il y est tombé
      * (null s'il n'a jamais été reçu) et « rupture » s'il y est depuis le délai du produit, ou à défaut
      * de la pharmacie, ou plus (au Mali, « rupture » veut dire que même le fournisseur n'en a plus).
+     * Ces chiffres sont ceux de l'officine ; « entrepots » donne le stock disponible dans les entrepôts actifs. Un produit
+     * qui attend dans un entrepôt n'est jamais « en rupture » : il suffit de le faire venir.
      *
      * @param iterable<Produit> $produits
      *
-     * @return array<int, array{stock: int, perime: int, valeur: int, aZeroDepuis: ?\DateTimeImmutable, rupture: bool}> indexé par id de produit
+     * @return array<int, array{stock: int, perime: int, valeur: int, aZeroDepuis: ?\DateTimeImmutable, rupture: bool, entrepots: int}> indexé par id de produit
      */
     public function syntheseParProduit(iterable $produits, \DateTimeImmutable $jour): array
     {
@@ -173,7 +218,7 @@ class LotRepository extends ServiceEntityRepository
             $pharmacie = $produit->getPharmacie();
             $delais[(int) $produit->getId()] = $produit->getJoursAvantRupture()
                 ?? ($parPharmacie[(int) $pharmacie?->getId()] ??= $this->joursAvantRupture($pharmacie));
-            $synthese[(int) $produit->getId()] = ['stock' => 0, 'perime' => 0, 'valeur' => 0, 'aZeroDepuis' => null, 'rupture' => false];
+            $synthese[(int) $produit->getId()] = ['stock' => 0, 'perime' => 0, 'valeur' => 0, 'aZeroDepuis' => null, 'rupture' => false, 'entrepots' => 0];
         }
         if ([] === $ids) {
             return [];
@@ -186,6 +231,7 @@ class LotRepository extends ServiceEntityRepository
             ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS valeur')
             ->andWhere('l.produit IN (:ids)')->setParameter('ids', $ids)
             ->andWhere('l.quantiteRestante > 0')
+            ->andWhere('l.entrepot IS NULL')
             ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
             ->groupBy('l.produit')
             ->getQuery()->getArrayResult();
@@ -193,11 +239,14 @@ class LotRepository extends ServiceEntityRepository
         foreach ($lignes as $l) {
             $synthese[(int) $l['produit']] = ['stock' => (int) $l['stock'], 'perime' => (int) $l['perime'], 'valeur' => (int) $l['valeur']] + $synthese[(int) $l['produit']];
         }
+        foreach ($this->disponibleEnEntrepots($ids, $jour) as $id => $quantite) {
+            $synthese[$id]['entrepots'] = $quantite;
+        }
 
         $aZero = array_keys(array_filter($synthese, static fn (array $s) => 0 === $s['stock']));
         foreach ($this->aZeroDepuis($aZero, $jour) as $id => $depuis) {
             $synthese[$id]['aZeroDepuis'] = $depuis;
-            $synthese[$id]['rupture'] = $depuis < $jour->modify(\sprintf('-%d days', $delais[$id] - 1));
+            $synthese[$id]['rupture'] = 0 === $synthese[$id]['entrepots'] && $depuis < $jour->modify(\sprintf('-%d days', $delais[$id] - 1));
         }
 
         return $synthese;
@@ -228,6 +277,7 @@ class LotRepository extends ServiceEntityRepository
         $lots = $this->createQueryBuilder('l')
             ->select('l.id', 'IDENTITY(l.produit) AS produit', 'l.datePeremption', 'l.quantiteRestante', 'l.dateReception')
             ->andWhere('l.produit IN (:produits)')->setParameter('produits', $produits)
+            ->andWhere('l.entrepot IS NULL')
             ->getQuery()->getArrayResult();
         if ([] === $lots) {
             return [];
@@ -277,6 +327,7 @@ class LotRepository extends ServiceEntityRepository
         $lignes = $this->createQueryBuilder('l')
             ->select('IDENTITY(l.produit) AS produit', 'SUM(l.quantiteRestante) AS stock')
             ->andWhere('l.quantiteRestante > 0')
+            ->andWhere('l.entrepot IS NULL')
             ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')
             ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
             ->groupBy('l.produit')
@@ -290,10 +341,153 @@ class LotRepository extends ServiceEntityRepository
         return $stocks;
     }
 
+    /**
+     * Stock disponible (lots non périmés) dans les entrepôts actifs, par produit.
+     *
+     * @param list<int|null> $produits ids de produits
+     *
+     * @return array<int, int> quantité indexée par id de produit (produits présents en entrepôt seulement)
+     */
+    public function disponibleEnEntrepots(array $produits, \DateTimeImmutable $jour): array
+    {
+        if ([] === $produits) {
+            return [];
+        }
+        $lignes = $this->createQueryBuilder('l')
+            ->select('IDENTITY(l.produit) AS produit', 'SUM(l.quantiteRestante) AS stock')
+            ->join('l.entrepot', 'e')
+            ->andWhere('e.actif = true')
+            ->andWhere('l.produit IN (:produits)')->setParameter('produits', $produits)
+            ->andWhere('l.quantiteRestante > 0')
+            ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->groupBy('l.produit')
+            ->getQuery()->getArrayResult();
+
+        $stocks = [];
+        foreach ($lignes as $l) {
+            $stocks[(int) $l['produit']] = (int) $l['stock'];
+        }
+
+        return $stocks;
+    }
+
+    /**
+     * Stock disponible d'un produit dans chaque entrepôt actif qui en a.
+     *
+     * @return list<array{entrepot: Entrepot, quantite: int}> par nom d'entrepôt
+     */
+    public function disponibleParEntrepot(Produit $produit, \DateTimeImmutable $jour): array
+    {
+        $lignes = $this->createQueryBuilder('l')
+            ->select('IDENTITY(l.entrepot) AS entrepot', 'SUM(l.quantiteRestante) AS quantite')
+            ->join('l.entrepot', 'e')
+            ->andWhere('e.actif = true')
+            ->andWhere('l.produit = :produit')->setParameter('produit', $produit)
+            ->andWhere('l.quantiteRestante > 0')
+            ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->groupBy('l.entrepot')
+            ->getQuery()->getArrayResult();
+
+        $resultat = [];
+        foreach ($lignes as $l) {
+            $entrepot = $this->getEntityManager()->find(Entrepot::class, (int) $l['entrepot']);
+            if (null !== $entrepot) {
+                $resultat[] = ['entrepot' => $entrepot, 'quantite' => (int) $l['quantite']];
+            }
+        }
+        usort($resultat, static fn (array $a, array $b) => strcoll($a['entrepot']->getNom(), $b['entrepot']->getNom()));
+
+        return $resultat;
+    }
+
+    /**
+     * Contenu d'un entrepôt, produit par produit : quantité disponible, quantité périmée, valeur au prix d'achat
+     * et date de péremption la plus proche.
+     *
+     * @return list<array{produit: Produit, disponible: int, perime: int, valeur: int, peremption: ?\DateTimeImmutable}>
+     */
+    public function contenu(Entrepot $entrepot, \DateTimeImmutable $jour, ?string $recherche = null): array
+    {
+        $qb = $this->createQueryBuilder('l')
+            ->select('IDENTITY(l.produit) AS produit')
+            ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante ELSE 0 END) AS disponible')
+            ->addSelect('SUM(CASE WHEN l.datePeremption <= :jour THEN l.quantiteRestante ELSE 0 END) AS perime')
+            ->addSelect('SUM(l.quantiteRestante * l.prixAchat) AS valeur')
+            ->addSelect('MIN(l.datePeremption) AS peremption')
+            ->join('l.produit', 'p')
+            ->andWhere('l.entrepot = :entrepot')->setParameter('entrepot', $entrepot)
+            ->andWhere('l.quantiteRestante > 0')
+            ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->groupBy('l.produit')
+            ->addGroupBy('p.nomCommercial')
+            ->orderBy('p.nomCommercial', 'ASC');
+        if (null !== $recherche && '' !== trim($recherche)) {
+            $qb->andWhere('p.nomCommercial LIKE :q OR p.dci LIKE :q')->setParameter('q', '%'.addcslashes(trim($recherche), '%_').'%');
+        }
+        $lignes = $qb->getQuery()->getArrayResult();
+        if ([] === $lignes) {
+            return [];
+        }
+
+        $produits = [];
+        foreach ($this->getEntityManager()->getRepository(Produit::class)->findBy(['id' => array_column($lignes, 'produit')]) as $produit) {
+            $produits[(int) $produit->getId()] = $produit;
+        }
+
+        return array_values(array_map(static fn (array $l) => [
+            'produit' => $produits[(int) $l['produit']],
+            'disponible' => (int) $l['disponible'],
+            'perime' => (int) $l['perime'],
+            'valeur' => (int) $l['valeur'],
+            'peremption' => null !== $l['peremption'] ? new \DateTimeImmutable($l['peremption']) : null,
+        ], array_filter($lignes, static fn (array $l) => isset($produits[(int) $l['produit']]))));
+    }
+
+    /**
+     * Valeur au prix d'achat du stock disponible et périmé de chaque emplacement (officine puis entrepôts).
+     *
+     * @return list<array{entrepot: ?Entrepot, disponible: int, perime: int, quantite: int}>
+     */
+    public function valorisationParEmplacement(\DateTimeImmutable $jour): array
+    {
+        $lignes = $this->createQueryBuilder('l')
+            ->select('IDENTITY(l.entrepot) AS entrepot')
+            ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS disponible')
+            ->addSelect('SUM(CASE WHEN l.datePeremption <= :jour THEN l.quantiteRestante * l.prixAchat ELSE 0 END) AS perime')
+            ->addSelect('SUM(CASE WHEN (l.datePeremption IS NULL OR l.datePeremption > :jour) THEN l.quantiteRestante ELSE 0 END) AS quantite')
+            ->andWhere('l.quantiteRestante > 0')
+            ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
+            ->groupBy('l.entrepot')
+            ->getQuery()->getArrayResult();
+
+        $resultat = [];
+        foreach ($lignes as $l) {
+            $resultat[] = [
+                'entrepot' => null !== $l['entrepot'] ? $this->getEntityManager()->find(Entrepot::class, (int) $l['entrepot']) : null,
+                'disponible' => (int) $l['disponible'],
+                'perime' => (int) $l['perime'],
+                'quantite' => (int) $l['quantite'],
+            ];
+        }
+        usort($resultat, static fn (array $a, array $b) => [null !== $a['entrepot'], $a['entrepot']?->getNom()] <=> [null !== $b['entrepot'], $b['entrepot']?->getNom()]);
+
+        return $resultat;
+    }
+
+    /** Limite une requête sur les lots (alias « l ») à l'officine, ou à l'entrepôt donné. */
+    private static function dans(QueryBuilder $qb, ?Entrepot $entrepot): QueryBuilder
+    {
+        return null === $entrepot
+            ? $qb->andWhere('l.entrepot IS NULL')
+            : $qb->andWhere('l.entrepot = :entrepot')->setParameter('entrepot', $entrepot);
+    }
+
+    /** Lots de l'officine encore en stock, avec leur produit (alertes, inventaire). */
     private function enStockAvecProduit(): QueryBuilder
     {
         return $this->createQueryBuilder('l')
             ->join('l.produit', 'p')->addSelect('p')
-            ->andWhere('l.quantiteRestante > 0');
+            ->andWhere('l.quantiteRestante > 0')
+            ->andWhere('l.entrepot IS NULL');
     }
 }

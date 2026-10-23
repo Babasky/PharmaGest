@@ -60,6 +60,7 @@ final class AppStory extends Story
         private readonly RecetteService $recettes,
         private readonly GenerateurNotifications $notifications,
         private readonly TransfertService $transferts,
+        private readonly \App\Stock\TransfertInterneService $transfertsInternes,
         private readonly TokenStorageInterface $jetons,
         private readonly \Doctrine\ORM\EntityManagerInterface $em,
     ) {
@@ -90,6 +91,7 @@ final class AppStory extends Story
         $catalogue = $this->catalogue($fleuve);
         $this->caisse($fleuve, $catalogue);
         $this->commandes($fleuve, $catalogue);
+        $this->entrepots($fleuve, $catalogue);
         $this->finances($fleuve);
         $this->finition($fleuve, $catalogue);
         $this->jetons->setToken(null);
@@ -373,6 +375,31 @@ final class AppStory extends Story
         ]);
 
         $this->commandes->creer($ppm, [[$catalogue['Coartem'], 25], [$catalogue['Amoxicilline'], 20]]);
+        $this->tenantContext->forcer(null);
+    }
+
+    /**
+     * Entrepôts : le magasin de Kalaban garde la réserve (dont le Spasfon, absent de l'officine) et a déjà réassorti
+     * l'officine en Doliprane ; le dépôt de Sogoniko est vide.
+     *
+     * @param array<string, \App\Entity\Produit> $catalogue
+     */
+    private function entrepots(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
+    {
+        $this->tenantContext->forcer($pharmacie);
+        $kalaban = (new \App\Entity\Entrepot())->setNom('Magasin de Kalaban')->setAdresse('Kalaban Coura, près du marché')->setPharmacie($pharmacie);
+        $sogoniko = (new \App\Entity\Entrepot())->setNom('Dépôt de Sogoniko')->setPharmacie($pharmacie);
+        $this->em->persist($kalaban);
+        $this->em->persist($sogoniko);
+        $catalogue['Spasfon'] = ProduitFactory::createOne([
+            'pharmacie' => $pharmacie, 'nomCommercial' => 'Spasfon', 'dci' => 'Phloroglucinol', 'dosage' => '80 mg', 'conditionnement' => 'Boîte de 10',
+            'fournisseurHabituel' => $catalogue['Coartem']->getFournisseurHabituel(), 'prixAchat' => 1900, 'prixVente' => 2600, 'seuilAlerte' => 10, 'stockMax' => 40,
+        ]);
+        foreach ([['Doliprane', 'DP25K', '+2 years', 100], ['Coartem', 'CO240', '+20 months', 60], ['Spasfon', 'SP0912', '+18 months', 45]] as [$nom, $numero, $peremption, $quantite]) {
+            $produit = $catalogue[$nom];
+            $this->stock->entrer($produit, $numero, new \DateTimeImmutable('today '.$peremption), $quantite, (int) $produit->getPrixAchat(), $produit->getFournisseurHabituel(), motif: 'Stock initial du magasin', entrepot: $kalaban);
+        }
+        $this->transfertsInternes->transferer($kalaban, null, [[$catalogue['Doliprane'], 20]], 'Réassort du comptoir');
         $this->tenantContext->forcer(null);
     }
 

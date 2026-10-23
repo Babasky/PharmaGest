@@ -12,9 +12,12 @@ use Doctrine\ORM\Mapping as ORM;
  * Lot d'un produit (ST-01) : unités fabriquées ensemble, avec un numéro et une date de péremption.
  *
  * La quantité restante ne change que par un {@see MouvementStock}, via {@see \App\Stock\StockService}.
+ * Un lot sans entrepôt est dans l'officine (stock de vente) ; un lot rangé dans un {@see Entrepot} n'est pas vendable
+ * tant qu'il n'a pas été transféré vers l'officine.
  */
 #[ORM\Entity(repositoryClass: LotRepository::class)]
 #[ORM\Index(name: 'idx_lot_peremption', columns: ['pharmacie_id', 'date_peremption'])]
+#[ORM\Index(name: 'idx_lot_emplacement', columns: ['produit_id', 'entrepot_id'])]
 class Lot implements TenantAwareInterface
 {
     use TenantAwareTrait;
@@ -49,6 +52,10 @@ class Lot implements TenantAwareInterface
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
         private ?Fournisseur $fournisseur = null,
+        /** Null : le lot est dans l'officine. */
+        #[ORM\ManyToOne]
+        #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+        private ?Entrepot $entrepot = null,
     ) {
         $this->numero = trim($numero);
         $this->creeLe = new \DateTimeImmutable();
@@ -113,6 +120,17 @@ class Lot implements TenantAwareInterface
     public function getFournisseur(): ?Fournisseur
     {
         return $this->fournisseur;
+    }
+
+    public function getEntrepot(): ?Entrepot
+    {
+        return $this->entrepot;
+    }
+
+    /** Officine ou nom de l'entrepôt où se trouve le lot. */
+    public function getEmplacement(): string
+    {
+        return $this->entrepot?->getNom() ?? 'Officine';
     }
 
     public function getCreeLe(): \DateTimeImmutable

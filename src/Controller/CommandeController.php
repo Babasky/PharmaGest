@@ -16,6 +16,7 @@ use App\Entity\Utilisateur;
 use App\Enum\StatutCommande;
 use App\Pdf\CommandePdf;
 use App\Repository\CommandeRepository;
+use App\Repository\EntrepotRepository;
 use App\Repository\FournisseurRepository;
 use App\Repository\LotRepository;
 use App\Repository\ProduitRepository;
@@ -147,6 +148,7 @@ final class CommandeController extends AbstractAppController
             'fournisseur' => $choisi,
             'sans_fournisseur' => $sansFournisseur,
             'suggestions' => null !== $choisi || $sansFournisseur ? $suggestions->pour($choisi, $liste) : [],
+            'a_transferer' => SuggestionsCommande::aTransferer($liste),
             'a_transmettre' => array_values($aTransmettre),
             'csrf_suggestions' => self::CSRF_SUGGESTIONS,
         ]);
@@ -420,7 +422,7 @@ final class CommandeController extends AbstractAppController
 
     #[Route('/{id}/reception', name: 'app_commande_reception', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     #[IsGranted(Utilisateur::ROLE_ADJOINT)]
-    public function reception(Commande $commande, Request $requete, ReceptionService $receptions, StockService $stock): Response
+    public function reception(Commande $commande, Request $requete, ReceptionService $receptions, StockService $stock, EntrepotRepository $entrepots): Response
     {
         $this->exigerMemePharmacie($commande);
         if (!$commande->estReceptionnable()) {
@@ -438,8 +440,14 @@ final class CommandeController extends AbstractAppController
                 try {
                     $date = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $donnees->get('date')) ?: throw new AchatException('Date de réception invalide.');
                     $saisies = array_values(array_filter($donnees->all('lignes'), 'is_array'));
-                    $avertissements = $receptions->receptionner($commande, $date, (string) $donnees->get('bon_livraison'), $saisies);
-                    $this->addFlash('success', \sprintf('Réception enregistrée : lots créés et stock mis à jour. Commande %s.', mb_strtolower($commande->getStatut()->libelle())));
+                    $entrepot = null;
+                    if ('' !== (string) $donnees->get('entrepot')) {
+                        $entrepot = $entrepots->findOneBy(['id' => (int) $donnees->get('entrepot'), 'actif' => true]) ?? throw new AchatException('Choisissez l\'emplacement de la livraison dans la liste.');
+                    }
+                    $avertissements = $receptions->receptionner($commande, $date, (string) $donnees->get('bon_livraison'), $saisies, $entrepot);
+                    $this->addFlash('success', null === $entrepot
+                        ? \sprintf('Réception enregistrée : lots créés et stock mis à jour. Commande %s.', mb_strtolower($commande->getStatut()->libelle()))
+                        : \sprintf('Réception enregistrée dans l\'entrepôt %s. Commande %s.', $entrepot->getNom(), mb_strtolower($commande->getStatut()->libelle())));
                     foreach ($avertissements as $avertissement) {
                         $this->addFlash('warning', $avertissement);
                     }
@@ -456,6 +464,7 @@ final class CommandeController extends AbstractAppController
             'erreur' => $erreur,
             'saisie' => $requete->isMethod('POST') ? $donnees->all() : null,
             'aujourdhui' => $stock->aujourdhui(),
+            'entrepots' => $entrepots->actifs(),
         ], null === $erreur ? null : new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
     }
 
