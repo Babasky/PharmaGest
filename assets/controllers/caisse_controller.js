@@ -9,16 +9,23 @@ const entier = (texte) => {
     return /^\d+$/.test(nettoye) ? parseInt(nettoye, 10) : null;
 };
 
+/** Jours calendaires entre deux dates « AAAA-MM-JJ », null si l'une est invalide. */
+const joursEntre = (debut, fin) => {
+    const [a, b] = [Date.parse(`${debut}T00:00:00Z`), Date.parse(`${fin}T00:00:00Z`)];
+    return Number.isNaN(a) || Number.isNaN(b) ? null : Math.round((b - a) / 86400000);
+};
+
 /*
  * Confort de l'écran de caisse (le serveur reste seul juge) :
  *  - F2 place le curseur dans la recherche, F9 dans les espèces remises ;
  *  - la monnaie à rendre s'affiche pendant la saisie ;
  *  - le type de vente et l'ordonnance saisis mais pas encore appliqués sont enregistrés avant de choisir,
  *    retirer ou rechercher un client, pour ne pas être perdus au rechargement de l'écran ;
- *  - un nouveau client se crée dans une fenêtre, sans quitter la caisse.
+ *  - un nouveau client se crée dans une fenêtre, sans quitter la caisse ;
+ *  - une ordonnance AMO prescrite depuis au moins une semaine est signalée dès la saisie de sa date.
  */
 export default class extends Controller {
-    static targets = ['recherche', 'remis', 'monnaie', 'du', 'autre', 'vente', 'fenetreClient', 'corpsClient'];
+    static targets = ['recherche', 'remis', 'monnaie', 'du', 'autre', 'vente', 'fenetreClient', 'corpsClient', 'alerteOrdonnance'];
 
     connect() {
         this.raccourcis = (event) => {
@@ -54,6 +61,22 @@ export default class extends Controller {
             return;
         }
         this.monnaieTarget.textContent = remis >= especes ? formatFcfa(remis - especes) : `il manque ${formatFcfa(especes - remis)}`;
+    }
+
+    /** Avertissement (non bloquant) : ordonnance AMO ancienne d'au moins une semaine au jour de sa présentation. */
+    alerteOrdonnance() {
+        if (!this.hasAlerteOrdonnanceTarget || !this.hasVenteTarget) {
+            return;
+        }
+        const alerte = this.alerteOrdonnanceTarget;
+        const date = this.venteTarget.querySelector('[name=ordonnance_date]')?.value;
+        const amo = this.venteTarget.querySelector('[name=type]:checked')?.value === 'amo';
+        const jours = date ? joursEntre(date, alerte.dataset.aujourdhui) : null;
+        const ancienne = amo && jours !== null && jours >= parseInt(alerte.dataset.seuil, 10);
+        alerte.classList.toggle('d-none', !ancienne);
+        if (ancienne) {
+            alerte.querySelector('[data-message]').textContent = `Attention : cette ordonnance AMO est ancienne de ${jours} jours (prescrite le ${date.split('-').reverse().join('/')}).`;
+        }
     }
 
     etatVente() {
