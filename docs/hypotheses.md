@@ -1003,3 +1003,14 @@ donc plus signalé tout de suite comme une rupture.
 - Accord donné et refus sont tracés dans le journal d'audit (`vente.accord_donne`, `vente.accord_refuse`), en plus de
   la trace habituelle de la vente sans ordonnance ou de la remise. Seul un propriétaire de la pharmacie répond ;
   l'adjoint ne le peut pas, comme pour le code PIN.
+
+## Décision — Le code PIN du propriétaire ne valide plus aucune vente d'un collaborateur (Modibo, 23/10/2026)
+
+- Un collaborateur qui connaît le code PIN du propriétaire pourrait vendre en son nom ou vendre sans son accord. Le
+  champ « Code PIN du propriétaire » disparaît donc de la caisse : une vente sans ordonnance d'un produit qui l'exige
+  ou une remise au-delà du plafond n'est autorisée que par l'accord donné depuis le compte d'un propriétaire
+  (« Accords demandés »), pour le panier présenté. Un code PIN envoyé quand même est ignoré et la vente reste en
+  attente de l'accord. Les boutons « Encaisser » et « Envoyer à la caisse » restent grisés tant que l'accord manque.
+- Le propriétaire (ou un associé) qui vend lui-même, connecté avec son mot de passe, n'a pas d'accord à demander :
+  il est l'auteur de l'autorisation. Le code PIN reste celui qui valide chaque vente au nom du vendeur.
+- Hors ligne, l'accord ne peut pas être demandé : ces ventes attendent le retour du réseau, comme avant.

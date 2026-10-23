@@ -33,7 +33,7 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 | `i.ouattara@paix.ml` | Propriétaire | Abonnement expiré : lecture seule |
 | `m.dembele@groupe-dembele.ml` | Propriétaire Premium | Deux pharmacies, Kati et Koulikoro (sélecteur en haut de page), avec des **Transferts** de stock entre elles |
 | `s.cisse@groupe-dembele.ml` | Adjoint | Pharmacie de Koulikoro : un transfert venu de Kati à réceptionner |
-
+Codes PIN de la Pharmacie du Fleuve (validation de chaque vente ; une vente sans ordonnance ou une remise hors plafond attend l'accord du propriétaire, donné depuis « Accords demandés », jamais par son code PIN) :
 Codes PIN de la Pharmacie du Fleuve (validation de chaque vente, remise hors plafond, vente sans ordonnance ; le propriétaire peut aussi donner son accord depuis « Accords demandés », sans son code PIN) :
 Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**,
 Awa Konaté **4826** (caissière), Bakary Diallo **6047** (propriétaire associé).

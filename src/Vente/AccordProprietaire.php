@@ -48,7 +48,7 @@ class AccordProprietaire
         if ($controle->estBloquee()) {
             throw new VenteException($controle->blocages[0]);
         }
-        if (!$controle->exigeCodePin()) {
+        if (!$controle->exigeAccord()) {
             throw new VenteException('Cette vente ne demande pas l\'accord du propriétaire.');
         }
         $proprietaires = $this->tenantContext->sansFiltre(fn () => $this->affectations->proprietaires($pharmacie));
@@ -116,8 +116,9 @@ class AccordProprietaire
         }
     }
 
+    /** Une clé par demande : deux demandes dans la même seconde (panier modifié aussitôt) ne se confondent pas. */
     private static function cle(Vente $vente, \DateTimeImmutable $le): string
     {
-        return 'accord-vente-'.$vente->getId().'-'.$le->format('YmdHis');
+        return 'accord-vente-'.$vente->getId().'-'.$le->format('YmdHis').'-'.bin2hex(random_bytes(4));
     }
 }

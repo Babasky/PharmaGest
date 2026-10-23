@@ -190,7 +190,7 @@ const controler = (type, lignes, organisme, totaux) => {
     if (type === 'sans_ordonnance') {
         const exigeant = lignes.filter((l) => etat.produits.get(l.produit).ordonnance).map((l) => l.nom);
         if (exigeant.length > 0 && (etat.copie.politiqueSansOrdonnance === 'blocage' || !etat.copie.utilisateur.proprietaire)) {
-            return `Ordonnance obligatoire pour ${exigeant.join(', ')} : choisissez « Ordonnance classique » ou « Ordonnance AMO / assurance » (le code PIN du propriétaire ne peut pas être saisi hors ligne).`;
+            return `Ordonnance obligatoire pour ${exigeant.join(', ')} : choisissez « Ordonnance classique » ou « Ordonnance AMO / assurance » (l'accord du propriétaire ne peut pas être demandé hors ligne).`;
         }
     }
     const autres = autresPaiements();

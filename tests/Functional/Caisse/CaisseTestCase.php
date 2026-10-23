@@ -99,15 +99,34 @@ abstract class CaisseTestCase extends AppWebTestCase
     /**
      * @param array<string, mixed> $paiement
      */
-    protected function encaisser(array $paiement = [], ?string $codePin = null, ?Utilisateur $vendeur = null): void
+    protected function encaisser(array $paiement = [], ?Utilisateur $vendeur = null): void
     {
-        $this->poster('/caisse/encaisser', ['paiement' => $paiement, 'code_pin' => $codePin, ...$this->pinVendeur($vendeur)]);
+        $this->poster('/caisse/encaisser', ['paiement' => $paiement, ...$this->pinVendeur($vendeur)]);
     }
 
     /** « Envoyer à la caisse », validé avec le code PIN de l'utilisateur connecté. */
-    protected function envoyerALaCaisse(?string $codePin = null): void
+    protected function envoyerALaCaisse(): void
     {
-        $this->poster('/caisse/envoyer', ['code_pin' => $codePin, ...$this->pinVendeur()]);
+        $this->poster('/caisse/envoyer', $this->pinVendeur());
+    }
+
+    /**
+     * Le vendeur connecté demande l'accord du propriétaire pour son panier ; le propriétaire le donne depuis son
+     * compte (« Accords demandés »), puis le vendeur reprend la caisse.
+     */
+    protected function accordDuProprietaire(?Utilisateur $proprietaire = null): void
+    {
+        $vendeur = $this->connecte;
+        self::assertNotNull($vendeur, 'Connectez le vendeur avant de demander l\'accord.');
+        $this->poster('/caisse/accord');
+        self::assertResponseRedirects('/caisse');
+
+        $this->connecter($proprietaire ?? $this->officine->proprietaire)->request('GET', '/accords');
+        $this->client->clickLink('Examiner');
+        $this->client->submitForm('Donner mon accord');
+        self::assertResponseRedirects('/accords');
+
+        $this->connecter($vendeur);
     }
 
     /** Message d'erreur affiché après la dernière action. */

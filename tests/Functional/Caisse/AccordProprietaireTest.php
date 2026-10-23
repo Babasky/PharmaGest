@@ -5,11 +5,14 @@ namespace App\Tests\Functional\Caisse;
 use App\Entity\JournalAudit;
 use App\Entity\Notification;
 use App\Entity\Produit;
+use App\Entity\Utilisateur;
 use App\Enum\PolitiqueSansOrdonnance;
 use App\Enum\StatutVente;
 use App\Enum\TypeNotification;
+use App\Tests\Factory\AffectationFactory;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\ProduitFactory;
+use App\Tests\Factory\UtilisateurFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -79,10 +82,7 @@ final class AccordProprietaireTest extends CaisseTestCase
     public function testUnPanierModifieApresLAccordRedemandeLaConfirmation(): void
     {
         $this->demarrerLaVente();
-        $this->poster('/caisse/accord');
-        $this->donnerAccord();
-
-        $this->connecter($this->officine->vendeur);
+        $this->accordDuProprietaire();
         $this->ajouter($this->antibiotique, 5);
         $this->client->request('GET', '/caisse');
         self::assertSelectorNotExists('#accord-proprietaire .alert-success');
@@ -92,9 +92,45 @@ final class AccordProprietaireTest extends CaisseTestCase
         self::assertStringContainsString('propriétaire', $this->erreur());
         self::assertSame(StatutVente::EnCours, $this->derniereVente()->getStatut());
 
-        // Le code PIN du propriétaire au comptoir reste possible.
-        $this->encaisser([], '4826');
+        // Le code PIN du propriétaire, même connu du vendeur, ne remplace pas l'accord : il faut le redemander.
+        $this->poster('/caisse/encaisser', ['code_pin' => '4826', ...$this->pinVendeur()]);
+        self::assertStringContainsString('Demandez l\'accord du propriétaire', $this->erreur());
+        self::assertSame(StatutVente::EnCours, $this->derniereVente()->getStatut());
+
+        $this->accordDuProprietaire();
+        $this->encaisser();
         self::assertSame(StatutVente::Validee, $this->derniereVente()->getStatut());
+    }
+
+    public function testUnAssocieDonneAussiSonAccord(): void
+    {
+        $associe = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_PROPRIETAIRE, 'nom' => 'Fanta Coulibaly']);
+        AffectationFactory::createOne(['utilisateur' => $associe, 'pharmacie' => $this->officine->pharmacie]);
+
+        $this->demarrerLaVente();
+        $this->accordDuProprietaire($associe);
+        $this->encaisser();
+
+        $vente = $this->derniereVente();
+        self::assertSame(StatutVente::Validee, $vente->getStatut());
+        self::assertSame($associe->getId(), $vente->getAutorisePar()?->getId());
+    }
+
+    public function testLeProprietaireQuiVendLuiMemeNAttendPasDAccord(): void
+    {
+        $this->ouvrirCaisse($this->officine->proprietaire);
+        $this->sansFiltre(fn (EntityManagerInterface $em) => $em->getConnection()->executeStatement(
+            'UPDATE parametre_pharmacie SET politique_sans_ordonnance = ? WHERE pharmacie_id = ?',
+            [PolitiqueSansOrdonnance::Confirmation->value, $this->officine->pharmacie->getId()],
+        ));
+        $this->ajouter($this->antibiotique);
+        $this->client->request('GET', '/caisse');
+        self::assertSelectorNotExists('#accord-proprietaire');
+
+        $this->encaisser([], $this->officine->proprietaire);
+        $vente = $this->derniereVente();
+        self::assertSame(StatutVente::Validee, $vente->getStatut());
+        self::assertSame($this->officine->proprietaire->getId(), $vente->getAutorisePar()?->getId());
     }
 
     public function testUnRefusBloqueLaVente(): void
@@ -142,14 +178,6 @@ final class AccordProprietaireTest extends CaisseTestCase
             [PolitiqueSansOrdonnance::Confirmation->value, $this->officine->pharmacie->getId()],
         ));
         $this->ajouter($this->antibiotique);
-    }
-
-    private function donnerAccord(): void
-    {
-        $this->connecter($this->officine->proprietaire)->request('GET', '/accords');
-        $this->client->clickLink('Examiner');
-        $this->client->submitForm('Donner mon accord');
-        self::assertResponseRedirects('/accords');
     }
 
     /** @return list<Notification> */

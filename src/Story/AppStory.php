@@ -273,30 +273,30 @@ final class AppStory extends Story
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Doliprane'], 2);
         $this->ventes->ajouter($vente, $catalogue['Ibuprofène Biogaran']);
-        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']]);
 
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Coartem']);
         $this->ventes->ajouter($vente, $catalogue['Crème solaire SPF 50']);
         $this->ventes->definirVente($vente, TypeVente::Amo, $mariam, ['date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Sangaré', 'structure' => 'CSCOM de Badalabougou']);
         $this->ventes->remiseGlobale($vente, TypeRemise::Pourcentage, 5);
-        $this->ventes->encaisser($vente, $moussa, $session, ['orange_money' => ['montant' => '6000', 'reference' => 'OM-DEMO-1']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['orange_money' => ['montant' => '6000', 'reference' => 'OM-DEMO-1']]);
 
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Coartem'], 2);
         $this->ventes->definirVente($vente, TypeVente::Amo, $mariam, ['numero' => 'ORD-5521', 'date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Sangaré', 'structure' => 'CSCOM de Badalabougou']);
-        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']]);
 
         $oumar = \Zenstruck\Foundry\Persistence\repository(\App\Entity\Client::class)->findOneBy(['nom' => 'Oumar Sidibé']);
         \assert($oumar instanceof \App\Entity\Client);
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Amoxicilline'], 2);
         $this->ventes->definirVente($vente, TypeVente::Amo, $oumar, ['date' => new \DateTimeImmutable('today -1 day'), 'prescripteur' => 'Dr Keïta', 'structure' => 'CHU du Point G']);
-        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '2000']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '2000']]);
 
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Efferalgan']);
-        $this->ventes->encaisser($vente, $moussa, $session, [], null);
+        $this->ventes->encaisser($vente, $moussa, $session, []);
         $this->ventes->annuler($vente, 'Le client a changé d\'avis');
 
         // Comptage juste, au franc près, avec les plus grosses coupures possibles.
@@ -323,7 +323,7 @@ final class AppStory extends Story
             if (null !== $client) {
                 $this->ventes->definirVente($vente, TypeVente::Amo, $client, $ordonnance);
             }
-            $this->ventes->envoyerEnCaisse($vente, $seydou, null);
+            $this->ventes->envoyerEnCaisse($vente, $seydou);
 
             return $vente;
         };

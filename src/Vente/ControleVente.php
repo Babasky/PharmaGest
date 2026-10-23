@@ -4,7 +4,7 @@ namespace App\Vente;
 
 /**
  * Résultat des contrôles d'un panier avant l'encaissement : blocages (la vente ne peut pas passer) et
- * autorisations du propriétaire requises (code PIN : remise hors plafond, vente sans ordonnance).
+ * accords du propriétaire requis (remise hors plafond, vente sans ordonnance), donnés depuis son compte.
  */
 final class ControleVente
 {
@@ -28,7 +28,7 @@ final class ControleVente
         return [] !== $this->blocages;
     }
 
-    public function exigeCodePin(): bool
+    public function exigeAccord(): bool
     {
         return [] !== $this->autorisations;
     }
