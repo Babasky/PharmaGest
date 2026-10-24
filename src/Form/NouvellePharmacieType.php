@@ -33,10 +33,11 @@ final class NouvellePharmacieType extends AbstractType
             ->add('joursEssai', IntegerType::class, [
                 'label' => 'Période d\'essai (jours)',
                 'help' => '0 = pas d\'essai : la pharmacie reste en lecture seule jusqu\'au premier paiement.',
-                'attr' => ['min' => 0, 'max' => 90],
+                'attr' => ['placeholder' => 'Ex. : 30', 'min' => 0, 'max' => 90],
             ])
-            ->add('nomProprietaire', TextType::class, ['label' => 'Nom du pharmacien titulaire'])
+            ->add('nomProprietaire', TextType::class, ['attr' => ['placeholder' => 'Entrez le prénom et le nom du titulaire'], 'label' => 'Nom du pharmacien titulaire'])
             ->add('emailProprietaire', EmailType::class, [
+                'attr' => ['placeholder' => 'Entrez l\'email du titulaire'],
                 'label' => 'Email du pharmacien titulaire',
                 'help' => 'Il recevra un lien pour activer son compte. Si l\'email correspond déjà à un propriétaire, la pharmacie lui est ajoutée. Les associés s\'ajoutent ensuite depuis la fiche de la pharmacie.',
             ]);

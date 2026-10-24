@@ -16,7 +16,7 @@ final class MotDePasseOublieType extends AbstractType
     {
         $builder->add('email', EmailType::class, [
             'label' => 'Adresse email du compte',
-            'attr' => ['autocomplete' => 'email', 'autofocus' => true],
+            'attr' => ['placeholder' => 'Entrez votre email', 'autocomplete' => 'email', 'autofocus' => true],
             'constraints' => [new Assert\NotBlank(), new Assert\Email()],
         ]);
     }

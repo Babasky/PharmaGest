@@ -27,7 +27,7 @@
                     <input type="hidden" name="_token" value="{{ token }}">
                     <input type="hidden" name="retour" value="caisse">
                     <label class="small text-nowrap" for="fond">Fond de caisse</label>
-                    <input type="text" inputmode="numeric" class="form-control form-control-sm text-end" id="fond" name="fond" value="0" autocomplete="off" style="width: 8rem">
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm text-end" id="fond" placeholder="Montant en FCFA" name="fond" value="0" autocomplete="off" style="width: 8rem">
                     <button class="btn btn-sm btn-success text-nowrap" type="submit"><i class="bi bi-unlock"></i> Ouvrir la caisse</button>
                 </form>
             {% else %}
@@ -77,7 +77,7 @@
                                             {% if dispo > 0 %}
                                                 <form method="post" action="{{ path('app_caisse_ajouter', {id: produit.id}) }}" class="input-group input-group-sm">
                                                     <input type="hidden" name="_token" value="{{ token }}">
-                                                    <input type="number" name="quantite" value="1" min="1" max="{{ dispo }}" class="form-control text-end" aria-label="Quantité de {{ produit.nomCommercial }}">
+                                                    <input type="number" name="quantite" value="1" placeholder="Qté" min="1" max="{{ dispo }}" class="form-control text-end" aria-label="Quantité de {{ produit.nomCommercial }}">
                                                     <button class="btn btn-success" type="submit" title="Ajouter au panier"><i class="bi bi-cart-plus"></i><span class="visually-hidden">Ajouter {{ produit.nomCommercial }}</span></button>
                                                 </form>
                                             {% endif %}
@@ -153,7 +153,7 @@
                                         {% if tarif_amo and ligne.remboursable and ligne.accordPrealable %}
                                             <div class="input-group input-group-sm mt-1 accord-prealable" style="max-width: 20rem">
                                                 <span class="input-group-text">Accord préalable n°</span>
-                                                <input type="text" form="{{ form_id }}" name="accord" value="{{ ligne.numeroAccord }}" maxlength="40" class="form-control" aria-label="N° d'accord préalable pour {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
+                                                <input type="text" form="{{ form_id }}" name="accord" placeholder="N° d'accord" value="{{ ligne.numeroAccord }}" maxlength="40" class="form-control" aria-label="N° d'accord préalable pour {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
                                                 {# Photo ou PDF de l'accord, remis à l'organisme avec le bordereau. #}
                                                 <label class="btn btn-outline-secondary mb-0 copie-accord" title="{{ ligne.copieAccord ? 'Remplacer' : 'Joindre' }} la photo ou le PDF de l'accord">
                                                     <i class="bi {{ ligne.copieAccord ? 'bi-paperclip text-success' : 'bi-camera' }}"></i><span class="visually-hidden">{{ ligne.copieAccord ? 'Remplacer' : 'Joindre' }} la copie de l'accord</span>
@@ -170,12 +170,12 @@
                                         <form method="post" action="{{ path('app_caisse_ligne', {id: ligne.id}) }}" id="{{ form_id }}" enctype="multipart/form-data">
                                             <input type="hidden" name="_token" value="{{ token }}">
                                         </form>
-                                        <input type="number" form="{{ form_id }}" name="quantite" value="{{ ligne.quantite }}" min="0" class="form-control form-control-sm text-end" aria-label="Quantité de {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
+                                        <input type="number" form="{{ form_id }}" name="quantite" value="{{ ligne.quantite }}" placeholder="Qté" min="0" class="form-control form-control-sm text-end" aria-label="Quantité de {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
                                     </td>
                                     {% if remise_possible %}
                                         <td>
                                             <div class="input-group input-group-sm">
-                                                <input type="text" inputmode="numeric" form="{{ form_id }}" name="remise_valeur" value="{{ ligne.remiseValeur ?: '' }}" class="form-control text-end" aria-label="Remise sur {{ produit.nomCommercial }}">
+                                                <input type="text" inputmode="numeric" form="{{ form_id }}" placeholder="Remise" name="remise_valeur" value="{{ ligne.remiseValeur ?: '' }}" class="form-control text-end" aria-label="Remise sur {{ produit.nomCommercial }}">
                                                 <select form="{{ form_id }}" name="remise_type" class="form-select" aria-label="Type de remise" style="max-width: 5rem">
                                                     <option value="pourcentage"{{ ligne.remiseType and ligne.remiseType.value == 'montant' ? '' : ' selected' }}>%</option>
                                                     <option value="montant"{{ ligne.remiseType and ligne.remiseType.value == 'montant' ? ' selected' }}>F</option>
@@ -365,7 +365,7 @@
                         <div class="mt-2">
                             <label class="form-label small text-body-secondary mb-1" for="remise-globale">Remise sur {{ panier.type.value == 'amo' ? 'la part assuré' : 'le total' }} (plafond {{ parametres.plafondRemise }} %)</label>
                             <div class="input-group input-group-sm">
-                                <input type="text" inputmode="numeric" id="remise-globale" name="remise_valeur" value="{{ panier.remiseValeur ?: '' }}" class="form-control text-end">
+                                <input type="text" inputmode="numeric" id="remise-globale" placeholder="Remise" name="remise_valeur" value="{{ panier.remiseValeur ?: '' }}" class="form-control text-end">
                                 <select name="remise_type" class="form-select" aria-label="Type de remise" style="max-width: 5rem">
                                     <option value="pourcentage"{{ panier.remiseType and panier.remiseType.value == 'montant' ? '' : ' selected' }}>%</option>
                                     <option value="montant"{{ panier.remiseType and panier.remiseType.value == 'montant' ? ' selected' }}>FCFA</option>
@@ -436,7 +436,7 @@
                                     <div class="{{ choix_vendeur ? 'col-5' : 'col-12' }}">
                                         <label class="form-label small mb-1" for="pin-vente">{{ choix_vendeur ? 'Code PIN du vendeur' : 'Votre code PIN' }}</label>
                                         <div class="pg-mdp">
-                                            <input type="password" inputmode="numeric" maxlength="4" pattern="\d{4}" class="form-control" id="pin-vente" name="pin_vendeur" autocomplete="off" required>
+                                            <input type="password" inputmode="numeric" maxlength="4" pattern="\d{4}" class="form-control" id="pin-vente" placeholder="4 chiffres" name="pin_vendeur" autocomplete="off" required>
                                             {{ include('form/_bouton_mot_de_passe.html.twig') }}
                                         </div>
                                     </div>

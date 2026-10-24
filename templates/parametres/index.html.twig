@@ -129,7 +129,7 @@
                                         <td class="ps-3">
                                             <form method="post" action="{{ path('app_parametres_caisse_renommer', {id: c.id}) }}" class="d-flex gap-2">
                                                 <input type="hidden" name="_token" value="{{ jeton_caisses }}">
-                                                <input type="text" class="form-control form-control-sm" name="libelle" value="{{ c.libelle }}" maxlength="60" aria-label="Nom de la caisse" required>
+                                                <input type="text" class="form-control form-control-sm" name="libelle" value="{{ c.libelle }}" placeholder="Nom de la caisse" maxlength="60" aria-label="Nom de la caisse" required>
                                                 <button class="btn btn-sm btn-outline-secondary" type="submit" title="Renommer"><i class="bi bi-check-lg"></i></button>
                                             </form>
                                         </td>

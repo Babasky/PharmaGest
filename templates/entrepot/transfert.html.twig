@@ -54,7 +54,7 @@
                                     <td class="ps-3">{{ p.designation }}</td>
                                     <td class="text-end">{{ dispo }}</td>
                                     <td class="text-end">{{ disponibles[id].destination }}</td>
-                                    <td class="pe-3"><input type="number" min="0" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="p[{{ id }}]" value="{{ quantites[id] is defined and quantites[id] > 0 ? min(quantites[id], dispo) }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
+                                    <td class="pe-3"><input type="number" min="0" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="p[{{ id }}]" placeholder="Qté" value="{{ quantites[id] is defined and quantites[id] > 0 ? min(quantites[id], dispo) }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
                                 </tr>
                             {% endfor %}
                         </tbody>

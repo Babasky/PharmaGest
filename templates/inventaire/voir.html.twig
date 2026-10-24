@@ -35,7 +35,7 @@
                                 <td class="text-end">{{ ligne.quantiteTheorique }}</td>
                                 <td class="text-end">
                                     {% if modifiable %}
-                                        <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm text-end" name="comptage[{{ ligne.id }}]" value="{{ ligne.quantiteComptee }}" aria-label="Quantité comptée, lot {{ lot.numero }}">
+                                        <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm text-end" name="comptage[{{ ligne.id }}]" placeholder="Qté comptée" value="{{ ligne.quantiteComptee }}" aria-label="Quantité comptée, lot {{ lot.numero }}">
                                     {% else %}
                                         {{ ligne.quantiteComptee ?? '—' }}
                                     {% endif %}

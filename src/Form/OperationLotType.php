@@ -17,8 +17,8 @@ final class OperationLotType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('quantite', IntegerType::class, ['label' => $options['libelle_quantite'], 'attr' => ['min' => 0, 'inputmode' => 'numeric']])
-            ->add('motif', TextType::class, ['label' => 'Motif']);
+            ->add('quantite', IntegerType::class, ['label' => $options['libelle_quantite'], 'attr' => ['placeholder' => 'Nombre d\'unités', 'min' => 0, 'inputmode' => 'numeric']])
+            ->add('motif', TextType::class, ['attr' => ['placeholder' => 'Ex. : Boîte abîmée'], 'label' => 'Motif']);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

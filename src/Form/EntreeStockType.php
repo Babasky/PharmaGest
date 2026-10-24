@@ -23,10 +23,10 @@ final class EntreeStockType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('numero', TextType::class, ['label' => 'N° de lot', 'attr' => ['autocomplete' => 'off']])
+            ->add('numero', TextType::class, ['label' => 'N° de lot', 'attr' => ['placeholder' => 'Ex. : L2026-001', 'autocomplete' => 'off']])
             ->add('datePeremption', DateType::class, ['label' => 'Date de péremption', 'widget' => 'single_text', 'input' => 'datetime_immutable'])
-            ->add('quantite', IntegerType::class, ['label' => 'Quantité (unités)', 'attr' => ['min' => 1, 'inputmode' => 'numeric']])
-            ->add('prixAchat', IntegerType::class, ['label' => 'Prix d\'achat unitaire (FCFA)', 'attr' => ['min' => 0, 'inputmode' => 'numeric']])
+            ->add('quantite', IntegerType::class, ['label' => 'Quantité (unités)', 'attr' => ['placeholder' => 'Nombre d\'unités', 'min' => 1, 'inputmode' => 'numeric']])
+            ->add('prixAchat', IntegerType::class, ['label' => 'Prix d\'achat unitaire (FCFA)', 'attr' => ['placeholder' => 'Ex. : 1000', 'min' => 0, 'inputmode' => 'numeric']])
             ->add('fournisseur', EntityType::class, [
                 'label' => 'Fournisseur',
                 'class' => Fournisseur::class,
@@ -34,7 +34,7 @@ final class EntreeStockType extends AbstractType
                 'required' => false,
                 'placeholder' => '—',
             ])
-            ->add('motif', TextType::class, ['label' => 'Motif', 'help' => 'Ex. : stock initial, don, échantillons, régularisation.']);
+            ->add('motif', TextType::class, ['attr' => ['placeholder' => 'Ex. : Stock initial'], 'label' => 'Motif', 'help' => 'Ex. : stock initial, don, échantillons, régularisation.']);
         if ($options['avec_entrepots']) {
             $builder->add('entrepot', EntityType::class, [
                 'label' => 'Emplacement',

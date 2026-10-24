@@ -70,12 +70,12 @@
                                 {% for cle, coupure in coupures %}
                                     <div class="col-6 col-md-4">
                                         <label class="form-label small mb-0" for="coupure-{{ cle }}">{{ coupure[0] }}</label>
-                                        <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm text-end" id="coupure-{{ cle }}" name="comptage[{{ cle }}]">
+                                        <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm text-end" id="coupure-{{ cle }}" placeholder="Nombre" name="comptage[{{ cle }}]">
                                     </div>
                                 {% endfor %}
                             </div>
                             <label class="form-label small mt-2" for="justification">Justification de l'écart</label>
-                            <textarea class="form-control form-control-sm" id="justification" name="justification" rows="2" maxlength="1000"></textarea>
+                            <textarea class="form-control form-control-sm" id="justification" placeholder="Expliquez l'écart constaté" name="justification" rows="2" maxlength="1000"></textarea>
                             <button class="btn btn-danger mt-3" type="submit" data-turbo-confirm="Clôturer la session {{ session.numero }} ?"><i class="bi bi-lock"></i> Clôturer la caisse</button>
                         </form>
                     {% elseif not session.estOuverte and session.comptage is not empty %}

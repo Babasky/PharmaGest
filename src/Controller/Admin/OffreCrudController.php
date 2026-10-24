@@ -62,11 +62,13 @@ final class OffreCrudController extends AbstractCrudController
     {
         yield TextField::new('nom', 'Offre')->hideOnForm();
         yield IntegerField::new('maxUtilisateurs', 'Utilisateurs')
+            ->setFormTypeOption('attr', ['placeholder' => 'Vide : illimité'])
             ->formatValue(static fn (?int $max) => null === $max ? 'Illimités' : (string) $max)
             ->setRequired(false)
             ->setHelp('Utilisateurs actifs par pharmacie, propriétaire compris ; vide pour illimité. Une baisse ne désactive aucun compte : elle empêche seulement d\'en créer au-delà de la limite.');
-        yield IntegerField::new('maxPharmacies', 'Pharmacies par propriétaire');
+        yield IntegerField::new('maxPharmacies', 'Pharmacies par propriétaire')->setFormTypeOption('attr', ['placeholder' => 'Ex. : 1']);
         yield IntegerField::new('tarifAnnuel', 'Tarif annuel')->setTextAlign('right')
+            ->setFormTypeOption('attr', ['placeholder' => 'Vide : à fixer'])
             ->formatValue(static fn (?int $tarif) => null === $tarif ? 'À fixer' : Fcfa::format($tarif))
             ->setRequired(false)
             ->setHelp('En FCFA ; vide tant qu\'il n\'est pas fixé. Vaut pour les prochains paiements : les abonnements déjà payés gardent leur montant.');

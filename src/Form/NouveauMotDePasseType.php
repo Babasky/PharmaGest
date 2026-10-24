@@ -23,9 +23,9 @@ final class NouveauMotDePasseType extends AbstractType
             'first_options' => [
                 'label' => 'Nouveau mot de passe',
                 'help' => \sprintf('Au moins %d caractères.', self::LONGUEUR_MIN),
-                'attr' => ['autocomplete' => 'new-password', 'autofocus' => true],
+                'attr' => ['placeholder' => 'Entrez le nouveau mot de passe', 'autocomplete' => 'new-password', 'autofocus' => true],
             ],
-            'second_options' => ['label' => 'Confirmez le mot de passe', 'attr' => ['autocomplete' => 'new-password']],
+            'second_options' => ['label' => 'Confirmez le mot de passe', 'attr' => ['placeholder' => 'Retapez le mot de passe', 'autocomplete' => 'new-password']],
             'constraints' => self::contraintes(),
         ]);
     }
