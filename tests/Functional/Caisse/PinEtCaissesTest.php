@@ -37,6 +37,7 @@ final class PinEtCaissesTest extends CaisseTestCase
         $this->ajouterAugmentin();
         $this->client->request('GET', '/caisse');
         self::assertSelectorExists('#pin-vente[required]');
+        self::assertSelectorExists('.pg-mdp #pin-vente + [data-pg-mdp]');
 
         $this->poster('/caisse/encaisser', ['vendeur' => $this->officine->vendeur->getId()]);
         self::assertStringContainsString('Saisissez le code PIN du vendeur', $this->erreur());

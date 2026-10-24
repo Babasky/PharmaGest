@@ -435,7 +435,10 @@
                                     {% endif %}
                                     <div class="{{ choix_vendeur ? 'col-5' : 'col-12' }}">
                                         <label class="form-label small mb-1" for="pin-vente">{{ choix_vendeur ? 'Code PIN du vendeur' : 'Votre code PIN' }}</label>
-                                        <input type="password" inputmode="numeric" maxlength="4" pattern="\d{4}" class="form-control" id="pin-vente" name="pin_vendeur" autocomplete="off" required>
+                                        <div class="pg-mdp">
+                                            <input type="password" inputmode="numeric" maxlength="4" pattern="\d{4}" class="form-control" id="pin-vente" name="pin_vendeur" autocomplete="off" required>
+                                            {{ include('form/_bouton_mot_de_passe.html.twig') }}
+                                        </div>
                                     </div>
                                 </div>
                             {% endif %}

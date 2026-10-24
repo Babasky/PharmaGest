@@ -18,7 +18,10 @@
         </div>
         <div>
             <label for="mot_de_passe" class="form-label">Mot de passe</label>
-            <input type="password" name="mot_de_passe" placeholder="Entrez votre mot de passe" id="mot_de_passe" class="form-control" autocomplete="current-password" required>
+            <div class="pg-mdp">
+                <input type="password" name="mot_de_passe" placeholder="Entrez votre mot de passe" id="mot_de_passe" class="form-control" autocomplete="current-password" required>
+                {{ include('form/_bouton_mot_de_passe.html.twig') }}
+            </div>
         </div>
         <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
         <button class="btn btn-success btn-lg fs-6" type="submit"><i class="bi bi-box-arrow-in-right"></i> Se connecter</button>
