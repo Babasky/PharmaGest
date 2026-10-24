@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Entrepot;
 use App\Entity\Lot;
 use App\Entity\Produit;
 use App\Entity\Utilisateur;
@@ -10,6 +11,7 @@ use App\Form\Model\EntreeStock;
 use App\Form\Model\OperationLot;
 use App\Form\OperationLotType;
 use App\Repository\CategorieRepository;
+use App\Repository\EntrepotRepository;
 use App\Repository\LotRepository;
 use App\Repository\ProduitRepository;
 use App\Stock\AlertesStock;
@@ -85,9 +87,12 @@ final class StockController extends AbstractAppController
     public function valorisation(): Response
     {
         $lignes = $this->lots->valorisationParCategorie($this->stock->aujourdhui());
+        $emplacements = $this->lots->valorisationParEmplacement($this->stock->aujourdhui());
 
         return $this->render('stock/valorisation.html.twig', [
             'lignes' => $lignes,
+            // Le détail par emplacement n'a d'intérêt que si une partie du stock est rangée en entrepôt.
+            'emplacements' => array_filter($emplacements, static fn (array $e) => null !== $e['entrepot']) ? $emplacements : [],
             'total' => array_sum(array_column($lignes, 'disponible')),
             'total_perime' => array_sum(array_column($lignes, 'perime')),
         ]);
@@ -95,21 +100,31 @@ final class StockController extends AbstractAppController
 
     #[Route('/produit/{id}/entree', name: 'app_stock_entree', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     #[IsGranted(Utilisateur::ROLE_ADJOINT)]
-    public function entree(Produit $produit, Request $requete): Response
+    public function entree(Produit $produit, Request $requete, EntrepotRepository $entrepots, #[MapQueryParameter(flags: \FILTER_NULL_ON_FAILURE)] ?int $entrepot = null): Response
     {
         $this->exigerMemePharmacie($produit);
         $entree = new EntreeStock();
         $entree->prixAchat = $produit->getPrixAchat();
         $entree->fournisseur = $produit->getFournisseurHabituel()?->isActif() ? $produit->getFournisseurHabituel() : null;
+        $actifs = $entrepots->actifs();
+        foreach ($actifs as $candidat) {
+            if ($candidat->getId() === $entrepot) {
+                $entree->entrepot = $candidat;
+            }
+        }
 
-        $formulaire = $this->createForm(EntreeStockType::class, $entree);
+        $formulaire = $this->createForm(EntreeStockType::class, $entree, ['avec_entrepots' => [] !== $actifs]);
         $formulaire->handleRequest($requete);
         if ($formulaire->isSubmitted() && $formulaire->isValid()) {
             try {
-                $lot = $this->stock->entrer($produit, (string) $entree->numero, $entree->datePeremption, (int) $entree->quantite, (int) $entree->prixAchat, $entree->fournisseur, motif: $entree->motif);
-                $this->addFlash('success', \sprintf('%d unité(s) de %s entrée(s) en stock (lot %s).', $lot->getQuantiteInitiale(), $produit->getNomCommercial(), $lot->getNumero()));
+                $lot = $this->stock->entrer($produit, (string) $entree->numero, $entree->datePeremption, (int) $entree->quantite, (int) $entree->prixAchat, $entree->fournisseur, motif: $entree->motif, entrepot: $entree->entrepot);
+                $this->addFlash('success', null === $lot->getEntrepot()
+                    ? \sprintf('%d unité(s) de %s entrée(s) en stock (lot %s).', $lot->getQuantiteInitiale(), $produit->getNomCommercial(), $lot->getNumero())
+                    : \sprintf('%d unité(s) de %s rangée(s) dans l\'entrepôt %s (lot %s).', $lot->getQuantiteInitiale(), $produit->getNomCommercial(), $lot->getEntrepot()->getNom(), $lot->getNumero()));
 
-                return $this->redirectToRoute('app_produit_voir', ['id' => $produit->getId()]);
+                return $lot->getEntrepot() instanceof Entrepot
+                    ? $this->redirectToRoute('app_entrepot_voir', ['id' => $lot->getEntrepot()->getId()])
+                    : $this->redirectToRoute('app_produit_voir', ['id' => $produit->getId()]);
             } catch (StockException $e) {
                 $formulaire->addError(new FormError($e->getMessage()));
             }

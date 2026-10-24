@@ -1,0 +1,8 @@
+{# Stock disponible dans les entrepôts pour un produit dont l'officine manque : « quantite » (synthese.entrepots), « produit ». #}
+{% if quantite > 0 %}
+    {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+        <a class="badge text-bg-info text-decoration-none ms-1 pg-en-entrepot" href="{{ path('app_entrepot_transfert', {destination: 'officine', ('p[' ~ produit.id ~ ']'): ''}) }}" title="Disponible dans vos entrepôts : faites-le venir à l'officine"><i class="bi bi-buildings"></i> {{ quantite|number_format }} en entrepôt</a>
+    {% else %}
+        <span class="badge text-bg-info ms-1 pg-en-entrepot" title="Disponible dans les entrepôts de la pharmacie : demandez un transfert à l'officine"><i class="bi bi-buildings"></i> {{ quantite|number_format }} en entrepôt</span>
+    {% endif %}
+{% endif %}

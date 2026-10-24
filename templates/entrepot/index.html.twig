@@ -1,0 +1,62 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Entrepôts{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_entrepot_transferts') }}"><i class="bi bi-clock-history"></i> Historique des transferts</a>
+    {% if entrepots|filter(e => e.actif) is not empty and ecriture_autorisee() %}
+        <a class="btn btn-success" href="{{ path('app_entrepot_transfert') }}"><i class="bi bi-arrow-left-right"></i> Nouveau transfert</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <p class="text-body-secondary small">
+        Le stock de chaque entrepôt (magasin de stockage) est séparé de celui de l'officine : on ne vend que ce qui est à
+        l'officine. Quand un produit manque à l'officine, SoftPharm indique ce qui attend dans vos entrepôts, et les
+        suggestions de commande proposent d'abord de le faire venir avant de l'acheter au grossiste.
+    </p>
+    <div class="row g-3">
+        <div class="col-12 col-lg-8 order-2 order-lg-1">
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="entrepots">
+                        <thead class="table-light"><tr><th class="ps-3">Emplacement</th><th>Adresse</th><th class="text-end">Unités disponibles</th><th class="text-end pe-3">Valeur</th></tr></thead>
+                        <tbody>
+                            {% set officine = valeurs[0] ?? null %}
+                            <tr>
+                                <td class="ps-3 fw-semibold"><i class="bi bi-shop"></i> Officine <span class="badge text-bg-light">stock de vente</span></td>
+                                <td class="small text-body-secondary">—</td>
+                                <td class="text-end">{{ (officine.quantite ?? 0)|number_format }}</td>
+                                <td class="montant pe-3">{{ (officine.disponible ?? 0)|fcfa }}</td>
+                            </tr>
+                            {% for entrepot in entrepots %}
+                                {% set v = valeurs[entrepot.id] ?? null %}
+                                <tr class="{{ entrepot.actif ? '' : 'text-body-secondary' }}">
+                                    <td class="ps-3"><a class="fw-semibold text-decoration-none" href="{{ path('app_entrepot_voir', {id: entrepot.id}) }}"><i class="bi bi-buildings"></i> {{ entrepot.nom }}</a>{% if not entrepot.actif %} <span class="badge text-bg-secondary">Archivé</span>{% endif %}</td>
+                                    <td class="small">{{ entrepot.adresse ?? '—' }}</td>
+                                    <td class="text-end">{{ (v.quantite ?? 0)|number_format }}</td>
+                                    <td class="montant pe-3">{{ (v.disponible ?? 0)|fcfa }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="4" class="text-center text-body-secondary py-4" id="aucun-entrepot">Aucun entrepôt pour l'instant. Créez-en un pour chaque magasin de stockage de la pharmacie.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% if ecriture_autorisee() %}
+            <div class="col-12 col-lg-4 order-1 order-lg-2">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-body fw-semibold">Nouvel entrepôt</div>
+                    <div class="card-body">
+                        {{ form_start(formulaire) }}
+                        {{ form_widget(formulaire) }}
+                        <button class="btn btn-success" type="submit">Créer</button>
+                        {{ form_end(formulaire) }}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

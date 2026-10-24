@@ -50,6 +50,10 @@
                             {% if synthese.rupture %}<span class="badge text-bg-danger fs-6 align-middle">Rupture</span>{% elseif synthese.stock > 0 and synthese.stock <= produit.seuilAlerte %}<span class="badge text-bg-warning fs-6 align-middle">Sous le seuil</span>{% endif %}
                             {% if synthese.aZeroDepuis %}<div class="fw-normal text-danger-emphasis" style="font-size: .8125rem">à zéro depuis le {{ synthese.aZeroDepuis|date('d/m/Y') }}</div>{% endif %}
                         </dd>
+                        {% if synthese.entrepots > 0 %}
+                            <dt class="col-6 fw-normal text-body-secondary">En entrepôt</dt>
+                            <dd class="col-6 text-end fw-semibold" id="stock-entrepots">{{ synthese.entrepots|number_format }}</dd>
+                        {% endif %}
                         {% if is_granted('ROLE_ADJOINT') %}
                             <dt class="col-6 fw-normal text-body-secondary">Valeur du stock</dt><dd class="col-6 montant">{{ synthese.valeur|fcfa }}</dd>
                         {% endif %}
@@ -68,7 +72,7 @@
 
     {% set gerer_stock = is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
     <div class="card shadow-sm mt-3">
-        <div class="card-header bg-body fw-semibold">Stock par lot</div>
+        <div class="card-header bg-body fw-semibold">{{ lots_entrepots is empty ? 'Stock par lot' : 'Stock par lot à l\'officine' }}</div>
         <div class="table-responsive">
             <table class="table align-middle mb-0" id="lots">
                 <thead class="table-light">
@@ -106,6 +110,47 @@
         </div>
         <div class="card-body small text-body-secondary py-2">Les lots sortent à la vente du premier au dernier périmé (FEFO). Un lot périmé ne peut plus être vendu.</div>
     </div>
+
+    {% if lots_entrepots is not empty %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-body fw-semibold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-buildings"></i> Stock en entrepôt</span>
+                {% if gerer_stock and synthese.entrepots > 0 %}
+                    <a class="btn btn-sm btn-success" href="{{ path('app_entrepot_transfert', {destination: 'officine', ('p[' ~ produit.id ~ ']'): ''}) }}"><i class="bi bi-box-arrow-up"></i> Faire venir à l'officine</a>
+                {% endif %}
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" id="lots-entrepots">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Entrepôt</th><th>Lot</th><th>Péremption</th><th class="text-end">Quantité</th>
+                            {% if is_granted('ROLE_ADJOINT') %}<th class="text-end">Prix d'achat</th>{% endif %}
+                            {% if gerer_stock %}<th class="pe-3 text-end"><span class="visually-hidden">Actions</span></th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lot in lots_entrepots %}
+                            {% set perime = lot.estPerimeLe(aujourdhui) %}
+                            <tr class="{{ perime ? 'table-danger' }}">
+                                <td class="ps-3">{% if is_granted('ROLE_ADJOINT') %}<a class="text-decoration-none" href="{{ path('app_entrepot_voir', {id: lot.entrepot.id}) }}">{{ lot.entrepot.nom }}</a>{% else %}{{ lot.entrepot.nom }}{% endif %}{% if not lot.entrepot.actif %} <span class="badge text-bg-secondary">Archivé</span>{% endif %}</td>
+                                <td class="font-monospace">{{ lot.numero }}</td>
+                                <td class="text-nowrap">{{ lot.datePeremption ? lot.datePeremption|date('d/m/Y') : 'Non renseignée' }}{% if perime %} <span class="badge text-bg-danger">Périmé</span>{% endif %}</td>
+                                <td class="text-end fw-semibold">{{ lot.quantiteRestante|number_format }}</td>
+                                {% if is_granted('ROLE_ADJOINT') %}<td class="montant">{{ lot.prixAchat|fcfa }}</td>{% endif %}
+                                {% if gerer_stock %}
+                                    <td class="pe-3 text-end text-nowrap">
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_stock_ajuster', {id: lot.id}) }}">Ajuster</a>
+                                        <a class="btn btn-sm {{ perime ? 'btn-danger' : 'btn-outline-danger' }}" href="{{ path('app_stock_detruire', {id: lot.id}) }}">Détruire</a>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body small text-body-secondary py-2">Le stock d'un entrepôt ne se vend pas : transférez-le d'abord à l'officine.</div>
+        </div>
+    {% endif %}
 
     <div class="row g-3 mt-0">
         <div class="col-12 col-xl-5">

@@ -1,0 +1,61 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Entrepôt {{ entrepot.nom }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_entrepot_index') }}"><i class="bi bi-arrow-left"></i> Entrepôts</a>
+    {% if ecriture_autorisee() %}
+        <a class="btn btn-outline-secondary" href="{{ path('app_entrepot_modifier', {id: entrepot.id}) }}"><i class="bi bi-pencil"></i> Modifier</a>
+        {% if entrepot.actif %}
+            <a class="btn btn-outline-success" href="{{ path('app_entrepot_transfert', {origine: 'officine', destination: entrepot.id}) }}"><i class="bi bi-box-arrow-in-down"></i> Ranger depuis l'officine</a>
+            <a class="btn btn-success" href="{{ path('app_entrepot_transfert', {origine: entrepot.id, destination: 'officine'}) }}"><i class="bi bi-box-arrow-up"></i> Envoyer à l'officine</a>
+        {% endif %}
+        <form method="post" action="{{ path('app_entrepot_archiver', {id: entrepot.id}) }}" class="d-inline">
+            <input type="hidden" name="_token" value="{{ csrf_token('archiver-entrepot-' ~ entrepot.id) }}">
+            <button class="btn btn-outline-{{ entrepot.actif ? 'danger' : 'success' }}" type="submit"><i class="bi bi-{{ entrepot.actif ? 'archive' : 'arrow-counterclockwise' }}"></i> {{ entrepot.actif ? 'Archiver' : 'Restaurer' }}</button>
+        </form>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if not entrepot.actif %}<div class="alert alert-secondary small">Entrepôt archivé : il n'apparaît plus dans les choix d'emplacement.</div>{% endif %}
+    {% if entrepot.adresse %}<p class="text-body-secondary"><i class="bi bi-geo-alt"></i> {{ entrepot.adresse }}</p>{% endif %}
+    <p class="small text-body-secondary">Pour ranger un nouveau lot directement ici, faites une entrée de stock depuis la fiche du produit ou réceptionnez la commande en choisissant cet entrepôt.</p>
+
+    <form method="get" class="d-flex gap-2 mb-3" style="max-width: 32rem">
+        <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Rechercher un produit" aria-label="Rechercher un produit">
+        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+    </form>
+
+    <div class="card shadow-sm mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="contenu-entrepot">
+                <thead class="table-light"><tr><th class="ps-3">Produit</th><th class="text-end">Disponible ici</th><th class="text-end">Périmé</th><th>1<sup>re</sup> péremption</th><th class="text-end">Stock officine</th><th class="text-end">Valeur</th><th class="pe-3"></th></tr></thead>
+                <tbody>
+                    {% for ligne in contenu %}
+                        {% set p = ligne.produit %}
+                        {% set officine = synthese[p.id].stock ?? 0 %}
+                        <tr data-produit="{{ p.nomCommercial }}">
+                            <td class="ps-3"><a class="text-decoration-none" href="{{ path('app_produit_voir', {id: p.id}) }}">{{ p.designation }}</a></td>
+                            <td class="text-end fw-semibold">{{ ligne.disponible|number_format }}</td>
+                            <td class="text-end {{ ligne.perime ? 'text-danger' }}">{{ ligne.perime ?: '—' }}</td>
+                            <td class="small">{{ ligne.peremption ? ligne.peremption|date('d/m/Y') : '—' }}</td>
+                            <td class="text-end"><span class="{{ officine <= p.seuilAlerte ? 'text-danger fw-semibold' }}">{{ officine }}</span></td>
+                            <td class="montant">{{ ligne.valeur|fcfa }}</td>
+                            <td class="pe-3 text-end text-nowrap">
+                                {% if entrepot.actif and ligne.disponible > 0 and ecriture_autorisee() %}
+                                    <a class="btn btn-sm btn-outline-success" href="{{ path('app_entrepot_transfert', {origine: entrepot.id, destination: 'officine', ('p[' ~ p.id ~ ']'): ''}) }}" title="Envoyer à l'officine"><i class="bi bi-box-arrow-up"></i><span class="visually-hidden">Envoyer {{ p.nomCommercial }} à l'officine</span></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="7" class="text-center text-body-secondary py-4">{{ q ? 'Aucun produit trouvé dans cet entrepôt.' : 'Cet entrepôt est vide.' }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2 class="h6">Derniers transferts</h2>
+    {% include 'entrepot/_transferts.html.twig' with {transferts: transferts} %}
+{% endblock %}

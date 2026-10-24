@@ -2,8 +2,10 @@
 
 namespace App\Form;
 
+use App\Entity\Entrepot;
 use App\Entity\Fournisseur;
 use App\Form\Model\EntreeStock;
+use App\Repository\EntrepotRepository;
 use App\Repository\FournisseurRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -33,10 +35,21 @@ final class EntreeStockType extends AbstractType
                 'placeholder' => '—',
             ])
             ->add('motif', TextType::class, ['label' => 'Motif', 'help' => 'Ex. : stock initial, don, échantillons, régularisation.']);
+        if ($options['avec_entrepots']) {
+            $builder->add('entrepot', EntityType::class, [
+                'label' => 'Emplacement',
+                'class' => Entrepot::class,
+                'query_builder' => static fn (EntrepotRepository $r) => $r->createQueryBuilder('e')->andWhere('e.actif = true')->orderBy('e.nom'),
+                'required' => false,
+                'placeholder' => 'Officine (stock de vente)',
+                'help' => 'Un lot rangé dans un entrepôt ne se vend pas : faites-le venir à l\'officine par un transfert.',
+            ]);
+        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['data_class' => EntreeStock::class]);
+        $resolver->setDefaults(['data_class' => EntreeStock::class, 'avec_entrepots' => false]);
+        $resolver->setAllowedTypes('avec_entrepots', 'bool');
     }
 }

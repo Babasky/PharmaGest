@@ -1,0 +1,74 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Nouveau transfert de stock{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_entrepot_index') }}"><i class="bi bi-arrow-left"></i> Entrepôts</a>
+{% endblock %}
+
+{% block content %}
+    {% set valeur_origine = origine ? origine.id : officine %}
+    {% set valeur_destination = destination ? destination.id : officine %}
+
+    <p class="small text-body-secondary">
+        Le stock sort de l'origine lot par lot (premier périmé, premier sorti ; les lots périmés ne partent jamais) et entre
+        aussitôt à la destination avec les mêmes numéros de lot, dates de péremption et prix d'achat.
+    </p>
+
+    {% if erreur %}<div class="alert alert-danger" id="erreur-transfert">{{ erreur }}</div>{% endif %}
+
+    {# Un seul formulaire : « Afficher » le recharge (GET) en gardant les quantités saisies, « Transférer » l'enregistre. #}
+    <form method="post" action="{{ path('app_entrepot_transfert') }}" id="formulaire-transfert">
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-12 col-md-4">
+                <label class="form-label small mb-1" for="origine">De</label>
+                <select class="form-select" id="origine" name="origine">
+                    <option value="{{ officine }}"{{ valeur_origine == officine ? ' selected' }}>Officine</option>
+                    {% for e in entrepots %}<option value="{{ e.id }}"{{ valeur_origine == e.id ? ' selected' }}>Entrepôt {{ e.nom }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label small mb-1" for="destination">Vers</label>
+                <select class="form-select" id="destination" name="destination">
+                    <option value="{{ officine }}"{{ valeur_destination == officine ? ' selected' }}>Officine</option>
+                    {% for e in entrepots %}<option value="{{ e.id }}"{{ valeur_destination == e.id ? ' selected' }}>Entrepôt {{ e.nom }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Ajouter un produit…" aria-label="Rechercher un produit à transférer">
+                <button class="btn btn-outline-secondary text-nowrap" type="submit" formmethod="get" id="afficher">Afficher</button>
+            </div>
+        </div>
+
+        {% if produits is empty %}
+            <div class="alert alert-light border small">Recherchez les produits à transférer par leur nom ou leur DCI, puis indiquez les quantités.</div>
+        {% else %}
+            <div class="card shadow-sm mb-3">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0" id="produits-transfert">
+                        <thead class="table-light"><tr><th class="ps-3">Produit</th><th class="text-end">Disponible : {{ origine ? origine.nom : 'officine' }}</th><th class="text-end">Déjà : {{ destination ? destination.nom : 'officine' }}</th><th class="text-end pe-3">Quantité à transférer</th></tr></thead>
+                        <tbody>
+                            {% for id, p in produits %}
+                                {% set dispo = disponibles[id].origine %}
+                                <tr data-produit="{{ p.nomCommercial }}" class="{{ dispo == 0 ? 'text-body-secondary' }}">
+                                    <td class="ps-3">{{ p.designation }}</td>
+                                    <td class="text-end">{{ dispo }}</td>
+                                    <td class="text-end">{{ disponibles[id].destination }}</td>
+                                    <td class="pe-3"><input type="number" min="0" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="p[{{ id }}]" value="{{ quantites[id] is defined and quantites[id] > 0 ? min(quantites[id], dispo) }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="mb-3" style="max-width: 32rem">
+                <label class="form-label" for="note">Note <span class="text-body-secondary small">(facultative)</span></label>
+                <input type="text" class="form-control" id="note" name="note" maxlength="255" value="{{ note }}" placeholder="Ex. : réassort du comptoir">
+            </div>
+            {% if ecriture_autorisee() %}
+                <input type="hidden" name="_token" value="{{ csrf_token(csrf_transfert) }}">
+                <button class="btn btn-success" type="submit" id="transferer"><i class="bi bi-arrow-left-right"></i> Transférer</button>
+            {% endif %}
+        {% endif %}
+    </form>
+{% endblock %}

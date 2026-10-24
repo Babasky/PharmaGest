@@ -84,7 +84,7 @@ class ProduitRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->andWhere('p.actif = true')
-            ->andWhere(\sprintf('(SELECT COALESCE(SUM(ls.quantiteRestante), 0) FROM %s ls WHERE ls.produit = p AND (ls.datePeremption IS NULL OR ls.datePeremption > :jour)) <= p.seuilAlerte', Lot::class))
+            ->andWhere(\sprintf('(SELECT COALESCE(SUM(ls.quantiteRestante), 0) FROM %s ls WHERE ls.produit = p AND ls.entrepot IS NULL AND (ls.datePeremption IS NULL OR ls.datePeremption > :jour)) <= p.seuilAlerte', Lot::class))
             ->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
             ->orderBy('p.nomCommercial', 'ASC');
     }
@@ -96,7 +96,7 @@ class ProduitRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->andWhere('p.actif = true')
-            ->andWhere(\sprintf('EXISTS (SELECT ld.id FROM %s ld WHERE ld.produit = p AND ld.quantiteRestante > 0 AND ld.dateReception <= :depuis)', Lot::class))
+            ->andWhere(\sprintf('EXISTS (SELECT ld.id FROM %s ld WHERE ld.produit = p AND ld.entrepot IS NULL AND ld.quantiteRestante > 0 AND ld.dateReception <= :depuis)', Lot::class))
             ->andWhere(\sprintf('NOT EXISTS (SELECT md.id FROM %s md JOIN md.lot lm WHERE lm.produit = p AND md.type = :vente AND md.date >= :depuis)', MouvementStock::class))
             ->setParameter('depuis', $jour->modify(\sprintf('-%d days', $jours)), Types::DATE_IMMUTABLE)
             ->setParameter('vente', TypeMouvement::Vente)

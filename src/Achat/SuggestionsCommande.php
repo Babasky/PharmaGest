@@ -25,7 +25,11 @@ use App\Tenant\TenantContext;
  *
  * Le fournisseur est le fournisseur habituel du produit, à défaut celui de sa dernière commande (habitudes d'achat).
  *
- * @phpstan-type Suggestion array{produit: Produit, fournisseur: Fournisseur|null, stock: int, rupture: bool, attendu: int, quantite: int, vendu: int, moyenne: float, rotation: Rotation, couverture: float|null, delai: int, motif: string, inhabituelle: bool, dernier_achat: array{fournisseur: int, date: \DateTimeImmutable, quantite: int}|null}
+ * Avant d'acheter, on regarde les entrepôts de la pharmacie : ce qui y est disponible est d'abord à faire venir à
+ * l'officine (« a_transferer ») et n'est commandé au grossiste que pour le reste (« quantite »). Un produit entièrement
+ * couvert par les entrepôts n'apparaît que parmi les transferts à faire.
+ *
+ * @phpstan-type Suggestion array{produit: Produit, fournisseur: Fournisseur|null, stock: int, entrepot: int, a_transferer: int, rupture: bool, attendu: int, quantite: int, vendu: int, moyenne: float, rotation: Rotation, couverture: float|null, delai: int, motif: string, inhabituelle: bool, dernier_achat: array{fournisseur: int, date: \DateTimeImmutable, quantite: int}|null}
  */
 class SuggestionsCommande
 {
@@ -125,7 +129,11 @@ class SuggestionsCommande
             } else {
                 continue;
             }
-            $s['quantite'] = self::quantiteProposee($s['produit'], $s['stock'], $s['attendu'], $s['moyenne'], $s['delai'] + $parametres->getJoursCouverture());
+            $jours = $s['delai'] + $parametres->getJoursCouverture();
+            if ($s['entrepot'] > 0) {
+                $s['a_transferer'] = min($s['entrepot'], self::quantiteProposee($s['produit'], $s['stock'], $s['attendu'], $s['moyenne'], $jours));
+            }
+            $s['quantite'] = self::quantiteProposee($s['produit'], $s['stock'] + $s['entrepot'], $s['attendu'], $s['moyenne'], $jours);
             $s['inhabituelle'] = self::inhabituelle($s['quantite'], $s['dernier_achat']['quantite'] ?? null);
             $suggestions[] = $s;
         }
@@ -156,12 +164,37 @@ class SuggestionsCommande
             if (null !== $max = $s['produit']->getStockMax()) {
                 $quantite = min($quantite, max(0, $max - $s['stock'] - $s['attendu']));
             }
-            $s['quantite'] = $quantite;
+            $s['a_transferer'] = min($s['entrepot'], $quantite);
+            $s['quantite'] = $quantite - $s['a_transferer'];
             $s['inhabituelle'] = self::inhabituelle($quantite, $s['dernier_achat']['quantite'] ?? null);
             $suggestions[] = $s;
         }
 
         return $suggestions;
+    }
+
+    /**
+     * Suggestions à acheter : celles qui ne sont pas entièrement couvertes par le stock des entrepôts.
+     *
+     * @param list<Suggestion> $suggestions
+     *
+     * @return list<Suggestion>
+     */
+    public static function aAcheter(array $suggestions): array
+    {
+        return array_values(array_filter($suggestions, static fn (array $s) => $s['quantite'] > 0 || 0 === $s['a_transferer']));
+    }
+
+    /**
+     * Suggestions qui demandent d'abord un transfert depuis les entrepôts vers l'officine.
+     *
+     * @param list<Suggestion> $suggestions
+     *
+     * @return list<Suggestion>
+     */
+    public static function aTransferer(array $suggestions): array
+    {
+        return array_values(array_filter($suggestions, static fn (array $s) => $s['a_transferer'] > 0));
     }
 
     /**
@@ -174,7 +207,7 @@ class SuggestionsCommande
     public function parFournisseur(?array $suggestions = null): array
     {
         $groupes = [];
-        foreach ($suggestions ?? $this->selonTendances() as $suggestion) {
+        foreach (self::aAcheter($suggestions ?? $this->selonTendances()) as $suggestion) {
             $fournisseur = $suggestion['fournisseur'];
             $cle = (int) $fournisseur?->getId();
             $groupes[$cle] ??= ['fournisseur' => $fournisseur, 'nombre' => 0];
@@ -195,7 +228,7 @@ class SuggestionsCommande
     public function pour(?Fournisseur $fournisseur, ?array $suggestions = null): array
     {
         return array_values(array_filter(
-            $suggestions ?? $this->selonTendances(),
+            self::aAcheter($suggestions ?? $this->selonTendances()),
             static fn (array $s) => $s['fournisseur'] === $fournisseur,
         ));
     }
@@ -225,6 +258,8 @@ class SuggestionsCommande
                 'produit' => $produit,
                 'fournisseur' => $fournisseur,
                 'stock' => $synthese[$id]['stock'] ?? 0,
+                'entrepot' => $synthese[$id]['entrepots'] ?? 0,
+                'a_transferer' => 0,
                 'rupture' => $synthese[$id]['rupture'] ?? false,
                 'attendu' => $attendus[$id] ?? 0,
                 'quantite' => 0,

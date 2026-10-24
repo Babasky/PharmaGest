@@ -2,6 +2,7 @@
 
 namespace App\Stock;
 
+use App\Entity\Entrepot;
 use App\Entity\Fournisseur;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
@@ -17,7 +18,7 @@ use Psr\Clock\ClockInterface;
  * Seul point d'entrée pour faire varier le stock (ST-04) : chaque variation d'un lot écrit un mouvement typé.
  *
  * Règles : stock = lots non périmés (RG-03), sortie FEFO (RG-04), lot périmé invendable (RG-05),
- * stock jamais négatif.
+ * stock jamais négatif. Sans entrepôt précisé, le stock est celui de l'officine (le seul qu'on vend).
  */
 class StockService
 {
@@ -35,14 +36,14 @@ class StockService
         return $this->horloge->now()->setTime(0, 0);
     }
 
-    public function stockDisponible(Produit $produit): int
+    public function stockDisponible(Produit $produit, ?Entrepot $entrepot = null): int
     {
-        return $this->lots->stockDisponible($produit, $this->aujourdhui());
+        return $this->lots->stockDisponible($produit, $this->aujourdhui(), $entrepot);
     }
 
     /**
      * Crée un lot et son mouvement d'entrée. Sert à l'entrée manuelle (stock initial, livraison sans commande)
-     * et, au Lot 6, à la réception des commandes.
+     * et, au Lot 6, à la réception des commandes. Avec un entrepôt, le lot y est rangé au lieu de l'officine.
      *
      * @throws StockException
      */
@@ -56,6 +57,7 @@ class StockService
         TypeMouvement $type = TypeMouvement::EntreeManuelle,
         ?string $motif = null,
         ?string $document = null,
+        ?Entrepot $entrepot = null,
     ): Lot {
         if ('' === trim($numero)) {
             throw new StockException('Le numéro de lot est obligatoire.');
@@ -72,9 +74,12 @@ class StockService
         if (!$produit->isActif()) {
             throw new StockException(\sprintf('Le produit %s est archivé.', $produit->getNomCommercial()));
         }
+        if (null !== $entrepot && !$entrepot->isActif()) {
+            throw new StockException(\sprintf('L\'entrepôt %s est archivé.', $entrepot->getNom()));
+        }
 
-        return $this->transaction(function () use ($produit, $numero, $datePeremption, $quantite, $prixAchat, $fournisseur, $type, $motif, $document): Lot {
-            $lot = new Lot($produit, $numero, $datePeremption, $quantite, $prixAchat, $this->aujourdhui(), $fournisseur);
+        return $this->transaction(function () use ($produit, $numero, $datePeremption, $quantite, $prixAchat, $fournisseur, $type, $motif, $document, $entrepot): Lot {
+            $lot = new Lot($produit, $numero, $datePeremption, $quantite, $prixAchat, $this->aujourdhui(), $fournisseur, $entrepot);
             $this->em->persist($lot);
             $this->mouvementer($lot, $type, $quantite, $motif, $document);
 
@@ -87,6 +92,7 @@ class StockService
                     'quantite' => $quantite,
                     'prix_achat' => $prixAchat,
                     'motif' => $motif,
+                    'emplacement' => $lot->getEmplacement(),
                 ]);
             }
             $this->em->flush();
@@ -121,23 +127,24 @@ class StockService
     /**
      * Sort une quantité d'un produit en FEFO (RG-04) : les lots qui périment en premier sortent en premier,
      * une même sortie peut consommer plusieurs lots. Les lots périmés ne sortent jamais ainsi (RG-05).
+     * Sans entrepôt, la quantité sort de l'officine.
      *
      * @return list<Prelevement>
      *
      * @throws StockException
      */
-    public function prelever(Produit $produit, int $quantite, TypeMouvement $type = TypeMouvement::Vente, ?string $document = null): array
+    public function prelever(Produit $produit, int $quantite, TypeMouvement $type = TypeMouvement::Vente, ?string $document = null, ?Entrepot $entrepot = null): array
     {
         if ($quantite <= 0) {
             throw new StockException('La quantité doit être supérieure à zéro.');
         }
 
-        return $this->transaction(function () use ($produit, $quantite, $type, $document): array {
-            $disponibles = $this->lots->verrouillerDisponibles($produit, $this->aujourdhui());
+        return $this->transaction(function () use ($produit, $quantite, $type, $document, $entrepot): array {
+            $disponibles = $this->lots->verrouillerDisponibles($produit, $this->aujourdhui(), $entrepot);
             $total = array_sum(array_map(static fn (Lot $l) => $l->getQuantiteRestante(), $disponibles));
 
             if ($total < $quantite) {
-                throw new StockException($this->messageStockInsuffisant($produit, $total, $quantite));
+                throw new StockException(null === $entrepot ? $this->messageStockInsuffisant($produit, $total, $quantite) : \sprintf('Stock insuffisant pour %s dans l\'entrepôt %s : %d disponible(s) pour %d demandé(s).', $produit->getNomCommercial(), $entrepot->getNom(), $total, $quantite));
             }
 
             $prelevements = [];
@@ -168,6 +175,28 @@ class StockService
         if ($disponible < $quantite) {
             throw new StockException($this->messageStockInsuffisant($produit, $disponible, $quantite));
         }
+    }
+
+    /**
+     * Range à un autre emplacement (officine si null, ou entrepôt) des unités d'un lot qui viennent d'en sortir par un
+     * transfert interne : même numéro, péremption, prix d'achat, date de réception et fournisseur. Le lot identique
+     * déjà présent à cet emplacement les reçoit, sinon un lot est créé.
+     *
+     * @internal réservé à {@see TransfertInterneService}, qui sort d'abord les unités de l'origine
+     */
+    public function rangerDepuisTransfertInterne(Lot $origine, int $quantite, ?Entrepot $destination, string $document): Lot
+    {
+        $lot = $this->lots->memeLotDans($origine, $destination);
+        if (null === $lot) {
+            $lot = new Lot($origine->getProduit(), $origine->getNumero(), $origine->getDatePeremption(), $quantite, $origine->getPrixAchat(), $origine->getDateReception(), $origine->getFournisseur(), $destination);
+            $this->em->persist($lot);
+        } else {
+            $this->lots->verrouiller($lot);
+        }
+        $this->mouvementer($lot, TypeMouvement::Transfert, $quantite, null, $document);
+        $this->em->flush();
+
+        return $lot;
     }
 
     /**
@@ -314,13 +343,21 @@ class StockService
             foreach ($this->lots->enStock($produit) as $lot) {
                 if ($lot->estPerimeLe($this->aujourdhui())) {
                     return \sprintf('Vente impossible : le seul stock de %s est périmé (lot %s, périmé le %s).',
-                        $produit->getNomCommercial(), $lot->getNumero(), $lot->getDatePeremption()?->format('d/m/Y'));
+                        $produit->getNomCommercial(), $lot->getNumero(), $lot->getDatePeremption()?->format('d/m/Y')).$this->rappelEntrepots($produit);
                 }
             }
 
-            return \sprintf('%s est en rupture de stock.', $produit->getNomCommercial());
+            return \sprintf('%s est en rupture de stock.', $produit->getNomCommercial()).$this->rappelEntrepots($produit);
         }
 
-        return \sprintf('Stock insuffisant pour %s : %d disponible(s) pour %d demandé(s).', $produit->getNomCommercial(), $disponible, $demande);
+        return \sprintf('Stock insuffisant pour %s : %d disponible(s) pour %d demandé(s).', $produit->getNomCommercial(), $disponible, $demande).$this->rappelEntrepots($produit);
+    }
+
+    /** Le produit qui manque à l'officine attend peut-être dans un entrepôt : on le dit. */
+    private function rappelEntrepots(Produit $produit): string
+    {
+        $enEntrepots = $this->lots->disponibleEnEntrepots([$produit->getId()], $this->aujourdhui())[(int) $produit->getId()] ?? 0;
+
+        return $enEntrepots > 0 ? \sprintf(' %d disponible(s) en entrepôt : faites-les venir à l\'officine par un transfert.', $enEntrepots) : '';
     }
 }
