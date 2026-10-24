@@ -13,8 +13,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Inventaire complet ou tournant (ST-06). Les quantités théoriques sont figées à l'ouverture ;
- * à la validation, chaque écart (compté − théorique) devient un ajustement du lot.
+ * Inventaire complet ou tournant (ST-06) de l'officine ou d'un entrepôt. Les quantités théoriques sont figées
+ * à l'ouverture ; à la validation, chaque écart (compté − théorique) devient un ajustement du lot.
  */
 #[ORM\Entity(repositoryClass: InventaireRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_inventaire_numero', columns: ['pharmacie_id', 'numero'])]
@@ -58,6 +58,10 @@ class Inventaire implements TenantAwareInterface
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
         private ?Categorie $categorie = null,
+        /** Null = officine. */
+        #[ORM\ManyToOne]
+        #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+        private ?Entrepot $entrepot = null,
     ) {
         $this->lignes = new ArrayCollection();
     }
@@ -85,6 +89,17 @@ class Inventaire implements TenantAwareInterface
     public function getCategorie(): ?Categorie
     {
         return $this->categorie;
+    }
+
+    public function getEntrepot(): ?Entrepot
+    {
+        return $this->entrepot;
+    }
+
+    /** Ex. « Officine » ou « Entrepôt Magasin de Kalaban ». */
+    public function getLibelleEmplacement(): string
+    {
+        return null === $this->entrepot ? 'Officine' : 'Entrepôt '.$this->entrepot->getNom();
     }
 
     /** Ex. « Par étagère : E1-R1 ». */

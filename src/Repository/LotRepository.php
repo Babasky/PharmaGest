@@ -143,16 +143,19 @@ class LotRepository extends ServiceEntityRepository
     }
 
     /**
-     * Lots à compter pour un inventaire (ST-06), dans l'ordre du rayon : étagère, produit, péremption.
+     * Lots à compter pour un inventaire (ST-06) de l'officine ou d'un entrepôt, dans l'ordre du rayon : étagère (officine seulement), produit, péremption.
      * Les lots périmés sont inclus : ils sont physiquement présents.
      *
      * @return list<Lot>
      */
-    public function pourInventaire(?Etagere $etagere, ?Categorie $categorie): array
+    public function pourInventaire(?Etagere $etagere, ?Categorie $categorie, ?Entrepot $entrepot = null): array
     {
-        $qb = $this->enStockAvecProduit()
-            ->leftJoin('p.etagere', 'e')
-            ->orderBy('e.code', 'ASC')->addOrderBy('p.nomCommercial', 'ASC')->addSelect(self::SANS_DATE)->addOrderBy('sansDate', 'ASC')->addOrderBy('l.datePeremption', 'ASC');
+        $qb = $this->enStockAvecProduit($entrepot)->leftJoin('p.etagere', 'e');
+        // Les étagères sont celles de l'officine : un entrepôt se compte dans l'ordre des produits.
+        if (null === $entrepot) {
+            $qb->addOrderBy('e.code', 'ASC');
+        }
+        $qb->addOrderBy('p.nomCommercial', 'ASC')->addSelect(self::SANS_DATE)->addOrderBy('sansDate', 'ASC')->addOrderBy('l.datePeremption', 'ASC');
         if (null !== $etagere) {
             $qb->andWhere('p.etagere = :etagere')->setParameter('etagere', $etagere);
         }
@@ -482,12 +485,11 @@ class LotRepository extends ServiceEntityRepository
             : $qb->andWhere('l.entrepot = :entrepot')->setParameter('entrepot', $entrepot);
     }
 
-    /** Lots de l'officine encore en stock, avec leur produit (alertes, inventaire). */
-    private function enStockAvecProduit(): QueryBuilder
+    /** Lots encore en stock à un emplacement (null = officine), avec leur produit (alertes, inventaire). */
+    private function enStockAvecProduit(?Entrepot $entrepot = null): QueryBuilder
     {
-        return $this->createQueryBuilder('l')
+        return self::dans($this->createQueryBuilder('l')
             ->join('l.produit', 'p')->addSelect('p')
-            ->andWhere('l.quantiteRestante > 0')
-            ->andWhere('l.entrepot IS NULL');
+            ->andWhere('l.quantiteRestante > 0'), $entrepot);
     }
 }
