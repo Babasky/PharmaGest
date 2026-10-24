@@ -66,6 +66,7 @@ final class ProduitController extends AbstractAppController
         return $this->render('produit/voir.html.twig', [
             'produit' => $produit,
             'lots' => $lots->enStock($produit),
+            'lots_entrepots' => $lots->enEntrepots($produit),
             'synthese' => $lots->syntheseParProduit([$produit], $aujourdhui)[(int) $produit->getId()],
             'mouvements' => $mouvements->historique($produit, $page),
             'ventes_mois' => $mois,

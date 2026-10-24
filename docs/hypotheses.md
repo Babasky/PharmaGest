@@ -1014,3 +1014,34 @@ donc plus signalé tout de suite comme une rupture.
 - Le propriétaire (ou un associé) qui vend lui-même, connecté avec son mot de passe, n'a pas d'accord à demander :
   il est l'auteur de l'autorisation. Le code PIN reste celui qui valide chaque vente au nom du vendeur.
 - Hors ligne, l'accord ne peut pas être demandé : ces ventes attendent le retour du réseau, comme avant.
+## Décisions — Entrepôts de la pharmacie (Modibo, 22/10/2026)
+
+- Une pharmacie peut avoir zéro, un ou plusieurs entrepôts (magasins de stockage), créés par le propriétaire ou
+  l'adjoint (menu Stock → Entrepôts) avec un nom et une adresse facultative. Sans entrepôt, rien ne change.
+- Le stock d'un entrepôt est séparé de celui de l'officine : chaque lot est soit à l'officine, soit dans un entrepôt.
+  On ne vend que le stock de l'officine. Les alertes (seuil, péremption, périmés, dormants), le badge « Rupture », la
+  caisse hors ligne et les inventaires ne portent que sur l'officine. La valorisation du stock compte tout ce que
+  possède la pharmacie (officine et entrepôts), avec le détail par emplacement.
+- Du stock entre dans un entrepôt par une entrée de stock (champ « Emplacement »), par la réception d'une commande
+  (« Livrée à ») ou par un transfert. Ajustement et destruction se font lot par lot depuis la fiche produit, comme à
+  l'officine.
+- Transferts internes : de l'entrepôt vers l'officine, de l'officine vers un entrepôt, ou d'un entrepôt à un autre,
+  plusieurs produits à la fois. Ils sont faits en une fois (pas d'expédition puis de réception comme entre officines) :
+  le stock sort de l'origine en FEFO, les lots périmés ne partent jamais, et il entre aussitôt à la destination avec
+  les mêmes numéro de lot, péremption, prix d'achat et fournisseur. Un lot identique déjà présent à la destination
+  reçoit les unités (pas de doublon quand un lot fait l'aller-retour). Numéro TRI-AAAA-NNNNNN, mouvements de type
+  « Transfert », trace `transfert.interne` au journal d'audit. Réservés au propriétaire et à l'adjoint, comme les
+  entrées de stock ; le vendeur voit le stock des entrepôts mais demande le transfert.
+- Quand l'officine manque d'un produit (stock à zéro ou sous le seuil), l'état du stock, la caisse, les alertes, la
+  fiche produit et la saisie d'une commande indiquent la quantité disponible en entrepôt (lots non périmés des
+  entrepôts actifs), avec un lien vers le transfert pour le propriétaire et l'adjoint. Un produit qui attend en
+  entrepôt n'est jamais affiché « Rupture ». À la caisse, le message « rupture de stock » rappelle ce qui est en
+  entrepôt.
+- Suggestions de commande et commandes automatiques : avant d'acheter, on déduit le stock disponible en entrepôt. La
+  quantité utile à l'officine est d'abord proposée en transfert (encadré « D'abord, faire venir de vos entrepôts »,
+  bouton « Préparer le transfert ») ; seul le reste est commandé au grossiste. Un produit entièrement couvert par les
+  entrepôts n'est plus commandé, y compris par l'envoi automatique.
+- Un entrepôt qui contient encore du stock ne s'archive pas ; un entrepôt archivé disparaît des choix d'emplacement et
+  son stock (s'il en restait) ne compte plus dans les suggestions.
+- Pas encore fait : inventaire d'un entrepôt (on ajuste lot par lot), seuil d'alerte propre à un entrepôt, transfert
+  en deux temps (expédié puis reçu) pour un entrepôt éloigné.

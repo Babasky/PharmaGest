@@ -126,6 +126,7 @@ const afficherPanier = () => {
     const type = $('hl-type').value;
     document.querySelectorAll('.hl-amo').forEach((e) => e.classList.toggle('d-none', type !== 'amo'));
     document.querySelectorAll('.hl-ordonnance').forEach((e) => e.classList.toggle('d-none', type === 'sans_ordonnance'));
+    alerteOrdonnance();
     $('hl-panier').innerHTML = etat.panier.length === 0
         ? '<tr><td colspan="4" class="text-body-secondary small">Panier vide : recherchez un produit.</td></tr>'
         : etat.panier.map((l) => {
@@ -146,6 +147,18 @@ const afficherPanier = () => {
         + (type === 'amo' ? `<dt class="col-7">Part AMO / assurance</dt><dd class="col-5 text-end mb-0">− ${formatFcfa(totaux.partAmo)}</dd>` : '')
         + `<dt class="col-7 fs-5">À payer</dt><dd class="col-5 text-end fs-5 fw-semibold mb-0">${formatFcfa(totaux.aPayer)}</dd>`;
     monnaie();
+};
+
+/** Avertissement (non bloquant) : ordonnance AMO prescrite depuis au moins une semaine (Ordonnance::JOURS_ANCIENNE). */
+const JOURS_ORDONNANCE_ANCIENNE = 7;
+const alerteOrdonnance = () => {
+    const date = $('hl-ord-date').value;
+    const jours = date ? Math.round((Date.parse(`${aujourdhui()}T00:00:00Z`) - Date.parse(`${date}T00:00:00Z`)) / 86400000) : NaN;
+    const ancienne = $('hl-type').value === 'amo' && jours >= JOURS_ORDONNANCE_ANCIENNE;
+    $('hl-ord-ancienne').classList.toggle('d-none', !ancienne);
+    $('hl-ord-ancienne').firstElementChild.textContent = ancienne
+        ? `Attention : cette ordonnance AMO est ancienne de ${jours} jours (prescrite le ${date.split('-').reverse().join('/')}).`
+        : '';
 };
 
 const autresPaiements = () => [...document.querySelectorAll('.hl-mode')].reduce((somme, champ) => somme + (entier(champ.value) ?? 0), 0);
@@ -419,6 +432,7 @@ $('hl-panier').addEventListener('click', (event) => {
     }
 });
 $('hl-type').addEventListener('change', afficherPanier);
+$('hl-ord-date').addEventListener('input', alerteOrdonnance);
 $('hl-organisme').addEventListener('change', afficherPanier);
 $('hl-remis').addEventListener('input', monnaie);
 $('hl-modes').addEventListener('input', monnaie);

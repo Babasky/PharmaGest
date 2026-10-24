@@ -106,6 +106,7 @@ final class CaisseController extends AbstractAppController
             'a_encaisser' => $ventesRepo->aEncaisser(),
             'types' => TypeVente::cases(),
             'organismes' => $organismes->actifs(),
+            'aujourdhui' => $stock->aujourdhui(),
         ]);
     }
 

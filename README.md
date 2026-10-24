@@ -77,6 +77,13 @@ l'officine destinataire confirme la réception (les mêmes lots, dates de pérem
 Dans la démo, Kati a envoyé à Koulikoro un transfert déjà reçu, un transfert expédié qui attend la confirmation de
 Salif Cissé (adjoint de Koulikoro) et un transfert encore en préparation.
 
+**Entrepôts.** Une pharmacie peut avoir un ou plusieurs entrepôts (magasins de stockage) dont le stock est séparé de
+celui de l'officine (**Stock › Entrepôts**, propriétaire et adjoint). Le stock y entre par une entrée de stock, une
+réception de commande ou un transfert ; on le fait venir à l'officine par un transfert interne (numéro TRI). Quand
+l'officine manque d'un produit, l'état du stock, la caisse et la fiche produit indiquent ce qui attend en entrepôt, et
+les suggestions de commande proposent d'abord le transfert avant de commander le reste. Dans la démo, la Pharmacie du
+Fleuve a un « Magasin de Kalaban » (dont du Spasfon, absent de l'officine) et un « Dépôt de Sogoniko » vide.
+
 ## Sans DDEV
 
 Prérequis : PHP 8.3 (extensions `intl`, `pdo_mysql`, `zip`, `gd`, `mbstring`, `xml`), Composer, MySQL 8.

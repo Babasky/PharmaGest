@@ -50,7 +50,7 @@
                     <ul class="list-group list-group-flush mt-2" id="resultats">
                         {% for produit in resultats %}
                             <li class="list-group-item d-flex flex-wrap align-items-center gap-2 px-0">
-                                <span class="me-auto">{{ produit.designation }} <span class="small text-body-secondary">· stock {{ synthese[produit.id].stock ?? 0 }}</span></span>
+                                <span class="me-auto">{{ produit.designation }} <span class="small text-body-secondary">· stock {{ synthese[produit.id].stock ?? 0 }}</span>{% if (synthese[produit.id].entrepots ?? 0) > 0 %} <span class="small text-info-emphasis">· {{ synthese[produit.id].entrepots }} en entrepôt : vérifiez avant de commander</span>{% endif %}</span>
                                 <form method="post" action="{{ path('app_commande_ajouter', {id: commande.id}) }}" class="d-flex gap-2">
                                     <input type="hidden" name="_token" value="{{ jeton }}">
                                     <input type="hidden" name="produit" value="{{ produit.id }}">
@@ -97,7 +97,7 @@
                                     <div class="small text-body-secondary">{{ p.conditionnement }}</div>
                                 {% endif %}
                             </td>
-                            <td class="text-end">{{ synthese[p.id].stock ?? 0 }}</td>
+                            <td class="text-end">{{ synthese[p.id].stock ?? 0 }}{% if modifiable and (synthese[p.id].entrepots ?? 0) > 0 %}<div class="small text-info-emphasis text-nowrap">+ {{ synthese[p.id].entrepots }} en entrepôt</div>{% endif %}</td>
                             {% if modifiable %}
                                 <td>
                                     <input type="number" min="0" max="100000" form="lignes-commande" class="form-control form-control-sm text-end ms-auto" style="max-width: 6.5rem" name="quantite[{{ ligne.id }}]" value="{{ ligne.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}">

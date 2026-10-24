@@ -3,6 +3,7 @@
 namespace App\Achat;
 
 use App\Entity\Commande;
+use App\Entity\Entrepot;
 use App\Entity\LigneCommande;
 use App\Entity\Reception;
 use App\Enum\TypeMouvement;
@@ -14,7 +15,8 @@ use Psr\Clock\ClockInterface;
 
 /**
  * Réception d'une livraison fournisseur (CO-06) : chaque ligne reçue crée un lot par {@see StockService}
- * (mouvement « Réception »), la commande passe « reçue partiellement » ou « reçue ».
+ * (mouvement « Réception »), la commande passe « reçue partiellement » ou « reçue ». La livraison entre dans l'officine,
+ * ou dans l'entrepôt choisi quand le grossiste livre au magasin de stockage.
  */
 class ReceptionService
 {
@@ -36,7 +38,7 @@ class ReceptionService
      *
      * @throws AchatException
      */
-    public function receptionner(Commande $commande, \DateTimeImmutable $date, ?string $numeroBonLivraison, array $saisies): array
+    public function receptionner(Commande $commande, \DateTimeImmutable $date, ?string $numeroBonLivraison, array $saisies, ?Entrepot $entrepot = null): array
     {
         if (!$commande->estReceptionnable()) {
             throw new AchatException(\sprintf('La commande %s est %s : il n\'y a rien à réceptionner.', $commande->getLibelle(), mb_strtolower($commande->getStatut()->libelle())));
@@ -92,15 +94,18 @@ class ReceptionService
 
         $numeroBonLivraison = null === $numeroBonLivraison || '' === trim($numeroBonLivraison) ? null : mb_substr(trim($numeroBonLivraison), 0, 50);
 
-        return $this->stock->transaction(function () use ($commande, $date, $numeroBonLivraison, $lignes): array {
+        return $this->stock->transaction(function () use ($commande, $date, $numeroBonLivraison, $lignes, $entrepot): array {
             $reception = new Reception($commande, $date, $numeroBonLivraison, $this->tenantContext->getUtilisateur(), $this->horloge->now());
             $this->em->persist($reception);
             $motif = null === $numeroBonLivraison ? 'Réception' : 'Réception, BL '.$numeroBonLivraison;
+            if (null !== $entrepot) {
+                $motif .= ', entrepôt '.$entrepot->getNom();
+            }
 
             $recues = [];
             foreach ($lignes as [$ligne, $quantite, $numeroLot, $peremption, $prix]) {
                 try {
-                    $lot = $this->stock->entrer($ligne->getProduit(), $numeroLot, $peremption, $quantite, $prix, $commande->getFournisseur(), TypeMouvement::Reception, $motif, $commande->getNumero());
+                    $lot = $this->stock->entrer($ligne->getProduit(), $numeroLot, $peremption, $quantite, $prix, $commande->getFournisseur(), TypeMouvement::Reception, $motif, $commande->getNumero(), $entrepot);
                 } catch (StockException $e) {
                     throw new AchatException(\sprintf('%s : %s', $ligne->getProduit()->getNomCommercial(), $e->getMessage()), previous: $e);
                 }

@@ -56,6 +56,9 @@ class AuditLogger
     public const TRANSFERT_EXPEDIE = 'transfert.expedie';
     public const TRANSFERT_RECU = 'transfert.recu';
     public const TRANSFERT_ANNULE = 'transfert.annule';
+    public const TRANSFERT_INTERNE = 'transfert.interne';
+    public const ENTREPOT_CREE = 'entrepot.cree';
+    public const ENTREPOT_MODIFIE = 'entrepot.modifie';
 
     /** Actions de la plateforme : les seules que le super admin consulte (il ne voit jamais l'activité d'une officine). */
     public const ACTIONS_PLATEFORME = [
@@ -107,6 +110,9 @@ class AuditLogger
         self::TRANSFERT_EXPEDIE => 'Transfert de stock expédié',
         self::TRANSFERT_RECU => 'Transfert de stock reçu',
         self::TRANSFERT_ANNULE => 'Transfert de stock annulé',
+        self::TRANSFERT_INTERNE => 'Transfert entre officine et entrepôts',
+        self::ENTREPOT_CREE => 'Entrepôt créé',
+        self::ENTREPOT_MODIFIE => 'Entrepôt modifié',
     ];
 
     public static function libelle(string $action): string

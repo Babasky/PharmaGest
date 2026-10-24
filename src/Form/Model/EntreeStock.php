@@ -2,6 +2,7 @@
 
 namespace App\Form\Model;
 
+use App\Entity\Entrepot;
 use App\Entity\Fournisseur;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -29,6 +30,9 @@ final class EntreeStock
     public ?int $prixAchat = null;
 
     public ?Fournisseur $fournisseur = null;
+
+    /** Null : le lot entre dans l'officine (stock de vente). */
+    public ?Entrepot $entrepot = null;
 
     #[Assert\NotBlank(message: 'Indiquez le motif de l\'entrée (stock initial, don, échantillons…).')]
     #[Assert\Length(max: 255)]
