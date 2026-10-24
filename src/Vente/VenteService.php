@@ -23,8 +23,6 @@ use App\Enum\TypeVente;
 use App\Finance\RecetteService;
 use App\Repository\CreanceAmoRepository;
 use App\Repository\VenteRepository;
-use App\Security\CodePin;
-use App\Security\CodePinException;
 use App\Service\AuditLogger;
 use App\Service\Numeroteur;
 use App\Service\ParametresPharmacie;
@@ -52,7 +50,6 @@ class VenteService
         private readonly StockService $stock,
         private readonly Numeroteur $numeroteur,
         private readonly ParametresPharmacie $parametres,
-        private readonly CodePin $codePin,
         private readonly AuditLogger $audit,
         private readonly TenantContext $tenantContext,
         private readonly ClockInterface $horloge,
@@ -362,7 +359,7 @@ class VenteService
             } elseif ($totaux->tauxRemiseMaximal > $parametres->getPlafondRemise() + 1e-9) {
                 $controle->remiseHorsPlafond = true;
                 if (!$proprietaire) {
-                    $controle->autorisations[] = \sprintf('Remise de %s %% au-delà du plafond de %d %% : code PIN du propriétaire.', self::pourcentage($totaux->tauxRemiseMaximal), $parametres->getPlafondRemise());
+                    $controle->autorisations[] = \sprintf('Remise de %s %% au-delà du plafond de %d %% : le propriétaire doit confirmer la vente.', self::pourcentage($totaux->tauxRemiseMaximal), $parametres->getPlafondRemise());
                 }
             }
         }
@@ -378,12 +375,12 @@ class VenteService
      *
      * @throws VenteException
      */
-    public function encaisser(Vente $vente, Utilisateur $vendeur, SessionCaisse $session, array $saisie, ?string $codePin): void
+    public function encaisser(Vente $vente, Utilisateur $vendeur, SessionCaisse $session, array $saisie): void
     {
         $this->exigerModifiable($vente);
         $this->exigerSessionOuverte($session);
         $pharmacie = $this->tenantContext->exigerPharmacie();
-        [$controle, $autorisePar] = $this->autoriser($vente, $vendeur, $pharmacie, $codePin);
+        [$controle, $autorisePar] = $this->autoriser($vente, $vendeur, $pharmacie);
         $paiements = $this->analyserPaiements($saisie, $vente->calculer()->aEncaisser());
         $this->verifierStock($vente);
 
@@ -406,7 +403,7 @@ class VenteService
 
     /**
      * Encaisse, dans la session ouverte du vendeur et à sa date, une vente faite hors ligne pendant une coupure
-     * d'internet : mêmes contrôles qu'en ligne, sauf le code PIN du propriétaire, impossible hors ligne (la vente
+     * d'internet : mêmes contrôles qu'en ligne, sauf l'accord du propriétaire, impossible hors ligne (la vente
      * est alors refusée), puis sortie FEFO du stock et numéro définitif. Le client a payé le montant de son ticket
      * hors ligne : si le montant recalculé diffère (prix ou taux AMO modifié entre-temps), les espèces s'ajustent
      * et l'écart est retourné pour être tracé.
@@ -429,8 +426,8 @@ class VenteService
         if ($controle->estBloquee()) {
             throw new VenteException($controle->blocages[0]);
         }
-        if ($controle->exigeCodePin()) {
-            throw new VenteException($controle->autorisations[0].' Le code PIN ne peut pas être saisi hors ligne.');
+        if ($controle->exigeAccord()) {
+            throw new VenteException($controle->autorisations[0].' L\'accord du propriétaire ne peut pas être demandé hors ligne.');
         }
         $autorisePar = $controle->remiseHorsPlafond || [] !== $controle->sansOrdonnance ? $vendeur : null;
 
@@ -468,11 +465,11 @@ class VenteService
      *
      * @throws VenteException
      */
-    public function envoyerEnCaisse(Vente $vente, Utilisateur $vendeur, ?string $codePin): void
+    public function envoyerEnCaisse(Vente $vente, Utilisateur $vendeur): void
     {
         $this->exigerModifiable($vente);
         $pharmacie = $this->tenantContext->exigerPharmacie();
-        [$controle, $autorisePar] = $this->autoriser($vente, $vendeur, $pharmacie, $codePin);
+        [$controle, $autorisePar] = $this->autoriser($vente, $vendeur, $pharmacie);
         $this->verifierStock($vente);
 
         try {
@@ -583,7 +580,7 @@ class VenteService
      *
      * @throws VenteException
      */
-    private function autoriser(Vente $vente, Utilisateur $vendeur, Pharmacie $pharmacie, ?string $codePin): array
+    private function autoriser(Vente $vente, Utilisateur $vendeur, Pharmacie $pharmacie): array
     {
         $this->actualiserAmo($vente, $vente->getOrganismeAmo(), $vente->getNumeroAssure());
         $controle = $this->controler($vente, $vendeur, $pharmacie);
@@ -592,15 +589,10 @@ class VenteService
         }
 
         $autorisePar = null;
-        if ($controle->exigeCodePin() && null !== $vente->accordValide() && (null === $codePin || '' === trim($codePin))) {
-            // Accord donné à distance par le propriétaire, pour ce panier tel quel.
-            $autorisePar = $vente->accordValide();
-        } elseif ($controle->exigeCodePin()) {
-            try {
-                $autorisePar = $this->codePin->autorisationProprietaire($pharmacie, $codePin);
-            } catch (CodePinException $e) {
-                throw new VenteException($e->getMessage(), 0, $e);
-            }
+        if ($controle->exigeAccord()) {
+            // Seul l'accord donné par le propriétaire depuis son compte, pour ce panier tel quel, autorise la vente :
+            // son code PIN, qu'un collaborateur pourrait connaître, ne sert plus à valider (Modibo, 23/10/2026).
+            $autorisePar = $vente->accordValide() ?? throw new VenteException($controle->autorisations[0].' Demandez l\'accord du propriétaire : il répond depuis son compte.');
         } elseif ($controle->remiseHorsPlafond || [] !== $controle->sansOrdonnance) {
             $autorisePar = $vendeur; // Le propriétaire lui-même.
         }

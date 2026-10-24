@@ -245,7 +245,7 @@ final class CaisseTest extends CaisseTestCase
         self::assertStringContainsString('client privilégié', $this->erreur());
     }
 
-    public function testR06RemiseAuDelaDuPlafondAutoriseeParLePinDuProprietaire(): void
+    public function testR06RemiseAuDelaDuPlafondAutoriseeParLeProprietaireDepuisSonCompte(): void
     {
         $this->definirPin($this->officine->proprietaire, '4826');
         $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 2000]);
@@ -258,14 +258,16 @@ final class CaisseTest extends CaisseTestCase
         $this->poster('/caisse/vente', ['type' => 'sans_ordonnance', 'remise_valeur' => '25', 'remise_type' => 'pourcentage']);
         $this->client->followRedirect();
         self::assertSelectorTextContains('#encaissement', 'Remise de 25 % au-delà du plafond de 10 %');
-        self::assertSelectorExists('#code-pin');
+        self::assertSelectorNotExists('#code-pin', 'Le code PIN du propriétaire ne valide plus la vente d\'un collaborateur.');
+        self::assertSelectorExists('#encaissement button.btn-lg[disabled]');
 
+        // Même saisi par un collaborateur qui le connaît, le code PIN du propriétaire n'autorise rien.
+        $this->poster('/caisse/encaisser', ['code_pin' => '4826', ...$this->pinVendeur()]);
+        self::assertStringContainsString('Demandez l\'accord du propriétaire', $this->erreur());
+        self::assertSame(StatutVente::EnCours, $this->derniereVente()->getStatut());
+
+        $this->accordDuProprietaire();
         $this->encaisser();
-        self::assertStringContainsString('code PIN du propriétaire', $this->erreur());
-        $this->encaisser([], '1357');
-        self::assertStringContainsString('Code PIN du propriétaire incorrect', $this->erreur());
-
-        $this->encaisser([], '4826');
         $vente = $this->derniereVente();
         self::assertSame(StatutVente::Validee, $vente->getStatut());
         self::assertSame([1000, 3000], [$vente->getRemise(), $vente->getMontantEncaisse()]);
@@ -366,7 +368,8 @@ final class CaisseTest extends CaisseTestCase
         ));
         $this->client->request('GET', '/caisse');
         self::assertSelectorTextContains('#encaissement .alert-warning', 'le propriétaire doit confirmer');
-        $this->encaisser([], '4826');
+        $this->accordDuProprietaire();
+        $this->encaisser();
         $vente = $this->derniereVente();
         self::assertSame(StatutVente::Validee, $vente->getStatut());
         self::assertSame($this->officine->proprietaire->getId(), $vente->getAutorisePar()?->getId());

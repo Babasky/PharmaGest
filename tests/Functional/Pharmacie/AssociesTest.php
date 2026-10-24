@@ -190,25 +190,6 @@ final class AssociesTest extends AppWebTestCase
         }
     }
 
-    public function testLesAutorisationsParPinAcceptentLeCodeDeChaqueAssocie(): void
-    {
-        $officine = $this->creerOfficine();
-        $associe = UtilisateurFactory::createOne(['role' => Utilisateur::ROLE_PROPRIETAIRE]);
-        AffectationFactory::createOne(['utilisateur' => $associe, 'pharmacie' => $officine->pharmacie]);
-
-        /** @var \App\Security\CodePin $codePin */
-        $codePin = self::getContainer()->get(\App\Security\CodePin::class);
-        /** @var \App\Repository\UtilisateurRepository $utilisateurs */
-        $utilisateurs = self::getContainer()->get(\App\Repository\UtilisateurRepository::class);
-        $this->sansFiltre(static function (EntityManagerInterface $em) use ($codePin, $utilisateurs, $associe): void {
-            $codePin->definir($utilisateurs->find($associe->getId()) ?? throw new \LogicException(), '7319');
-            $em->flush();
-        });
-
-        $autorise = $this->sansFiltre(static fn () => $codePin->autorisationProprietaire($officine->pharmacie, '7319'));
-        self::assertSame($associe->getId(), $autorise->getId());
-    }
-
     private function affectationDe(Utilisateur $utilisateur): Affectation
     {
         return $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Affectation::class)->findOneBy(['utilisateur' => $utilisateur->getId()]))

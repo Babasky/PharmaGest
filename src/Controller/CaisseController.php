@@ -340,7 +340,7 @@ final class CaisseController extends AbstractAppController
             $vendeur = $this->vendeurParPin($requete, $codePin);
             /** @var array<array-key, mixed> $paiements */
             $paiements = $requete->getPayload()->all('paiement');
-            $this->ventes->encaisser($vente, $vendeur, $session, $paiements, (string) $requete->getPayload()->get('code_pin'));
+            $this->ventes->encaisser($vente, $vendeur, $session, $paiements);
         } catch (VenteException $e) {
             $this->addFlash('error', $e->getMessage());
 
@@ -368,7 +368,7 @@ final class CaisseController extends AbstractAppController
                 throw new VenteException('Le panier est vide.');
             }
             $vendeur = $this->vendeurParPin($requete, $codePin);
-            $this->ventes->envoyerEnCaisse($vente, $vendeur, (string) $requete->getPayload()->get('code_pin'));
+            $this->ventes->envoyerEnCaisse($vente, $vendeur);
         } catch (VenteException $e) {
             $this->addFlash('error', $e->getMessage());
 

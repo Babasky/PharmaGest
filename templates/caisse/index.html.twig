@@ -406,7 +406,7 @@
                     {% endif %}
 
                     {% if panier and panier.lignes is not empty and ecriture_autorisee() %}
-                        {% set bloquee = (controle and controle.estBloquee) or vendeurs_vente is empty %}
+                        {% set bloquee = (controle and (controle.estBloquee or (controle.exigeAccord and not panier.accordValide))) or vendeurs_vente is empty %}
                         <form method="post" action="{{ path(session ? 'app_caisse_encaisser' : 'app_caisse_envoyer') }}">
                             <input type="hidden" name="_token" value="{{ token }}">
                             {% if session %}
@@ -439,8 +439,8 @@
                                     </div>
                                 </div>
                             {% endif %}
-                            {% if controle and controle.exigeCodePin %}
-                                {# Le propriétaire confirme avec son code PIN au comptoir, ou à distance depuis son compte. #}
+                            {% if controle and controle.exigeAccord %}
+                                {# Le propriétaire confirme depuis son compte : son code PIN ne valide jamais la vente d'un collaborateur. #}
                                 <div class="mb-2" id="accord-proprietaire">
                                     {% if panier.accordValide %}
                                         <div class="alert alert-success py-2 small mb-0"><i class="bi bi-shield-check"></i> Accord donné par {{ panier.accordValide.nom }} : validez la vente.</div>
@@ -450,10 +450,8 @@
                                         {% elseif panier.accordRefuse %}
                                             <div class="alert alert-danger py-2 small mb-2"><i class="bi bi-x-octagon"></i> {{ panier.accordReponduPar ? panier.accordReponduPar.nom : 'Le propriétaire' }} a refusé cette vente.</div>
                                         {% endif %}
-                                        <label class="form-label small mb-1" for="code-pin">Code PIN du propriétaire</label>
-                                        <input type="password" inputmode="numeric" maxlength="4" class="form-control mb-2" id="code-pin" name="code_pin" autocomplete="off">
                                         {% if not panier.accordEnAttente %}
-                                            <button class="btn btn-sm btn-outline-primary w-100" type="submit" formaction="{{ path('app_caisse_accord') }}" formnovalidate><i class="bi bi-send-check"></i> Demander l'accord du propriétaire (sans son code PIN)</button>
+                                            <button class="btn btn-sm btn-outline-primary w-100" type="submit" formaction="{{ path('app_caisse_accord') }}" formnovalidate><i class="bi bi-send-check"></i> Demander l'accord du propriétaire</button>
                                         {% endif %}
                                     {% endif %}
                                 </div>

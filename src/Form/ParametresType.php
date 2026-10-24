@@ -23,7 +23,7 @@ final class ParametresType extends AbstractType
         $builder
             ->add('plafondRemise', IntegerType::class, [
                 'label' => 'Plafond de remise (%)',
-                'help' => 'Au-delà, le code PIN du propriétaire est exigé à la caisse. Seuls les clients privilégiés ont droit à une remise.',
+                'help' => 'Au-delà, la vente attend l\'accord du propriétaire, donné depuis son compte. Seuls les clients privilégiés ont droit à une remise.',
                 'attr' => ['min' => 0, 'max' => 100],
             ])
             ->add('delaiAlertePeremption', IntegerType::class, [

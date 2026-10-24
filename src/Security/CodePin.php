@@ -2,10 +2,7 @@
 
 namespace App\Security;
 
-use App\Entity\Pharmacie;
 use App\Entity\Utilisateur;
-use App\Repository\AffectationRepository;
-use App\Tenant\TenantContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
@@ -13,11 +10,11 @@ use Symfony\Component\PasswordHasher\PasswordHasherInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
- * Code PIN à 4 chiffres (PH-04) : changement rapide de vendeur à la caisse et autorisations du propriétaire
- * (remise au-delà du plafond, RE-03 ; vente sans ordonnance d'un produit qui l'exige, VE-03).
+ * Code PIN à 4 chiffres (PH-04) : il valide chaque vente au nom de celui qui le saisit. Il n'autorise plus
+ * les ventes qui demandent l'accord du propriétaire : celui-ci répond depuis son compte (Modibo, 23/10/2026).
  *
  * Le code est haché comme un mot de passe. Quatre chiffres se devinent vite : après 5 erreurs en 15 minutes,
- * le code est bloqué (par utilisateur, ou par pharmacie pour les autorisations du propriétaire).
+ * le code est bloqué (par utilisateur).
  */
 class CodePin
 {
@@ -27,8 +24,6 @@ class CodePin
         private readonly PasswordHasherFactoryInterface $hashers,
         #[Target('code_pin.limiter')]
         private readonly RateLimiterFactoryInterface $limiteur,
-        private readonly AffectationRepository $affectations,
-        private readonly TenantContext $tenantContext,
         private readonly EntityManagerInterface $em,
     ) {
     }
@@ -54,33 +49,6 @@ class CodePin
     public function verifier(Utilisateur $utilisateur, ?string $code): bool
     {
         return $this->essai('utilisateur-'.$utilisateur->getId(), fn () => $this->correspond($utilisateur, $code));
-    }
-
-    /**
-     * Propriétaire actif de la pharmacie dont c'est le code PIN.
-     *
-     * @throws CodePinException code absent, faux ou bloqué
-     */
-    public function autorisationProprietaire(Pharmacie $pharmacie, ?string $code): Utilisateur
-    {
-        if (null === $code || '' === trim($code)) {
-            throw new CodePinException('Cette vente demande le code PIN du propriétaire.');
-        }
-        $proprietaires = $this->tenantContext->sansFiltre(fn () => $this->affectations->proprietaires($pharmacie));
-        $autorise = null;
-        $this->essai('proprietaire-'.$pharmacie->getId(), function () use ($proprietaires, $code, &$autorise): bool {
-            foreach ($proprietaires as $proprietaire) {
-                if ($this->correspond($proprietaire, $code)) {
-                    $autorise = $proprietaire;
-
-                    return true;
-                }
-            }
-
-            return false;
-        });
-
-        return $autorise ?? throw new CodePinException('Code PIN du propriétaire incorrect.');
     }
 
     /**

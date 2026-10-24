@@ -32,7 +32,7 @@ class ParametrePharmacie implements TenantAwareInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    /** Remise maximale (en %) qu'un vendeur ou un adjoint peut accorder sans le code PIN du propriétaire (RG-08). */
+    /** Remise maximale (en %) qu'un vendeur ou un adjoint peut accorder sans l'accord du propriétaire (RG-08). */
     #[ORM\Column]
     #[Assert\Range(min: 0, max: 100)]
     private int $plafondRemise = self::PLAFOND_REMISE_PAR_DEFAUT;
