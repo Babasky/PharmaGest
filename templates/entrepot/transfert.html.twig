@@ -18,25 +18,26 @@
     {% if erreur %}<div class="alert alert-danger" id="erreur-transfert">{{ erreur }}</div>{% endif %}
 
     {# Un seul formulaire : « Afficher » le recharge (GET) en gardant les quantités saisies, « Transférer » l'enregistre. #}
-    <form method="post" action="{{ path('app_entrepot_transfert') }}" id="formulaire-transfert">
+    <form method="post" action="{{ path('app_entrepot_transfert') }}" id="formulaire-transfert" data-controller="transfert-interne">
         <div class="row g-2 align-items-end mb-3">
             <div class="col-12 col-md-4">
                 <label class="form-label small mb-1" for="origine">De</label>
-                <select class="form-select" id="origine" name="origine">
+                <select class="form-select" id="origine" name="origine" data-action="transfert-interne#recharger">
                     <option value="{{ officine }}"{{ valeur_origine == officine ? ' selected' }}>Officine</option>
                     {% for e in entrepots %}<option value="{{ e.id }}"{{ valeur_origine == e.id ? ' selected' }}>Entrepôt {{ e.nom }}</option>{% endfor %}
                 </select>
             </div>
             <div class="col-12 col-md-4">
                 <label class="form-label small mb-1" for="destination">Vers</label>
-                <select class="form-select" id="destination" name="destination">
-                    <option value="{{ officine }}"{{ valeur_destination == officine ? ' selected' }}>Officine</option>
-                    {% for e in entrepots %}<option value="{{ e.id }}"{{ valeur_destination == e.id ? ' selected' }}>Entrepôt {{ e.nom }}</option>{% endfor %}
+                <select class="form-select" id="destination" name="destination" data-action="transfert-interne#recharger">
+                    {# L'emplacement d'origine n'est pas proposé comme destination. #}
+                    {% if valeur_origine != officine %}<option value="{{ officine }}"{{ valeur_destination == officine ? ' selected' }}>Officine</option>{% endif %}
+                    {% for e in entrepots|filter(e => e.id != valeur_origine) %}<option value="{{ e.id }}"{{ valeur_destination == e.id ? ' selected' }}>Entrepôt {{ e.nom }}</option>{% endfor %}
                 </select>
             </div>
             <div class="col-12 col-md-4 d-flex gap-2">
                 <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Ajouter un produit…" aria-label="Rechercher un produit à transférer">
-                <button class="btn btn-outline-secondary text-nowrap" type="submit" formmethod="get" id="afficher">Afficher</button>
+                <button class="btn btn-outline-secondary text-nowrap" type="submit" formmethod="get" id="afficher" data-transfert-interne-target="afficher">Afficher</button>
             </div>
         </div>
 

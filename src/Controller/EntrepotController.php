@@ -160,8 +160,9 @@ final class EntrepotController extends AbstractAppController
         if (false === $origine) {
             $origine = $this->origineProposee($proposes, $produits) ?? $actifs[0];
         }
-        if (false === $destination) {
-            $destination = null === $origine ? $actifs[0] : null;
+        // La destination n'est jamais l'origine : par défaut l'officine, ou le premier autre entrepôt si l'on part de l'officine.
+        if (false === $destination || ($requete->isMethod('GET') && $destination?->getId() === $origine?->getId())) {
+            $destination = null !== $origine ? null : $actifs[0];
         }
 
         $erreur = null;
