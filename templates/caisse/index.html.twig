@@ -295,7 +295,7 @@
             </div>
 
             {# --- Type de vente, ordonnance, remise --- #}
-            <form method="post" action="{{ path('app_caisse_vente') }}" enctype="multipart/form-data" class="card shadow-sm mb-3" id="type-vente" data-caisse-target="vente">
+            <form method="post" action="{{ path('app_caisse_vente') }}" enctype="multipart/form-data" class="card shadow-sm mb-3" id="type-vente" data-caisse-target="vente" data-action="change->caisse#alerteOrdonnance input->caisse#alerteOrdonnance">
                 <input type="hidden" name="_token" value="{{ token }}">
                 <div class="card-body">
                     {% set type_courant = panier ? panier.type.value : 'sans_ordonnance' %}
@@ -322,6 +322,16 @@
                                 {% endif %}
                             </label>
                             <input type="file" name="ordonnance_copie" id="ordonnance-copie" accept="image/jpeg,image/png,image/webp,application/pdf" class="form-control form-control-sm">
+                        </div>
+                        {# Ordonnance AMO ancienne (au moins une semaine entre prescription et présentation) : simple avertissement, la vente reste possible. #}
+                        {% set jours_ordonnance = ord ? ord.joursDepuisPrescription(aujourdhui) : null %}
+                        {% set ordonnance_ancienne = type_courant == 'amo' and jours_ordonnance is not null and jours_ordonnance >= constant('App\\Entity\\Ordonnance::JOURS_ANCIENNE') %}
+                        <div class="col-12">
+                            <div class="alert alert-warning small py-1 px-2 mb-0 {{ ordonnance_ancienne ? '' : 'd-none' }}" role="alert" id="ordonnance-ancienne"
+                                 data-caisse-target="alerteOrdonnance" data-seuil="{{ constant('App\\Entity\\Ordonnance::JOURS_ANCIENNE') }}" data-aujourdhui="{{ aujourdhui|date('Y-m-d') }}">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span data-message>{% if ordonnance_ancienne %}Attention : cette ordonnance AMO est ancienne de {{ jours_ordonnance }} jours (prescrite le {{ ord.date|date('d/m/Y') }}).{% endif %}</span>
+                            </div>
                         </div>
                     </fieldset>
                     {% if panier and panier.client and panier.client.assureAmo %}
