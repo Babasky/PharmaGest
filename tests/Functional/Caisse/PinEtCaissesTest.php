@@ -37,6 +37,7 @@ final class PinEtCaissesTest extends CaisseTestCase
         $this->ajouterAugmentin();
         $this->client->request('GET', '/caisse');
         self::assertSelectorExists('#pin-vente[required]');
+        self::assertSelectorExists('.pg-mdp #pin-vente + [data-pg-mdp]');
 
         $this->poster('/caisse/encaisser', ['vendeur' => $this->officine->vendeur->getId()]);
         self::assertStringContainsString('Saisissez le code PIN du vendeur', $this->erreur());
@@ -72,7 +73,7 @@ final class PinEtCaissesTest extends CaisseTestCase
         $this->poster('/caisse/encaisser', ['vendeur' => $this->officine->adjoint->getId(), 'pin_vendeur' => '3691']);
         self::assertStringContainsString('Code PIN du vendeur incorrect', $this->erreur());
 
-        $this->encaisser([], null, $this->collegue);
+        $this->encaisser([], $this->collegue);
         $vente = $this->derniereVente();
         self::assertSame(StatutVente::Validee, $vente->getStatut());
         self::assertSame($this->collegue->getId(), $vente->getVendeur()->getId(), 'La vente est au nom de celui qui a saisi son code.');

@@ -52,6 +52,36 @@
         </div>
     {% endif %}
 
+    {% if a_transferer is not empty %}
+        {% set quantites_transfert = {} %}
+        {% for s in a_transferer %}{% set quantites_transfert = quantites_transfert|merge({('p[' ~ s.produit.id ~ ']'): s.a_transferer}) %}{% endfor %}
+        <div class="card shadow-sm border-info mb-3" id="a-transferer">
+            <div class="card-header bg-body d-flex flex-wrap align-items-center gap-2">
+                <span class="fw-semibold me-auto"><i class="bi bi-buildings"></i> D'abord, faire venir de vos entrepôts</span>
+                {% if is_granted('ROLE_ADJOINT') and ecriture_autorisee() %}
+                    <a class="btn btn-sm btn-info" href="{{ path('app_entrepot_transfert', quantites_transfert|merge({destination: 'officine'})) }}"><i class="bi bi-arrow-left-right"></i> Préparer le transfert</a>
+                {% endif %}
+            </div>
+            <div class="card-body py-2 small text-body-secondary">Ces quantités sont disponibles dans vos entrepôts : transférez-les à l'officine avant de commander. Le grossiste ne reçoit que ce qui manque encore.</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" id="suggestions-transfert">
+                    <thead class="table-light"><tr><th class="ps-3">Produit</th><th class="text-end">Stock officine</th><th class="text-end">En entrepôt</th><th class="text-end">À transférer</th><th class="text-end pe-3">Reste à commander</th></tr></thead>
+                    <tbody>
+                        {% for s in a_transferer %}
+                            <tr data-produit="{{ s.produit.nomCommercial }}">
+                                <td class="ps-3"><a class="text-decoration-none" href="{{ path('app_produit_voir', {id: s.produit.id}) }}">{{ s.produit.designation }}</a></td>
+                                <td class="text-end">{{ s.stock }}</td>
+                                <td class="text-end">{{ s.entrepot }}</td>
+                                <td class="text-end fw-semibold">{{ s.a_transferer }}</td>
+                                <td class="text-end pe-3">{{ s.quantite ?: '—' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
     {% if groupes is empty %}
         <div class="alert alert-success" id="aucune-suggestion"><i class="bi bi-check-circle"></i>
             {{ selon_jour ? 'Aucune vente ce jour-là : rien à recommander.' : 'Aucun produit à commander pour l\'instant.' }}
@@ -126,7 +156,7 @@
                                     {% else %}
                                         <th>Rotation</th><th class="text-end">Ventes / jour</th><th class="text-end">Couverture</th>
                                     {% endif %}
-                                    <th class="text-end">Stock</th><th class="text-end">Seuil</th><th class="text-end">Stock max.</th><th class="text-end">Déjà commandé</th><th>Dernier achat</th><th class="text-end pe-3">À commander</th>
+                                    <th class="text-end">Stock</th><th class="text-end">En entrepôt</th><th class="text-end">Seuil</th><th class="text-end">Stock max.</th><th class="text-end">Déjà commandé</th><th>Dernier achat</th><th class="text-end pe-3">À commander</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -147,11 +177,12 @@
                                             <td class="text-end">{{ s.couverture is not null ? s.couverture|round(0, 'floor') ~ ' j' : '—' }}</td>
                                         {% endif %}
                                         <td class="text-end">{{ s.stock }}</td>
+                                        <td class="text-end">{{ s.entrepot ?: '—' }}</td>
                                         <td class="text-end">{{ p.seuilAlerte }}</td>
                                         <td class="text-end">{{ p.stockMax ?? '—' }}</td>
                                         <td class="text-end">{{ s.attendu ?: '—' }}</td>
                                         <td class="small text-body-secondary">{{ s.dernier_achat ? s.dernier_achat.quantite ~ ' le ' ~ s.dernier_achat.date|date('d/m/Y') : '—' }}</td>
-                                        <td class="pe-3"><input type="number" min="0" max="100000" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="quantite[{{ p.id }}]" value="{{ s.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
+                                        <td class="pe-3"><input type="number" min="0" max="100000" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="quantite[{{ p.id }}]" placeholder="Qté" value="{{ s.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

@@ -11,6 +11,7 @@
     <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
         <span class="badge fs-6 text-bg-{{ inventaire.statut.couleur }}">{{ inventaire.statut.libelle }}</span>
         <span>{{ inventaire.libellePerimetre }}</span>
+        {% if inventaire.entrepot %}<span class="badge text-bg-light border"><i class="bi bi-box-seam"></i> <a class="text-reset" href="{{ path('app_entrepot_voir', {id: inventaire.entrepot.id}) }}">{{ inventaire.libelleEmplacement }}</a></span>{% endif %}
         <span class="small text-body-secondary">Ouvert le {{ inventaire.ouvertLe|date('d/m/Y H:i') }}{{ inventaire.ouvertPar ? ' par ' ~ inventaire.ouvertPar.nom }}</span>
         {% if inventaire.clotureLe %}<span class="small text-body-secondary">{{ inventaire.statut.libelle }} le {{ inventaire.clotureLe|date('d/m/Y H:i') }}{{ inventaire.cloturePar ? ' par ' ~ inventaire.cloturePar.nom }}</span>{% endif %}
         <span class="ms-md-auto small">{{ inventaire.nombreComptees }} / {{ inventaire.lignes|length }} lots comptés · {{ inventaire.nombreEcarts }} écart(s) · <span class="montant {{ inventaire.valeurEcarts < 0 ? 'text-danger' }}">{{ inventaire.valeurEcarts|fcfa }}</span></span>
@@ -22,20 +23,20 @@
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
-                        <tr><th class="ps-3">Étagère</th><th>Produit</th><th>Lot</th><th>Péremption</th><th class="text-end">Théorique</th><th class="text-end" style="width: 9rem">Compté</th><th class="text-end pe-3">Écart</th></tr>
+                        <tr>{% if not inventaire.entrepot %}<th class="ps-3">Étagère</th>{% endif %}<th class="{{ inventaire.entrepot ? 'ps-3' }}">Produit</th><th>Lot</th><th>Péremption</th><th class="text-end">Théorique</th><th class="text-end" style="width: 9rem">Compté</th><th class="text-end pe-3">Écart</th></tr>
                     </thead>
                     <tbody>
                         {% for ligne in inventaire.lignes %}
                             {% set lot = ligne.lot %}
                             <tr class="{{ ligne.ecart is not null and ligne.ecart != 0 ? 'table-warning' }}">
-                                <td class="ps-3 small">{{ lot.produit.etagere ? lot.produit.etagere.code : '—' }}</td>
-                                <td>{{ lot.produit.nomCommercial }}<div class="small text-body-secondary">{{ lot.produit.dosage }}</div></td>
+                                {% if not inventaire.entrepot %}<td class="ps-3 small">{{ lot.produit.etagere ? lot.produit.etagere.code : '—' }}</td>{% endif %}
+                                <td class="{{ inventaire.entrepot ? 'ps-3' }}">{{ lot.produit.nomCommercial }}<div class="small text-body-secondary">{{ lot.produit.dosage }}</div></td>
                                 <td class="font-monospace small">{{ lot.numero }}</td>
                                 <td class="small text-nowrap {{ lot.estPerimeLe(aujourdhui) ? 'text-danger' }}">{{ lot.datePeremption ? lot.datePeremption|date('d/m/Y') : 'Non renseignée' }}</td>
                                 <td class="text-end">{{ ligne.quantiteTheorique }}</td>
                                 <td class="text-end">
                                     {% if modifiable %}
-                                        <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm text-end" name="comptage[{{ ligne.id }}]" value="{{ ligne.quantiteComptee }}" aria-label="Quantité comptée, lot {{ lot.numero }}">
+                                        <input type="number" min="0" step="1" inputmode="numeric" class="form-control form-control-sm text-end" name="comptage[{{ ligne.id }}]" placeholder="Qté comptée" value="{{ ligne.quantiteComptee }}" aria-label="Quantité comptée, lot {{ lot.numero }}">
                                     {% else %}
                                         {{ ligne.quantiteComptee ?? '—' }}
                                     {% endif %}

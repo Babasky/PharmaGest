@@ -23,14 +23,14 @@ final class CodePinType extends AbstractType
         $builder
             ->add('motDePasse', PasswordType::class, [
                 'label' => 'Mot de passe du compte',
-                'attr' => ['autocomplete' => 'current-password', 'autofocus' => true],
+                'attr' => ['placeholder' => 'Entrez votre mot de passe', 'autocomplete' => 'current-password', 'autofocus' => true],
                 'constraints' => [new UserPassword(message: 'Mot de passe incorrect.')],
             ])
             ->add('code', RepeatedType::class, [
                 'type' => PasswordType::class,
                 'invalid_message' => 'Les deux codes ne correspondent pas.',
-                'first_options' => ['label' => 'Nouveau code PIN (4 chiffres)', 'attr' => $chiffres],
-                'second_options' => ['label' => 'Confirmez le code PIN', 'attr' => $chiffres],
+                'first_options' => ['label' => 'Nouveau code PIN (4 chiffres)', 'attr' => [...$chiffres, 'placeholder' => 'Entrez 4 chiffres']],
+                'second_options' => ['label' => 'Confirmez le code PIN', 'attr' => [...$chiffres, 'placeholder' => 'Retapez le code PIN']],
                 'constraints' => [
                     new Assert\NotBlank(message: 'Choisissez un code PIN.'),
                     new Assert\Regex(CodePin::FORMAT, message: 'Le code PIN doit comporter exactement 4 chiffres.'),

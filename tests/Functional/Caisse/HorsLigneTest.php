@@ -186,7 +186,7 @@ final class HorsLigneTest extends CaisseTestCase
         });
     }
 
-    public function testCodePinImpossibleHorsLigne(): void
+    public function testAccordDuProprietaireImpossibleHorsLigne(): void
     {
         $antibiotique = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'nomCommercial' => 'Amoxicilline', 'ordonnanceObligatoire' => true, 'prixVente' => 2500]);
         LotFactory::createOne(['produit' => $antibiotique]);
@@ -199,7 +199,7 @@ final class HorsLigneTest extends CaisseTestCase
         $vente = $this->venteHorsLigne([['produit' => $antibiotique->getId(), 'quantite' => 1]], 2500);
         $resultats = $this->envoyer([$vente]);
         self::assertSame('anomalie', $resultats[$vente['uuid']]['statut']);
-        self::assertStringContainsString('code PIN ne peut pas être saisi hors ligne', (string) $resultats[$vente['uuid']]['message']);
+        self::assertStringContainsString('accord du propriétaire ne peut pas être demandé hors ligne', (string) $resultats[$vente['uuid']]['message']);
     }
 
     public function testEnvoiProtegeEtCloisonne(): void

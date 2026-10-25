@@ -2,12 +2,14 @@
 
 namespace App\Tests\Functional\Stock;
 
+use App\Entity\Entrepot;
 use App\Entity\Inventaire;
 use App\Entity\JournalAudit;
 use App\Entity\Lot;
 use App\Entity\MouvementStock;
 use App\Enum\StatutInventaire;
 use App\Enum\TypeMouvement;
+use App\Tests\Factory\EntrepotFactory;
 use App\Tests\Factory\EtagereFactory;
 use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\ProduitFactory;
@@ -92,7 +94,85 @@ final class InventaireTest extends AppWebTestCase
             self::assertSame($this->officine->adjoint->getId(), $inventaire->getCloturePar()?->getId());
 
             $audit = $em->getRepository(JournalAudit::class)->findOneBy(['action' => 'inventaire.valide']);
-            self::assertEquals(['numero' => $numero, 'perimetre' => 'Étagère E1', 'lots' => 3, 'ecarts' => 2, 'valeur_ecarts' => -1800], $audit?->getApres());
+            self::assertEquals(['numero' => $numero, 'emplacement' => 'Officine', 'perimetre' => 'Étagère E1', 'lots' => 3, 'ecarts' => 2, 'valeur_ecarts' => -1800], $audit?->getApres());
+        });
+    }
+
+    public function testInventaireDUnEntrepotSansToucherAuStockDeLOfficine(): void
+    {
+        $p = $this->officine->pharmacie;
+        $kalaban = EntrepotFactory::createOne(['pharmacie' => $p, 'nom' => 'Kalaban']);
+        $sogoniko = EntrepotFactory::createOne(['pharmacie' => $p, 'nom' => 'Sogoniko']);
+        $coartem = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Coartem', 'etagere' => EtagereFactory::createOne(['pharmacie' => $p, 'code' => 'E1'])]);
+        $officine = LotFactory::createOne(['produit' => $coartem, 'numero' => 'OFF', 'quantiteInitiale' => 10]);
+        $k1 = LotFactory::createOne(['produit' => $coartem, 'numero' => 'K1', 'quantiteInitiale' => 30, 'prixAchat' => 2000, 'entrepot' => $kalaban]);
+        $k2 = LotFactory::createOne(['produit' => ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Spasfon']), 'numero' => 'K2', 'quantiteInitiale' => 12, 'entrepot' => $kalaban]);
+        LotFactory::createOne(['produit' => $coartem, 'numero' => 'SOG', 'quantiteInitiale' => 4, 'entrepot' => $sogoniko]);
+
+        // Depuis la fiche de l'entrepôt, l'emplacement est proposé d'avance.
+        $crawler = $this->connecter($this->officine->adjoint)->request('GET', '/entrepots/'.$kalaban->getId());
+        $crawler = $this->client->click($crawler->selectLink('Inventaire')->link());
+        self::assertSame((string) $kalaban->getId(), $crawler->filter('select[name="nouvel_inventaire[entrepot]"] option[selected]')->attr('value'));
+
+        // Les étagères sont celles de l'officine.
+        $this->client->submitForm('Ouvrir l\'inventaire', ['nouvel_inventaire[perimetre]' => 'etagere', 'nouvel_inventaire[etagere]' => (string) $coartem->getEtagere()?->getId()]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form', 'pour un entrepôt, choisissez un inventaire complet ou par catégorie');
+
+        $this->client->submitForm('Ouvrir l\'inventaire', ['nouvel_inventaire[entrepot]' => (string) $kalaban->getId(), 'nouvel_inventaire[perimetre]' => 'complet']);
+        self::assertResponseRedirects();
+        $crawler = $this->client->followRedirect();
+        $url = $crawler->getUri();
+        self::assertSelectorTextContains('.alert-success', '2 lot(s) à compter');
+        self::assertSelectorTextContains('main', 'Entrepôt Kalaban');
+        self::assertSame(['K1', 'K2'], array_keys($this->champsComptage($crawler)), 'Ni le lot de l\'officine ni celui de Sogoniko.');
+
+        // L'inventaire de Kalaban ne bloque ni l'officine ni un autre entrepôt, mais Kalaban une seconde fois si.
+        $this->client->request('GET', '/inventaires');
+        self::assertSelectorTextContains('main', '(entrepôt kalaban) est en cours');
+        $this->client->submitForm('Ouvrir l\'inventaire', ['nouvel_inventaire[entrepot]' => (string) $kalaban->getId(), 'nouvel_inventaire[perimetre]' => 'complet']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form', 'est en cours : validez-le ou annulez-le avant d\'en ouvrir un autre au même endroit');
+        $this->client->submitForm('Ouvrir l\'inventaire', ['nouvel_inventaire[entrepot]' => '', 'nouvel_inventaire[perimetre]' => 'complet']);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', '1 lot(s) à compter');
+
+        // Un entrepôt en cours d'inventaire ne s'archive pas.
+        $crawler = $this->client->request('GET', '/entrepots/'.$kalaban->getId());
+        $this->sansFiltre(static function (EntityManagerInterface $em): void {
+            foreach ($em->getRepository(Lot::class)->findAll() as $lot) {
+                if (null !== $lot->getEntrepot() && 'Kalaban' === $lot->getEntrepot()->getNom()) {
+                    $lot->modifierQuantite(-$lot->getQuantiteRestante());
+                }
+            }
+            $em->flush();
+        });
+        $this->client->submit($crawler->selectButton('Archiver')->form());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-danger', 'de l\'entrepôt Kalaban est en cours');
+        $this->sansFiltre(static function (EntityManagerInterface $em) use ($k1, $k2): void {
+            $em->find(Lot::class, $k1->getId())?->modifierQuantite(30);
+            $em->find(Lot::class, $k2->getId())?->modifierQuantite(12);
+            $em->flush();
+        });
+
+        $crawler = $this->client->request('GET', $url);
+        $champs = $this->champsComptage($crawler);
+        self::assertSelectorNotExists('#comptage th:contains("Étagère")');
+        $this->client->submitForm('Valider et appliquer les écarts', [$champs['K1'] => '28', $champs['K2'] => '12']);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', '1 écart(s) appliqué(s) au stock');
+
+        $this->sansFiltre(static function (EntityManagerInterface $em) use ($officine, $k1, $kalaban): void {
+            self::assertSame(28, $em->find(Lot::class, $k1->getId())?->getQuantiteRestante());
+            self::assertSame(10, $em->find(Lot::class, $officine->getId())?->getQuantiteRestante());
+            $inventaire = $em->getRepository(Inventaire::class)->findOneBy(['entrepot' => $kalaban->getId()]);
+            self::assertSame(StatutInventaire::Valide, $inventaire?->getStatut());
+            self::assertSame('Kalaban', $inventaire->getEntrepot()?->getNom());
+            $audit = $em->getRepository(JournalAudit::class)->findOneBy(['action' => 'inventaire.valide']);
+            self::assertEquals(['numero' => $inventaire->getNumero(), 'emplacement' => 'Entrepôt Kalaban', 'perimetre' => 'Complet', 'lots' => 2, 'ecarts' => 1, 'valeur_ecarts' => -4000], $audit?->getApres());
+            self::assertTrue($em->find(Entrepot::class, $kalaban->getId())?->isActif());
         });
     }
 

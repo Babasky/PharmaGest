@@ -33,7 +33,7 @@ Après `composer demo`, tous les comptes ont le mot de passe **`motdepasse`** :
 | `i.ouattara@paix.ml` | Propriétaire | Abonnement expiré : lecture seule |
 | `m.dembele@groupe-dembele.ml` | Propriétaire Premium | Deux pharmacies, Kati et Koulikoro (sélecteur en haut de page), avec des **Transferts** de stock entre elles |
 | `s.cisse@groupe-dembele.ml` | Adjoint | Pharmacie de Koulikoro : un transfert venu de Kati à réceptionner |
-
+Codes PIN de la Pharmacie du Fleuve (validation de chaque vente ; une vente sans ordonnance ou une remise hors plafond attend l'accord du propriétaire, donné depuis « Accords demandés », jamais par son code PIN) :
 Codes PIN de la Pharmacie du Fleuve (validation de chaque vente, remise hors plafond, vente sans ordonnance ; le propriétaire peut aussi donner son accord depuis « Accords demandés », sans son code PIN) :
 Aminata Traoré **2580** (propriétaire), Fatoumata Keïta **3690**, Moussa Coulibaly **1470**, Seydou Diarra **1590**,
 Awa Konaté **4826** (caissière), Bakary Diallo **6047** (propriétaire associé).
@@ -76,6 +76,14 @@ L'officine d'origine prépare le transfert puis l'expédie (le stock sort lot pa
 l'officine destinataire confirme la réception (les mêmes lots, dates de péremption et prix d'achat entrent chez elle).
 Dans la démo, Kati a envoyé à Koulikoro un transfert déjà reçu, un transfert expédié qui attend la confirmation de
 Salif Cissé (adjoint de Koulikoro) et un transfert encore en préparation.
+
+**Entrepôts.** Une pharmacie peut avoir un ou plusieurs entrepôts (magasins de stockage) dont le stock est séparé de
+celui de l'officine (**Stock › Entrepôts**, propriétaire et adjoint). Le stock y entre par une entrée de stock, une
+réception de commande ou un transfert ; on le fait venir à l'officine par un transfert interne (numéro TRI). Quand
+l'officine manque d'un produit, l'état du stock, la caisse et la fiche produit indiquent ce qui attend en entrepôt, et
+les suggestions de commande proposent d'abord le transfert avant de commander le reste. Chaque entrepôt peut être
+inventorié comme l'officine (**Stock › Inventaires**, champ « Emplacement »). Dans la démo, la Pharmacie du
+Fleuve a un « Magasin de Kalaban » (dont du Spasfon, absent de l'officine) et un « Dépôt de Sogoniko » vide.
 
 ## Sans DDEV
 

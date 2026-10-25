@@ -117,14 +117,17 @@ final class FournisseurType extends AbstractType
                 'attr' => ['placeholder' => 'https://…'],
             ])
             ->add('pharmaMlIdentifiant', TextType::class, [
+                'attr' => ['placeholder' => 'Identifiant fourni par le grossiste'],
                 'label' => 'Pharma-ML : identifiant de l\'officine (code client)',
                 'required' => false,
             ])
             ->add('pharmaMlCodeRepartiteur', TextType::class, [
+                'attr' => ['placeholder' => 'Code fourni par le grossiste'],
                 'label' => 'Pharma-ML : code répartiteur',
                 'required' => false,
             ])
             ->add('pharmaMlCle', PasswordType::class, [
+                'attr' => ['placeholder' => 'Clé fournie par le grossiste'],
                 'label' => 'Pharma-ML : clé ou mot de passe',
                 'required' => false,
                 'help' => 'Laissez vide pour garder la clé déjà enregistrée.',

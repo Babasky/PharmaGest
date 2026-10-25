@@ -10,7 +10,7 @@
             <div class="card shadow-sm h-100"><div class="card-body">
                 <div class="small text-body-secondary">Valeur du stock vendable</div>
                 <div class="fs-4 fw-semibold text-success" id="valeur-stock">{{ total|fcfa }}</div>
-                <div class="small text-body-secondary">Au prix d'achat réel de chaque lot (ST-07).</div>
+                <div class="small text-body-secondary">Au prix d'achat réel de chaque lot (ST-07){{ emplacements is not empty ? ', officine et entrepôts compris' }}.</div>
             </div></div>
         </div>
         <div class="col-12 col-md-6">
@@ -21,6 +21,27 @@
             </div></div>
         </div>
     </div>
+
+    {% if emplacements is not empty %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-body fw-semibold">Par emplacement</div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" id="valorisation-emplacements">
+                    <thead class="table-light"><tr><th class="ps-3">Emplacement</th><th class="text-end">Unités</th><th class="text-end">Valeur</th><th class="text-end pe-3">Périmés</th></tr></thead>
+                    <tbody>
+                        {% for e in emplacements %}
+                            <tr>
+                                <td class="ps-3">{% if e.entrepot %}<i class="bi bi-buildings"></i> {{ e.entrepot.nom }}{% else %}<i class="bi bi-shop"></i> Officine{% endif %}</td>
+                                <td class="text-end">{{ e.quantite|number_format }}</td>
+                                <td class="montant">{{ e.disponible|fcfa }}</td>
+                                <td class="montant pe-3">{{ e.perime > 0 ? e.perime|fcfa : '—' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
 
     <div class="card shadow-sm">
         <div class="card-header bg-body fw-semibold">Par catégorie</div>

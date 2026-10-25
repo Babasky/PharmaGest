@@ -27,7 +27,7 @@
                     <input type="hidden" name="_token" value="{{ token }}">
                     <input type="hidden" name="retour" value="caisse">
                     <label class="small text-nowrap" for="fond">Fond de caisse</label>
-                    <input type="text" inputmode="numeric" class="form-control form-control-sm text-end" id="fond" name="fond" value="0" autocomplete="off" style="width: 8rem">
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm text-end" id="fond" placeholder="Montant en FCFA" name="fond" value="0" autocomplete="off" style="width: 8rem">
                     <button class="btn btn-sm btn-success text-nowrap" type="submit"><i class="bi bi-unlock"></i> Ouvrir la caisse</button>
                 </form>
             {% else %}
@@ -71,13 +71,13 @@
                                             <div class="small text-body-secondary">{{ [produit.dci, produit.dosage, produit.forme ? produit.forme.nom : null]|filter(v => v)|join(' · ') }}</div>
                                         </td>
                                         <td class="small text-nowrap">{{ produit.etagere ? produit.etagere.code : '—' }}</td>
-                                        <td class="text-end text-nowrap {{ dispo == 0 ? 'text-danger fw-semibold' }}">{% if dispo > 0 %}{{ dispo }} en stock{% elseif stocks[produit.id].rupture ?? false %}<span class="badge text-bg-danger">Rupture</span>{% else %}0 en stock{% endif %}</td>
+                                        <td class="text-end text-nowrap {{ dispo == 0 ? 'text-danger fw-semibold' }}">{% if dispo > 0 %}{{ dispo }} en stock{% elseif stocks[produit.id].rupture ?? false %}<span class="badge text-bg-danger">Rupture</span>{% else %}0 en stock{% endif %}{% if dispo == 0 %}{% include 'stock/_en_entrepot.html.twig' with {quantite: stocks[produit.id].entrepots ?? 0, produit: produit} only %}{% endif %}</td>
                                         <td class="montant">{{ produit.prixVente|fcfa }}</td>
                                         <td class="pe-3" style="width: 9rem">
                                             {% if dispo > 0 %}
                                                 <form method="post" action="{{ path('app_caisse_ajouter', {id: produit.id}) }}" class="input-group input-group-sm">
                                                     <input type="hidden" name="_token" value="{{ token }}">
-                                                    <input type="number" name="quantite" value="1" min="1" max="{{ dispo }}" class="form-control text-end" aria-label="Quantité de {{ produit.nomCommercial }}">
+                                                    <input type="number" name="quantite" value="1" placeholder="Qté" min="1" max="{{ dispo }}" class="form-control text-end" aria-label="Quantité de {{ produit.nomCommercial }}">
                                                     <button class="btn btn-success" type="submit" title="Ajouter au panier"><i class="bi bi-cart-plus"></i><span class="visually-hidden">Ajouter {{ produit.nomCommercial }}</span></button>
                                                 </form>
                                             {% endif %}
@@ -153,7 +153,7 @@
                                         {% if tarif_amo and ligne.remboursable and ligne.accordPrealable %}
                                             <div class="input-group input-group-sm mt-1 accord-prealable" style="max-width: 20rem">
                                                 <span class="input-group-text">Accord préalable n°</span>
-                                                <input type="text" form="{{ form_id }}" name="accord" value="{{ ligne.numeroAccord }}" maxlength="40" class="form-control" aria-label="N° d'accord préalable pour {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
+                                                <input type="text" form="{{ form_id }}" name="accord" placeholder="N° d'accord" value="{{ ligne.numeroAccord }}" maxlength="40" class="form-control" aria-label="N° d'accord préalable pour {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
                                                 {# Photo ou PDF de l'accord, remis à l'organisme avec le bordereau. #}
                                                 <label class="btn btn-outline-secondary mb-0 copie-accord" title="{{ ligne.copieAccord ? 'Remplacer' : 'Joindre' }} la photo ou le PDF de l'accord">
                                                     <i class="bi {{ ligne.copieAccord ? 'bi-paperclip text-success' : 'bi-camera' }}"></i><span class="visually-hidden">{{ ligne.copieAccord ? 'Remplacer' : 'Joindre' }} la copie de l'accord</span>
@@ -170,12 +170,12 @@
                                         <form method="post" action="{{ path('app_caisse_ligne', {id: ligne.id}) }}" id="{{ form_id }}" enctype="multipart/form-data">
                                             <input type="hidden" name="_token" value="{{ token }}">
                                         </form>
-                                        <input type="number" form="{{ form_id }}" name="quantite" value="{{ ligne.quantite }}" min="0" class="form-control form-control-sm text-end" aria-label="Quantité de {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
+                                        <input type="number" form="{{ form_id }}" name="quantite" value="{{ ligne.quantite }}" placeholder="Qté" min="0" class="form-control form-control-sm text-end" aria-label="Quantité de {{ produit.nomCommercial }}" onchange="this.form.requestSubmit()">
                                     </td>
                                     {% if remise_possible %}
                                         <td>
                                             <div class="input-group input-group-sm">
-                                                <input type="text" inputmode="numeric" form="{{ form_id }}" name="remise_valeur" value="{{ ligne.remiseValeur ?: '' }}" class="form-control text-end" aria-label="Remise sur {{ produit.nomCommercial }}">
+                                                <input type="text" inputmode="numeric" form="{{ form_id }}" placeholder="Remise" name="remise_valeur" value="{{ ligne.remiseValeur ?: '' }}" class="form-control text-end" aria-label="Remise sur {{ produit.nomCommercial }}">
                                                 <select form="{{ form_id }}" name="remise_type" class="form-select" aria-label="Type de remise" style="max-width: 5rem">
                                                     <option value="pourcentage"{{ ligne.remiseType and ligne.remiseType.value == 'montant' ? '' : ' selected' }}>%</option>
                                                     <option value="montant"{{ ligne.remiseType and ligne.remiseType.value == 'montant' ? ' selected' }}>F</option>
@@ -295,7 +295,7 @@
             </div>
 
             {# --- Type de vente, ordonnance, remise --- #}
-            <form method="post" action="{{ path('app_caisse_vente') }}" enctype="multipart/form-data" class="card shadow-sm mb-3" id="type-vente" data-caisse-target="vente">
+            <form method="post" action="{{ path('app_caisse_vente') }}" enctype="multipart/form-data" class="card shadow-sm mb-3" id="type-vente" data-caisse-target="vente" data-action="change->caisse#alerteOrdonnance input->caisse#alerteOrdonnance">
                 <input type="hidden" name="_token" value="{{ token }}">
                 <div class="card-body">
                     {% set type_courant = panier ? panier.type.value : 'sans_ordonnance' %}
@@ -322,6 +322,16 @@
                                 {% endif %}
                             </label>
                             <input type="file" name="ordonnance_copie" id="ordonnance-copie" accept="image/jpeg,image/png,image/webp,application/pdf" class="form-control form-control-sm">
+                        </div>
+                        {# Ordonnance AMO ancienne (au moins une semaine entre prescription et présentation) : simple avertissement, la vente reste possible. #}
+                        {% set jours_ordonnance = ord ? ord.joursDepuisPrescription(aujourdhui) : null %}
+                        {% set ordonnance_ancienne = type_courant == 'amo' and jours_ordonnance is not null and jours_ordonnance >= constant('App\\Entity\\Ordonnance::JOURS_ANCIENNE') %}
+                        <div class="col-12">
+                            <div class="alert alert-warning small py-1 px-2 mb-0 {{ ordonnance_ancienne ? '' : 'd-none' }}" role="alert" id="ordonnance-ancienne"
+                                 data-caisse-target="alerteOrdonnance" data-seuil="{{ constant('App\\Entity\\Ordonnance::JOURS_ANCIENNE') }}" data-aujourdhui="{{ aujourdhui|date('Y-m-d') }}">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span data-message>{% if ordonnance_ancienne %}Attention : cette ordonnance AMO est ancienne de {{ jours_ordonnance }} jours (prescrite le {{ ord.date|date('d/m/Y') }}).{% endif %}</span>
+                            </div>
                         </div>
                     </fieldset>
                     {% if panier and panier.client and panier.client.assureAmo %}
@@ -355,7 +365,7 @@
                         <div class="mt-2">
                             <label class="form-label small text-body-secondary mb-1" for="remise-globale">Remise sur {{ panier.type.value == 'amo' ? 'la part assuré' : 'le total' }} (plafond {{ parametres.plafondRemise }} %)</label>
                             <div class="input-group input-group-sm">
-                                <input type="text" inputmode="numeric" id="remise-globale" name="remise_valeur" value="{{ panier.remiseValeur ?: '' }}" class="form-control text-end">
+                                <input type="text" inputmode="numeric" id="remise-globale" placeholder="Remise" name="remise_valeur" value="{{ panier.remiseValeur ?: '' }}" class="form-control text-end">
                                 <select name="remise_type" class="form-select" aria-label="Type de remise" style="max-width: 5rem">
                                     <option value="pourcentage"{{ panier.remiseType and panier.remiseType.value == 'montant' ? '' : ' selected' }}>%</option>
                                     <option value="montant"{{ panier.remiseType and panier.remiseType.value == 'montant' ? ' selected' }}>FCFA</option>
@@ -400,7 +410,7 @@
                     {% endif %}
 
                     {% if panier and panier.lignes is not empty and ecriture_autorisee() %}
-                        {% set bloquee = (controle and controle.estBloquee) or vendeurs_vente is empty %}
+                        {% set bloquee = (controle and (controle.estBloquee or (controle.exigeAccord and not panier.accordValide))) or vendeurs_vente is empty %}
                         <form method="post" action="{{ path(session ? 'app_caisse_encaisser' : 'app_caisse_envoyer') }}">
                             <input type="hidden" name="_token" value="{{ token }}">
                             {% if session %}
@@ -429,12 +439,15 @@
                                     {% endif %}
                                     <div class="{{ choix_vendeur ? 'col-5' : 'col-12' }}">
                                         <label class="form-label small mb-1" for="pin-vente">{{ choix_vendeur ? 'Code PIN du vendeur' : 'Votre code PIN' }}</label>
-                                        <input type="password" inputmode="numeric" maxlength="4" pattern="\d{4}" class="form-control" id="pin-vente" name="pin_vendeur" autocomplete="off" required>
+                                        <div class="pg-mdp">
+                                            <input type="password" inputmode="numeric" maxlength="4" pattern="\d{4}" class="form-control" id="pin-vente" placeholder="4 chiffres" name="pin_vendeur" autocomplete="off" required>
+                                            {{ include('form/_bouton_mot_de_passe.html.twig') }}
+                                        </div>
                                     </div>
                                 </div>
                             {% endif %}
-                            {% if controle and controle.exigeCodePin %}
-                                {# Le propriétaire confirme avec son code PIN au comptoir, ou à distance depuis son compte. #}
+                            {% if controle and controle.exigeAccord %}
+                                {# Le propriétaire confirme depuis son compte : son code PIN ne valide jamais la vente d'un collaborateur. #}
                                 <div class="mb-2" id="accord-proprietaire">
                                     {% if panier.accordValide %}
                                         <div class="alert alert-success py-2 small mb-0"><i class="bi bi-shield-check"></i> Accord donné par {{ panier.accordValide.nom }} : validez la vente.</div>
@@ -444,10 +457,8 @@
                                         {% elseif panier.accordRefuse %}
                                             <div class="alert alert-danger py-2 small mb-2"><i class="bi bi-x-octagon"></i> {{ panier.accordReponduPar ? panier.accordReponduPar.nom : 'Le propriétaire' }} a refusé cette vente.</div>
                                         {% endif %}
-                                        <label class="form-label small mb-1" for="code-pin">Code PIN du propriétaire</label>
-                                        <input type="password" inputmode="numeric" maxlength="4" class="form-control mb-2" id="code-pin" name="code_pin" autocomplete="off">
                                         {% if not panier.accordEnAttente %}
-                                            <button class="btn btn-sm btn-outline-primary w-100" type="submit" formaction="{{ path('app_caisse_accord') }}" formnovalidate><i class="bi bi-send-check"></i> Demander l'accord du propriétaire (sans son code PIN)</button>
+                                            <button class="btn btn-sm btn-outline-primary w-100" type="submit" formaction="{{ path('app_caisse_accord') }}" formnovalidate><i class="bi bi-send-check"></i> Demander l'accord du propriétaire</button>
                                         {% endif %}
                                     {% endif %}
                                 </div>

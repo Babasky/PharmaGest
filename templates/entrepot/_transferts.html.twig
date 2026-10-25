@@ -1,0 +1,24 @@
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0" id="transferts-internes">
+            <thead class="table-light"><tr><th class="ps-3">Transfert</th><th>Date</th><th>De</th><th>Vers</th><th>Produits</th><th class="pe-3">Par</th></tr></thead>
+            <tbody>
+                {% for t in transferts %}
+                    <tr>
+                        <td class="ps-3 fw-semibold text-nowrap">{{ t.numero }}</td>
+                        <td class="small text-nowrap">{{ t.creeLe|date('d/m/Y H:i') }}</td>
+                        <td>{{ t.libelleOrigine }}</td>
+                        <td>{{ t.libelleDestination }}</td>
+                        <td class="small">
+                            {% for l in t.lignes %}{{ l.produit.nomCommercial }} × {{ l.quantite }}{{ loop.last ? '' : ', ' }}{% endfor %}
+                            {% if t.note %}<div class="text-body-secondary">{{ t.note }}</div>{% endif %}
+                        </td>
+                        <td class="small pe-3">{{ t.creePar ? t.creePar.nom : '—' }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="text-center text-body-secondary py-4">Aucun transfert.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

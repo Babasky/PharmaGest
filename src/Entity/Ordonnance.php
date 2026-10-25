@@ -17,6 +17,9 @@ class Ordonnance implements TenantAwareInterface
 {
     use TenantAwareTrait;
 
+    /** À partir de ce nombre de jours entre prescription et présentation, la caisse signale une ordonnance AMO ancienne. */
+    public const JOURS_ANCIENNE = 7;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -113,6 +116,20 @@ class Ordonnance implements TenantAwareInterface
     public function estComplete(): bool
     {
         return null !== $this->date;
+    }
+
+    /** Nombre de jours entre la date de prescription et le jour donné (date de présentation), null sans date. */
+    public function joursDepuisPrescription(\DateTimeInterface $jour): ?int
+    {
+        if (null === $this->date) {
+            return null;
+        }
+        // Jours calendaires, comparés en UTC pour ne pas dépendre des fuseaux horaires.
+        $utc = new \DateTimeZone('UTC');
+        $prescription = new \DateTimeImmutable($this->date->format('Y-m-d'), $utc);
+        $presentation = new \DateTimeImmutable($jour->format('Y-m-d'), $utc);
+
+        return (int) $prescription->diff($presentation)->format('%r%a');
     }
 
     private static function nettoyer(?string $valeur, int $longueur): ?string

@@ -328,6 +328,13 @@ final class ImportTest extends AppWebTestCase
             self::assertSame(0, $this->compter(Fournisseur::class));
             self::assertSame([1960, 1960], $this->prix('ABAGYL'), 'Prix public et prix base de remboursement de la liste AMO.');
             self::assertSame([32635, 12400], $this->prix('OSMOGEL'), 'Prix AMO distinct du prix public quand la liste les distingue.');
+            // Valeurs remplies d'office : ordonnance estimée par sous-classe, TVA 0, seuils de départ 5 et 20.
+            $ordonnances = $this->sansFiltre(static fn (EntityManagerInterface $em): int => (int) $em->createQuery('SELECT COUNT(p.id) FROM '.Produit::class.' p WHERE p.ordonnanceObligatoire = true')->getSingleScalarResult());
+            self::assertSame(2463, $ordonnances);
+            $abagyl = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Produit::class)->findOneBy(['nomCommercial' => 'ABAGYL']));
+            self::assertInstanceOf(Produit::class, $abagyl);
+            self::assertTrue($abagyl->isOrdonnanceObligatoire(), 'Un injectable est délivré sur ordonnance.');
+            self::assertSame([0, 5, 20], [$abagyl->getTauxTva(), $abagyl->getSeuilAlerte(), $abagyl->getStockMax()]);
         }
     }
 

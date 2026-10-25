@@ -96,19 +96,19 @@ final class ProduitType extends AbstractType
                 'label' => 'Fournisseur habituel', 'class' => Fournisseur::class, 'required' => false, 'placeholder' => '—',
                 'query_builder' => static fn (FournisseurRepository $r) => $r->choixActifs(),
             ])
-            ->add('prixAchat', IntegerType::class, ['label' => 'Prix d\'achat (FCFA)', ...$montant])
-            ->add('prixVente', IntegerType::class, ['label' => 'Prix de vente (FCFA)', ...$montant])
+            ->add('prixAchat', IntegerType::class, ['label' => 'Prix d\'achat (FCFA)', 'attr' => [...$montant['attr'], 'placeholder' => 'Ex. : 1000']])
+            ->add('prixVente', IntegerType::class, ['label' => 'Prix de vente (FCFA)', 'attr' => [...$montant['attr'], 'placeholder' => 'Ex. : 1500']])
             ->add('tauxTva', ChoiceType::class, ['label' => 'TVA', 'choices' => Produit::TAUX_TVA])
-            ->add('seuilAlerte', IntegerType::class, ['label' => 'Seuil d\'alerte (unités)', 'help' => 'Au seuil ou en dessous, le produit apparaît dans les alertes de stock.', 'attr' => ['min' => 0]])
-            ->add('stockMax', IntegerType::class, ['label' => 'Stock maximum (unités)', 'required' => false, 'help' => 'Sert à proposer les quantités à commander.', 'attr' => ['min' => 0]])
+            ->add('seuilAlerte', IntegerType::class, ['label' => 'Seuil d\'alerte (unités)', 'help' => 'Au seuil ou en dessous, le produit apparaît dans les alertes de stock.', 'attr' => ['placeholder' => 'Ex. : 10', 'min' => 0]])
+            ->add('stockMax', IntegerType::class, ['label' => 'Stock maximum (unités)', 'required' => false, 'help' => 'Sert à proposer les quantités à commander.', 'attr' => ['placeholder' => 'Ex. : 100', 'min' => 0]])
             ->add('joursAvantRupture', IntegerType::class, [
-                'label' => 'Badge « Rupture » après (jours à zéro)', 'required' => false, 'attr' => ['min' => 1, 'max' => 365],
+                'label' => 'Badge « Rupture » après (jours à zéro)', 'required' => false, 'attr' => ['placeholder' => 'Ex. : 5', 'min' => 1, 'max' => 365],
                 'help' => 'Vide : délai de la pharmacie (paramètres).',
             ])
             ->add('ordonnanceObligatoire', CheckboxType::class, ['label' => 'Ordonnance obligatoire', 'required' => false])
             ->add('remboursableAmo', CheckboxType::class, ['label' => 'Remboursable (AMO et assurances)', 'required' => false])
             ->add('prixVenteAmo', IntegerType::class, [
-                'label' => 'Prix de vente AMO (FCFA)', 'required' => false, ...$montant,
+                'label' => 'Prix de vente AMO (FCFA)', 'required' => false, 'attr' => [...$montant['attr'], 'placeholder' => 'Prix de la liste AMO'],
                 'help' => 'Prix fixé par l\'AMO : la part AMO se calcule sur ce prix s\'il est plus bas que celui de la pharmacie. Vide : prix de vente de la pharmacie.',
             ])
             ->add('accordPrealableAmo', CheckboxType::class, [

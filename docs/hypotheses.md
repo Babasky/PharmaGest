@@ -918,8 +918,19 @@ donc plus signalé tout de suite comme une rupture.
   remboursement (colonne « × 70 % » divisée par 0,7) → **prix de vente AMO** ; remboursable AMO : oui.
 - Non repris : sous-classe pharmacothérapeutique (927 libellés, trop fins pour le rangement), « accord préalable »
   ~~(89 produits marqués AP : PharmaGest n'a pas ce champ)~~ (repris le 18/10/2026 dans la colonne
-  `accord_prealable_amo`), code-barres, étagère, fournisseur, prix d'achat, seuils.
+  `accord_prealable_amo`), code-barres, étagère, fournisseur, prix d'achat ~~, seuils~~.
   La pharmacie complète ou supprime les lignes avant l'import.
+- **Valeurs remplies d'office** (demande de Modibo, 24/10/2026) :
+  - **Ordonnance obligatoire** : la liste ne le dit pas ; `bin/liste-amo.py` l'estime par sous-classe
+    pharmacothérapeutique. Oui (2 463 produits) : antibiotiques, antihypertenseurs et médicaments du cœur,
+    antidiabétiques, hypolipémiants, psychotropes, opioïdes, corticoïdes, hormones, anticoagulants, antiglaucomateux…
+    et tout produit en forme « Solution injectable ». Non : antalgiques simples, AINS, vitamines, antipaludiques,
+    antihistaminiques, antiacides, dispositifs médicaux. Estimation à faire relire par un pharmacien (antipaludiques
+    en particulier).
+  - **TVA 0** partout (médicaments exonérés ; à confirmer pour les dispositifs médicaux).
+  - **Seuil d'alerte 5** et **stock maximum 20** : valeurs de départ identiques, à ajuster par chaque pharmacie.
+  - **Prix d'achat laissé vide** (choix de Modibo) : aucune source publique, le secteur privé est en prix libres.
+    Chaque pharmacie saisit ses vrais prix d'achat.
 - Écarts de la source : ligne 671 illisible (désignation « s ») et ligne 4353 en double de la ligne 2612 (MICONAZOLE
   2 % crème, prix différent) ignorées ; OSMOGEL : prix public 32 635 et base de remboursement 12 400, repris tels
   quels. Textes trop longs coupés à la taille des champs (nom et DCI 150, conditionnement 100 caractères).
@@ -1003,3 +1014,58 @@ donc plus signalé tout de suite comme une rupture.
 - Accord donné et refus sont tracés dans le journal d'audit (`vente.accord_donne`, `vente.accord_refuse`), en plus de
   la trace habituelle de la vente sans ordonnance ou de la remise. Seul un propriétaire de la pharmacie répond ;
   l'adjoint ne le peut pas, comme pour le code PIN.
+
+## Décision — Le code PIN du propriétaire ne valide plus aucune vente d'un collaborateur (Modibo, 23/10/2026)
+
+- Un collaborateur qui connaît le code PIN du propriétaire pourrait vendre en son nom ou vendre sans son accord. Le
+  champ « Code PIN du propriétaire » disparaît donc de la caisse : une vente sans ordonnance d'un produit qui l'exige
+  ou une remise au-delà du plafond n'est autorisée que par l'accord donné depuis le compte d'un propriétaire
+  (« Accords demandés »), pour le panier présenté. Un code PIN envoyé quand même est ignoré et la vente reste en
+  attente de l'accord. Les boutons « Encaisser » et « Envoyer à la caisse » restent grisés tant que l'accord manque.
+- Le propriétaire (ou un associé) qui vend lui-même, connecté avec son mot de passe, n'a pas d'accord à demander :
+  il est l'auteur de l'autorisation. Le code PIN reste celui qui valide chaque vente au nom du vendeur.
+- Hors ligne, l'accord ne peut pas être demandé : ces ventes attendent le retour du réseau, comme avant.
+## Décisions — Entrepôts de la pharmacie (Modibo, 22/10/2026)
+
+- Une pharmacie peut avoir zéro, un ou plusieurs entrepôts (magasins de stockage), créés par le propriétaire ou
+  l'adjoint (menu Stock → Entrepôts) avec un nom et une adresse facultative. Sans entrepôt, rien ne change.
+- Le stock d'un entrepôt est séparé de celui de l'officine : chaque lot est soit à l'officine, soit dans un entrepôt.
+  On ne vend que le stock de l'officine. Les alertes (seuil, péremption, périmés, dormants), le badge « Rupture », la
+  caisse hors ligne ne portent que sur l'officine ; les inventaires portent sur l'officine ou sur un entrepôt (voir plus
+  bas). La valorisation du stock compte tout ce que
+  possède la pharmacie (officine et entrepôts), avec le détail par emplacement.
+- Du stock entre dans un entrepôt par une entrée de stock (champ « Emplacement »), par la réception d'une commande
+  (« Livrée à ») ou par un transfert. Ajustement et destruction se font lot par lot depuis la fiche produit, comme à
+  l'officine.
+- Transferts internes : de l'entrepôt vers l'officine, de l'officine vers un entrepôt, ou d'un entrepôt à un autre,
+  plusieurs produits à la fois. Ils sont faits en une fois (pas d'expédition puis de réception comme entre officines) :
+  le stock sort de l'origine en FEFO, les lots périmés ne partent jamais, et il entre aussitôt à la destination avec
+  les mêmes numéro de lot, péremption, prix d'achat et fournisseur. Un lot identique déjà présent à la destination
+  reçoit les unités (pas de doublon quand un lot fait l'aller-retour). Numéro TRI-AAAA-NNNNNN, mouvements de type
+  « Transfert », trace `transfert.interne` au journal d'audit. Réservés au propriétaire et à l'adjoint, comme les
+  entrées de stock ; le vendeur voit le stock des entrepôts mais demande le transfert.
+- Quand l'officine manque d'un produit (stock à zéro ou sous le seuil), l'état du stock, la caisse, les alertes, la
+  fiche produit et la saisie d'une commande indiquent la quantité disponible en entrepôt (lots non périmés des
+  entrepôts actifs), avec un lien vers le transfert pour le propriétaire et l'adjoint. Un produit qui attend en
+  entrepôt n'est jamais affiché « Rupture ». À la caisse, le message « rupture de stock » rappelle ce qui est en
+  entrepôt.
+- Suggestions de commande et commandes automatiques : avant d'acheter, on déduit le stock disponible en entrepôt. La
+  quantité utile à l'officine est d'abord proposée en transfert (encadré « D'abord, faire venir de vos entrepôts »,
+  bouton « Préparer le transfert ») ; seul le reste est commandé au grossiste. Un produit entièrement couvert par les
+  entrepôts n'est plus commandé, y compris par l'envoi automatique.
+- Un entrepôt qui contient encore du stock ne s'archive pas ; un entrepôt archivé disparaît des choix d'emplacement et
+  son stock (s'il en restait) ne compte plus dans les suggestions.
+- Pas encore fait : seuil d'alerte propre à un entrepôt, transfert en deux temps (expédié puis reçu) pour un entrepôt
+  éloigné.
+
+## Décisions — Inventaire des entrepôts (Modibo, 24/10/2026)
+
+- Un inventaire porte sur un emplacement : l'officine ou un entrepôt actif (champ « Emplacement » de Stock › Inventaires,
+  visible dès qu'il existe un entrepôt ; bouton « Inventaire » sur la fiche de l'entrepôt, qui le choisit d'avance).
+  Seuls les lots de cet emplacement sont comptés, et les écarts ne touchent qu'eux.
+- Un seul inventaire en cours par emplacement (au lieu d'un par pharmacie) : l'officine et chaque entrepôt peuvent être
+  comptés en même temps, puisqu'aucun lot n'est dans deux emplacements.
+- Périmètre : complet ou par catégorie. Les étagères sont celles de l'officine, donc l'inventaire « par étagère » est
+  refusé pour un entrepôt, et la feuille de comptage d'un entrepôt est triée par produit sans colonne Étagère.
+- Un entrepôt dont l'inventaire est en cours ne s'archive pas. Le journal d'audit (`inventaire.valide`) note
+  l'emplacement.

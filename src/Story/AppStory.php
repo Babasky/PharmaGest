@@ -60,6 +60,7 @@ final class AppStory extends Story
         private readonly RecetteService $recettes,
         private readonly GenerateurNotifications $notifications,
         private readonly TransfertService $transferts,
+        private readonly \App\Stock\TransfertInterneService $transfertsInternes,
         private readonly TokenStorageInterface $jetons,
         private readonly \Doctrine\ORM\EntityManagerInterface $em,
     ) {
@@ -90,6 +91,7 @@ final class AppStory extends Story
         $catalogue = $this->catalogue($fleuve);
         $this->caisse($fleuve, $catalogue);
         $this->commandes($fleuve, $catalogue);
+        $this->entrepots($fleuve, $catalogue);
         $this->finances($fleuve);
         $this->finition($fleuve, $catalogue);
         $this->jetons->setToken(null);
@@ -273,30 +275,30 @@ final class AppStory extends Story
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Doliprane'], 2);
         $this->ventes->ajouter($vente, $catalogue['Ibuprofène Biogaran']);
-        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']]);
 
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Coartem']);
         $this->ventes->ajouter($vente, $catalogue['Crème solaire SPF 50']);
         $this->ventes->definirVente($vente, TypeVente::Amo, $mariam, ['date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Sangaré', 'structure' => 'CSCOM de Badalabougou']);
         $this->ventes->remiseGlobale($vente, TypeRemise::Pourcentage, 5);
-        $this->ventes->encaisser($vente, $moussa, $session, ['orange_money' => ['montant' => '6000', 'reference' => 'OM-DEMO-1']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['orange_money' => ['montant' => '6000', 'reference' => 'OM-DEMO-1']]);
 
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Coartem'], 2);
         $this->ventes->definirVente($vente, TypeVente::Amo, $mariam, ['numero' => 'ORD-5521', 'date' => new \DateTimeImmutable('today'), 'prescripteur' => 'Dr Sangaré', 'structure' => 'CSCOM de Badalabougou']);
-        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '5000']]);
 
         $oumar = \Zenstruck\Foundry\Persistence\repository(\App\Entity\Client::class)->findOneBy(['nom' => 'Oumar Sidibé']);
         \assert($oumar instanceof \App\Entity\Client);
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Amoxicilline'], 2);
         $this->ventes->definirVente($vente, TypeVente::Amo, $oumar, ['date' => new \DateTimeImmutable('today -1 day'), 'prescripteur' => 'Dr Keïta', 'structure' => 'CHU du Point G']);
-        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '2000']], null);
+        $this->ventes->encaisser($vente, $moussa, $session, ['especes' => ['remis' => '2000']]);
 
         $vente = $this->ventes->panierOuNouveau($moussa);
         $this->ventes->ajouter($vente, $catalogue['Efferalgan']);
-        $this->ventes->encaisser($vente, $moussa, $session, [], null);
+        $this->ventes->encaisser($vente, $moussa, $session, []);
         $this->ventes->annuler($vente, 'Le client a changé d\'avis');
 
         // Comptage juste, au franc près, avec les plus grosses coupures possibles.
@@ -323,7 +325,7 @@ final class AppStory extends Story
             if (null !== $client) {
                 $this->ventes->definirVente($vente, TypeVente::Amo, $client, $ordonnance);
             }
-            $this->ventes->envoyerEnCaisse($vente, $seydou, null);
+            $this->ventes->envoyerEnCaisse($vente, $seydou);
 
             return $vente;
         };
@@ -373,6 +375,31 @@ final class AppStory extends Story
         ]);
 
         $this->commandes->creer($ppm, [[$catalogue['Coartem'], 25], [$catalogue['Amoxicilline'], 20]]);
+        $this->tenantContext->forcer(null);
+    }
+
+    /**
+     * Entrepôts : le magasin de Kalaban garde la réserve (dont le Spasfon, absent de l'officine) et a déjà réassorti
+     * l'officine en Doliprane ; le dépôt de Sogoniko est vide.
+     *
+     * @param array<string, \App\Entity\Produit> $catalogue
+     */
+    private function entrepots(\App\Entity\Pharmacie $pharmacie, array $catalogue): void
+    {
+        $this->tenantContext->forcer($pharmacie);
+        $kalaban = (new \App\Entity\Entrepot())->setNom('Magasin de Kalaban')->setAdresse('Kalaban Coura, près du marché')->setPharmacie($pharmacie);
+        $sogoniko = (new \App\Entity\Entrepot())->setNom('Dépôt de Sogoniko')->setPharmacie($pharmacie);
+        $this->em->persist($kalaban);
+        $this->em->persist($sogoniko);
+        $catalogue['Spasfon'] = ProduitFactory::createOne([
+            'pharmacie' => $pharmacie, 'nomCommercial' => 'Spasfon', 'dci' => 'Phloroglucinol', 'dosage' => '80 mg', 'conditionnement' => 'Boîte de 10',
+            'fournisseurHabituel' => $catalogue['Coartem']->getFournisseurHabituel(), 'prixAchat' => 1900, 'prixVente' => 2600, 'seuilAlerte' => 10, 'stockMax' => 40,
+        ]);
+        foreach ([['Doliprane', 'DP25K', '+2 years', 100], ['Coartem', 'CO240', '+20 months', 60], ['Spasfon', 'SP0912', '+18 months', 45]] as [$nom, $numero, $peremption, $quantite]) {
+            $produit = $catalogue[$nom];
+            $this->stock->entrer($produit, $numero, new \DateTimeImmutable('today '.$peremption), $quantite, (int) $produit->getPrixAchat(), $produit->getFournisseurHabituel(), motif: 'Stock initial du magasin', entrepot: $kalaban);
+        }
+        $this->transfertsInternes->transferer($kalaban, null, [[$catalogue['Doliprane'], 20]], 'Réassort du comptoir');
         $this->tenantContext->forcer(null);
     }
 

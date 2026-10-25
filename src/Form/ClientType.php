@@ -51,14 +51,7 @@ final class ClientType extends AbstractType
                 'block_prefix' => 'assurances_client',
                 'help' => 'Un client peut avoir plusieurs assurances ; à la caisse, on choisit celle qui s\'applique à la vente. Taux : celui de l\'assuré selon son statut (assurances autres que l\'AMO) ; vide, le taux de la pharmacie s\'applique.',
             ])
-            ->add('entreprise', TextType::class, [
-                    'label' => 'Entreprise ou mutuelle', 
-                    'required' => false,
-                    'attr' => [
-                        'placeholder' => 'Entreprise ou mutuelle'
-                    ] , 
-                ]
-            );
+            ->add('entreprise', TextType::class, ['attr' => ['placeholder' => 'Nom de l\'entreprise ou de la mutuelle'], 'label' => 'Entreprise ou mutuelle', 'required' => false]);
 
         if ($options['peut_privilegier']) {
             $builder->add('privilegie', CheckboxType::class, [

@@ -96,14 +96,17 @@ final class PharmacieCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         yield FormField::addFieldset('Officine');
-        yield TextField::new('nom', 'Nom de la pharmacie');
-        yield TextField::new('numeroAutorisation', 'N° d\'autorisation d\'exploitation')->hideOnIndex();
-        yield TextField::new('ville', 'Ville');
-        yield TextField::new('adresse', 'Adresse')->setHelp('Quartier, rue, porte.')->hideOnIndex();
+        yield TextField::new('nom', 'Nom de la pharmacie')->setFormTypeOption('attr', ['placeholder' => 'Ex. : Pharmacie du Fleuve']);
+        yield TextField::new('numeroAutorisation', 'N° d\'autorisation d\'exploitation')->hideOnIndex()
+            ->setFormTypeOption('attr', ['placeholder' => 'N° de l\'autorisation d\'ouverture']);
+        yield TextField::new('ville', 'Ville')->setFormTypeOption('attr', ['placeholder' => 'Ex. : Bamako']);
+        yield TextField::new('adresse', 'Adresse')->setHelp('Quartier, rue, porte.')->hideOnIndex()
+            ->setFormTypeOption('attr', ['placeholder' => 'Quartier, rue, repère']);
         yield TelephoneField::new('telephone', 'Téléphone')
             ->formatValue(static fn (?string $numero) => htmlspecialchars(Telephone::format($numero)))
             ->setFormTypeOption('attr', ['placeholder' => '+223 XX XX XX XX']);
-        yield EmailField::new('email', 'Email de la pharmacie')->hideOnIndex()->setRequired(false);
+        yield EmailField::new('email', 'Email de la pharmacie')->hideOnIndex()->setRequired(false)
+            ->setFormTypeOption('attr', ['placeholder' => 'contact@pharmacie.ml']);
         yield AssociationField::new('offre', 'Offre')->onlyOnIndex()->setSortable(false)
             ->formatValue(static fn (?Offre $offre) => htmlspecialchars((string) $offre?->getNom()));
         // Échéance et statut viennent de l'état de l'abonnement (essai, grâce, suspension…) ; les propriétés

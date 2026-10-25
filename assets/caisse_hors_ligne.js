@@ -54,7 +54,7 @@ const charger = (copie) => {
             <div class="col-6"><label class="form-label small mb-1" for="hl-mode-${m.code}">${echapper(m.libelle)}</label>
             <input class="form-control form-control-sm text-end hl-mode" data-mode="${m.code}" id="hl-mode-${m.code}" inputmode="numeric" placeholder="Montant"></div>
             <div class="col-6"><label class="form-label small mb-1" for="hl-ref-${m.code}">Référence</label>
-            <input class="form-control form-control-sm" data-reference="${m.code}" id="hl-ref-${m.code}" maxlength="60"></div>`).join('');
+            <input class="form-control form-control-sm" data-reference="${m.code}" id="hl-ref-${m.code}" maxlength="60" placeholder="${m.code === 'carte' ? 'N° du ticket carte' : 'Référence'}"></div>`).join('');
     }
     // Les produits du panier suivent la nouvelle copie (prix et stock à jour).
     etat.panier = etat.panier.filter((l) => etat.produits.has(l.produit));
@@ -126,6 +126,7 @@ const afficherPanier = () => {
     const type = $('hl-type').value;
     document.querySelectorAll('.hl-amo').forEach((e) => e.classList.toggle('d-none', type !== 'amo'));
     document.querySelectorAll('.hl-ordonnance').forEach((e) => e.classList.toggle('d-none', type === 'sans_ordonnance'));
+    alerteOrdonnance();
     $('hl-panier').innerHTML = etat.panier.length === 0
         ? '<tr><td colspan="4" class="text-body-secondary small">Panier vide : recherchez un produit.</td></tr>'
         : etat.panier.map((l) => {
@@ -137,7 +138,7 @@ const afficherPanier = () => {
             const base = prixPriseEnCharge(p, organisme);
             const auPrixAmo = couverte && base < prix ? ` (part AMO sur ${formatFcfa(base)})` : '';
             return `<tr><td>${echapper(p.nom)}${nonRembourse}<br><span class="small text-body-secondary">${formatFcfa(prix)}${auPrixAmo}</span></td>
-                <td><input class="form-control form-control-sm text-end" inputmode="numeric" value="${l.quantite}" data-quantite="${p.id}" aria-label="Quantité"></td>
+                <td><input class="form-control form-control-sm text-end" inputmode="numeric" value="${l.quantite}" data-quantite="${p.id}" aria-label="Quantité" placeholder="Qté"></td>
                 <td class="text-end">${formatFcfa(prix * l.quantite)}</td>
                 <td class="text-end"><button type="button" class="btn btn-sm btn-link text-danger" data-retirer="${p.id}" aria-label="Retirer"><i class="bi bi-x-lg"></i></button></td></tr>`;
         }).join('');
@@ -146,6 +147,18 @@ const afficherPanier = () => {
         + (type === 'amo' ? `<dt class="col-7">Part AMO / assurance</dt><dd class="col-5 text-end mb-0">− ${formatFcfa(totaux.partAmo)}</dd>` : '')
         + `<dt class="col-7 fs-5">À payer</dt><dd class="col-5 text-end fs-5 fw-semibold mb-0">${formatFcfa(totaux.aPayer)}</dd>`;
     monnaie();
+};
+
+/** Avertissement (non bloquant) : ordonnance AMO prescrite depuis au moins une semaine (Ordonnance::JOURS_ANCIENNE). */
+const JOURS_ORDONNANCE_ANCIENNE = 7;
+const alerteOrdonnance = () => {
+    const date = $('hl-ord-date').value;
+    const jours = date ? Math.round((Date.parse(`${aujourdhui()}T00:00:00Z`) - Date.parse(`${date}T00:00:00Z`)) / 86400000) : NaN;
+    const ancienne = $('hl-type').value === 'amo' && jours >= JOURS_ORDONNANCE_ANCIENNE;
+    $('hl-ord-ancienne').classList.toggle('d-none', !ancienne);
+    $('hl-ord-ancienne').firstElementChild.textContent = ancienne
+        ? `Attention : cette ordonnance AMO est ancienne de ${jours} jours (prescrite le ${date.split('-').reverse().join('/')}).`
+        : '';
 };
 
 const autresPaiements = () => [...document.querySelectorAll('.hl-mode')].reduce((somme, champ) => somme + (entier(champ.value) ?? 0), 0);
@@ -190,7 +203,7 @@ const controler = (type, lignes, organisme, totaux) => {
     if (type === 'sans_ordonnance') {
         const exigeant = lignes.filter((l) => etat.produits.get(l.produit).ordonnance).map((l) => l.nom);
         if (exigeant.length > 0 && (etat.copie.politiqueSansOrdonnance === 'blocage' || !etat.copie.utilisateur.proprietaire)) {
-            return `Ordonnance obligatoire pour ${exigeant.join(', ')} : choisissez « Ordonnance classique » ou « Ordonnance AMO / assurance » (le code PIN du propriétaire ne peut pas être saisi hors ligne).`;
+            return `Ordonnance obligatoire pour ${exigeant.join(', ')} : choisissez « Ordonnance classique » ou « Ordonnance AMO / assurance » (l'accord du propriétaire ne peut pas être demandé hors ligne).`;
         }
     }
     const autres = autresPaiements();
@@ -419,6 +432,7 @@ $('hl-panier').addEventListener('click', (event) => {
     }
 });
 $('hl-type').addEventListener('change', afficherPanier);
+$('hl-ord-date').addEventListener('input', alerteOrdonnance);
 $('hl-organisme').addEventListener('change', afficherPanier);
 $('hl-remis').addEventListener('input', monnaie);
 $('hl-modes').addEventListener('input', monnaie);

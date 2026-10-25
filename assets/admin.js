@@ -6,6 +6,7 @@ import { Application } from '@hotwired/stimulus';
 import ChartController from './controllers/chart_controller.js';
 import 'bootstrap-icons/font/bootstrap-icons.min.css';
 import './styles/admin.css';
+import './mot_de_passe.js';
 
 const application = Application.start();
 application.register('chart', ChartController);

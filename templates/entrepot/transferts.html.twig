@@ -1,0 +1,13 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Transferts entre officine et entrepôts{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_entrepot_index') }}"><i class="bi bi-arrow-left"></i> Entrepôts</a>
+    {% if ecriture_autorisee() %}<a class="btn btn-success" href="{{ path('app_entrepot_transfert') }}"><i class="bi bi-arrow-left-right"></i> Nouveau transfert</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% include 'entrepot/_transferts.html.twig' with {transferts: transferts} %}
+    {% include 'layout/_pagination.html.twig' with {page: transferts, route: 'app_entrepot_transferts', params: {}} %}
+{% endblock %}
