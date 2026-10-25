@@ -918,8 +918,19 @@ donc plus signalé tout de suite comme une rupture.
   remboursement (colonne « × 70 % » divisée par 0,7) → **prix de vente AMO** ; remboursable AMO : oui.
 - Non repris : sous-classe pharmacothérapeutique (927 libellés, trop fins pour le rangement), « accord préalable »
   ~~(89 produits marqués AP : PharmaGest n'a pas ce champ)~~ (repris le 18/10/2026 dans la colonne
-  `accord_prealable_amo`), code-barres, étagère, fournisseur, prix d'achat, seuils.
+  `accord_prealable_amo`), code-barres, étagère, fournisseur, prix d'achat ~~, seuils~~.
   La pharmacie complète ou supprime les lignes avant l'import.
+- **Valeurs remplies d'office** (demande de Modibo, 24/10/2026) :
+  - **Ordonnance obligatoire** : la liste ne le dit pas ; `bin/liste-amo.py` l'estime par sous-classe
+    pharmacothérapeutique. Oui (2 463 produits) : antibiotiques, antihypertenseurs et médicaments du cœur,
+    antidiabétiques, hypolipémiants, psychotropes, opioïdes, corticoïdes, hormones, anticoagulants, antiglaucomateux…
+    et tout produit en forme « Solution injectable ». Non : antalgiques simples, AINS, vitamines, antipaludiques,
+    antihistaminiques, antiacides, dispositifs médicaux. Estimation à faire relire par un pharmacien (antipaludiques
+    en particulier).
+  - **TVA 0** partout (médicaments exonérés ; à confirmer pour les dispositifs médicaux).
+  - **Seuil d'alerte 5** et **stock maximum 20** : valeurs de départ identiques, à ajuster par chaque pharmacie.
+  - **Prix d'achat laissé vide** (choix de Modibo) : aucune source publique, le secteur privé est en prix libres.
+    Chaque pharmacie saisit ses vrais prix d'achat.
 - Écarts de la source : ligne 671 illisible (désignation « s ») et ligne 4353 en double de la ligne 2612 (MICONAZOLE
   2 % crème, prix différent) ignorées ; OSMOGEL : prix public 32 635 et base de remboursement 12 400, repris tels
   quels. Textes trop longs coupés à la taille des champs (nom et DCI 150, conditionnement 100 caractères).

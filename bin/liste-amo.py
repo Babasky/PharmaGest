@@ -107,6 +107,30 @@ def couper(s, longueur):
     """Respecte la longueur des champs de PharmaGest."""
     return s if len(s) <= longueur else s[:longueur - 1].rstrip(' ,/') + '…'
 
+# Sous-classes délivrées sur ordonnance : estimation (la liste AMO ne le précise pas), à faire relire par un pharmacien.
+ORDONNANCE = ['antibac', 'antibat', 'antbac', 'antibiotique', 'antiinfectieux', 'antihypert', 'antihypotenseur',
+    'antidiabet', 'medicamentdudiabete', 'hypolip', 'hypolem', 'hypolid', 'hypochol', 'antilipid', 'antihyperlip',
+    'neuroleptique', 'antipsychotique', 'anxiolyt', 'hypnotique', 'antidepress', 'antiepilept', 'anticonvuls',
+    'opio', 'corticoid', 'corticost', 'glucocortico', 'steroid', 'sterod', 'ais',
+    'hormone', 'thyroid', 'progestatif', 'antiandrogene', 'anticoagulant', 'antivitaminek', 'thrombolytique',
+    'trombolytique', 'antiagregant', 'antiarythmique', 'cardiotonique', 'insuffisancecardiaque', 'antiangoreux',
+    'angine', 'betabloquant', 'bloquant', 'diuretique', 'diueretique', 'antiviral', 'anticancereux', 'immunosuppresseur',
+    'antiparkinson', 'antiglaucomateux', 'ocytocique', 'prostaglandine', 'antithyroid', 'bisphosphonate',
+    'produitdecontraste', 'psychostimulant', 'antigoutteux', 'inhibiteurcalcique', 'antagonistecalcique',
+    'antimigraineux', 'tetanos', 'hypoglyc', 'quinolone', 'anthypert', 'antiagreg', 'narcotique', 'sommeil',
+    'vigilance', 'analeptique', 'cyclemenstruel', 'contaception', 'contraception', 'progesta', 'hyperprolactin', 'sclerose',
+    'immunoglob', 'immunserum', 'vaccin', 'substitutsdusang', 'uterot', 'urgence', 'cardiovasculaire', 'catecholamine', 'anesthesique', 'anesthesie', 'anesthesie', 'osteoporose', 'medecamentdelosteoporose']
+# « non stéroïdien », « non opioïde », « non narcotique » ne valent pas ordonnance.
+SAUF = ['nonsteroidien', 'nonsterodien', 'nonstereoidien', 'nonsteroid', 'nonopioide', 'nonnarcotique']
+
+def ordonnance(sous_classe, forme):
+    if forme == 'Solution injectable':
+        return True
+    k = cle(sous_classe)
+    for s in SAUF:
+        k = k.replace(s, '')
+    return any(m in k for m in ORDONNANCE)
+
 def entier(v):
     return float(str(v).replace(' ', '').replace(' ', '').replace(',', '.'))
 
@@ -116,7 +140,7 @@ def main(source, sortie_csv):
     assert lignes[0][:6] == ('Désignation', 'Composition', 'Sous-classe pharmacothérapeutique', 'Classe pharmacothérapeutique',
                               'Prix base de remboursement (G) x 70%', 'Prix public'), lignes[0]
     produits, vus, remarques, accords = [], {}, [], []
-    for n, (designation, composition, _sous_classe, classe, part, public, accord) in enumerate(lignes[1:], start=2):
+    for n, (designation, composition, sous_classe, classe, part, public, accord) in enumerate(lignes[1:], start=2):
         if not designation or len(str(designation).strip()) < 2:
             remarques.append(f'Ligne {n} ignorée : désignation illisible (« {designation} », {composition}, {public} FCFA).')
             continue
@@ -138,6 +162,9 @@ def main(source, sortie_csv):
         produits.append({
             'nom_commercial': nom, 'dci': dci, 'forme': frm, 'dosage': dosage, 'conditionnement': cond,
             'categorie': cat, 'prix_vente': str(prix_public), 'remboursable_amo': 'oui', 'prix_vente_amo': str(tarif),
+            'ordonnance_obligatoire': 'non' if cat == 'Dispositifs médicaux' or not ordonnance(sous_classe, frm) else 'oui',
+            # Médicaments exonérés de TVA ; seuils de départ, à ajuster par chaque pharmacie.
+            'tva': '0', 'seuil_alerte': '5', 'stock_max': '20',
             'accord_prealable_amo': 'oui' if str(accord or '').strip().upper() == 'AP' else 'non',
         })
         if str(accord or '').strip().upper() == 'AP':
@@ -146,7 +173,7 @@ def main(source, sortie_csv):
         w = csv.DictWriter(f, fieldnames=list(produits[0]))
         w.writeheader()
         w.writerows(produits)
-    print(len(produits), 'produits,', sum(1 for p in produits if not p['forme']), 'sans forme reconnue,', len(accords), 'avec accord préalable')
+    print(len(produits), 'produits,', sum(1 for p in produits if p['ordonnance_obligatoire'] == 'oui'), 'sur ordonnance,', sum(1 for p in produits if not p['forme']), 'sans forme reconnue,', len(accords), 'avec accord préalable')
     print('\n'.join(remarques))
 
 
