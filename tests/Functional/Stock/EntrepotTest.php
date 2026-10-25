@@ -16,6 +16,7 @@ use App\Tests\Factory\ProduitFactory;
 use App\Tests\Support\AppWebTestCase;
 use App\Tests\Support\Officine;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 
 /**
  * Entrepôts de la pharmacie (Modibo, 2026-10-22) : stock séparé de l'officine, transferts officine ↔ entrepôts et
@@ -181,8 +182,22 @@ final class EntrepotTest extends AppWebTestCase
         $produit = ProduitFactory::createOne(['pharmacie' => $p, 'nomCommercial' => 'Amoxicilline']);
         LotFactory::createOne(['produit' => $produit, 'quantiteInitiale' => 10, 'entrepot' => $entrepot]);
 
-        $this->connecter($this->officine->adjoint)->request('GET', '/entrepots/transfert?origine='.$entrepot->getId().'&destination='.$entrepot->getId().'&q=Amox');
-        $this->client->submitForm('Transférer', ['p['.$produit->getId().']' => '2']);
+        // L'origine n'est jamais proposée comme destination (retour de Modibo, 24/10/2026), même demandée dans l'adresse.
+        $autre = EntrepotFactory::createOne(['pharmacie' => $p, 'nom' => 'Sotuba']);
+        $crawler = $this->connecter($this->officine->adjoint)->request('GET', '/entrepots/transfert?origine='.$entrepot->getId().'&destination='.$entrepot->getId().'&q=Amox');
+        self::assertSame(['officine', (string) $autre->getId()], $crawler->filter('#destination option')->each(static fn ($o) => $o->attr('value')));
+        self::assertSelectorTextContains('#destination option[selected]', 'Officine');
+        $crawler = $this->client->request('GET', '/entrepots/transfert?origine=officine&q=Amox');
+        self::assertSame([(string) $entrepot->getId(), (string) $autre->getId()], $crawler->filter('#destination option')->each(static fn ($o) => $o->attr('value')));
+
+        // Un envoi forgé avec la même origine et la même destination reste refusé.
+        $this->client->request('GET', '/entrepots/transfert?origine='.$entrepot->getId().'&q=Amox');
+        $formulaire = $this->client->getCrawler()->filter('#formulaire-transfert')->form();
+        $destination = $formulaire['destination'];
+        self::assertInstanceOf(ChoiceFormField::class, $destination);
+        $destination->disableValidation()->setValue((string) $entrepot->getId());
+        $formulaire['p['.$produit->getId().']'] = '2';
+        $this->client->submit($formulaire);
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('#erreur-transfert', 'Choisissez une destination différente de l\'origine.');
 
