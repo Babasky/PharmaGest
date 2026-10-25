@@ -6,6 +6,7 @@ use App\Entity\Entrepot;
 use App\Entity\Utilisateur;
 use App\Form\EntrepotType;
 use App\Repository\EntrepotRepository;
+use App\Repository\InventaireRepository;
 use App\Repository\LotRepository;
 use App\Repository\ProduitRepository;
 use App\Repository\TransfertInterneRepository;
@@ -113,11 +114,16 @@ final class EntrepotController extends AbstractAppController
     /** Un entrepôt qui contient encore du stock ne s'archive pas : il faut d'abord le vider (transfert, destruction). */
     #[Route('/{id}/archiver', name: 'app_entrepot_archiver', requirements: ['id' => '\d+'], methods: ['POST'])]
     #[IsCsrfTokenValid(new Expression('"archiver-entrepot-" ~ args["entrepot"].getId()'))]
-    public function archiver(Entrepot $entrepot): Response
+    public function archiver(Entrepot $entrepot, InventaireRepository $inventaires): Response
     {
         $this->exigerMemePharmacie($entrepot);
         if ($entrepot->isActif() && [] !== $this->lots->contenu($entrepot, $this->stock->aujourdhui())) {
             $this->addFlash('error', \sprintf('L\'entrepôt %s contient encore du stock : transférez-le ou détruisez-le avant d\'archiver l\'entrepôt.', $entrepot->getNom()));
+
+            return $this->redirectToRoute('app_entrepot_voir', ['id' => $entrepot->getId()]);
+        }
+        if ($entrepot->isActif() && null !== ($inventaire = $inventaires->enCours($entrepot))) {
+            $this->addFlash('error', \sprintf('L\'inventaire %s de l\'entrepôt %s est en cours : validez-le ou annulez-le avant d\'archiver l\'entrepôt.', $inventaire->getNumero(), $entrepot->getNom()));
 
             return $this->redirectToRoute('app_entrepot_voir', ['id' => $entrepot->getId()]);
         }

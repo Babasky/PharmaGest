@@ -81,7 +81,8 @@ Salif Cissé (adjoint de Koulikoro) et un transfert encore en préparation.
 celui de l'officine (**Stock › Entrepôts**, propriétaire et adjoint). Le stock y entre par une entrée de stock, une
 réception de commande ou un transfert ; on le fait venir à l'officine par un transfert interne (numéro TRI). Quand
 l'officine manque d'un produit, l'état du stock, la caisse et la fiche produit indiquent ce qui attend en entrepôt, et
-les suggestions de commande proposent d'abord le transfert avant de commander le reste. Dans la démo, la Pharmacie du
+les suggestions de commande proposent d'abord le transfert avant de commander le reste. Chaque entrepôt peut être
+inventorié comme l'officine (**Stock › Inventaires**, champ « Emplacement »). Dans la démo, la Pharmacie du
 Fleuve a un « Magasin de Kalaban » (dont du Spasfon, absent de l'officine) et un « Dépôt de Sogoniko » vide.
 
 ## Sans DDEV

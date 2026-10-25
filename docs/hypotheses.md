@@ -1031,7 +1031,8 @@ donc plus signalé tout de suite comme une rupture.
   l'adjoint (menu Stock → Entrepôts) avec un nom et une adresse facultative. Sans entrepôt, rien ne change.
 - Le stock d'un entrepôt est séparé de celui de l'officine : chaque lot est soit à l'officine, soit dans un entrepôt.
   On ne vend que le stock de l'officine. Les alertes (seuil, péremption, périmés, dormants), le badge « Rupture », la
-  caisse hors ligne et les inventaires ne portent que sur l'officine. La valorisation du stock compte tout ce que
+  caisse hors ligne ne portent que sur l'officine ; les inventaires portent sur l'officine ou sur un entrepôt (voir plus
+  bas). La valorisation du stock compte tout ce que
   possède la pharmacie (officine et entrepôts), avec le détail par emplacement.
 - Du stock entre dans un entrepôt par une entrée de stock (champ « Emplacement »), par la réception d'une commande
   (« Livrée à ») ou par un transfert. Ajustement et destruction se font lot par lot depuis la fiche produit, comme à
@@ -1054,5 +1055,17 @@ donc plus signalé tout de suite comme une rupture.
   entrepôts n'est plus commandé, y compris par l'envoi automatique.
 - Un entrepôt qui contient encore du stock ne s'archive pas ; un entrepôt archivé disparaît des choix d'emplacement et
   son stock (s'il en restait) ne compte plus dans les suggestions.
-- Pas encore fait : inventaire d'un entrepôt (on ajuste lot par lot), seuil d'alerte propre à un entrepôt, transfert
-  en deux temps (expédié puis reçu) pour un entrepôt éloigné.
+- Pas encore fait : seuil d'alerte propre à un entrepôt, transfert en deux temps (expédié puis reçu) pour un entrepôt
+  éloigné.
+
+## Décisions — Inventaire des entrepôts (Modibo, 24/10/2026)
+
+- Un inventaire porte sur un emplacement : l'officine ou un entrepôt actif (champ « Emplacement » de Stock › Inventaires,
+  visible dès qu'il existe un entrepôt ; bouton « Inventaire » sur la fiche de l'entrepôt, qui le choisit d'avance).
+  Seuls les lots de cet emplacement sont comptés, et les écarts ne touchent qu'eux.
+- Un seul inventaire en cours par emplacement (au lieu d'un par pharmacie) : l'officine et chaque entrepôt peuvent être
+  comptés en même temps, puisqu'aucun lot n'est dans deux emplacements.
+- Périmètre : complet ou par catégorie. Les étagères sont celles de l'officine, donc l'inventaire « par étagère » est
+  refusé pour un entrepôt, et la feuille de comptage d'un entrepôt est triée par produit sans colonne Étagère.
+- Un entrepôt dont l'inventaire est en cours ne s'archive pas. Le journal d'audit (`inventaire.valide`) note
+  l'emplacement.

@@ -9,6 +9,7 @@
         {% if entrepot.actif %}
             <a class="btn btn-outline-success" href="{{ path('app_entrepot_transfert', {origine: 'officine', destination: entrepot.id}) }}"><i class="bi bi-box-arrow-in-down"></i> Ranger depuis l'officine</a>
             <a class="btn btn-success" href="{{ path('app_entrepot_transfert', {origine: entrepot.id, destination: 'officine'}) }}"><i class="bi bi-box-arrow-up"></i> Envoyer à l'officine</a>
+            <a class="btn btn-outline-secondary" href="{{ path('app_inventaire_index', {entrepot: entrepot.id}) }}"><i class="bi bi-clipboard-check"></i> Inventaire</a>
         {% endif %}
         <form method="post" action="{{ path('app_entrepot_archiver', {id: entrepot.id}) }}" class="d-inline">
             <input type="hidden" name="_token" value="{{ csrf_token('archiver-entrepot-' ~ entrepot.id) }}">

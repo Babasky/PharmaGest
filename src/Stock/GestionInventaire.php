@@ -3,6 +3,7 @@
 namespace App\Stock;
 
 use App\Entity\Categorie;
+use App\Entity\Entrepot;
 use App\Entity\Etagere;
 use App\Entity\Inventaire;
 use App\Entity\Pharmacie;
@@ -20,7 +21,8 @@ use Psr\Clock\ClockInterface;
  * Inventaire complet ou tournant (ST-06) : ouverture (quantités théoriques figées), comptage par lot,
  * puis validation par le propriétaire ou l'adjoint, qui transforme chaque écart en ajustement.
  *
- * Un seul inventaire en cours à la fois par pharmacie, pour qu'un lot ne soit jamais ajusté deux fois.
+ * L'inventaire porte sur l'officine ou sur un entrepôt. Un seul inventaire en cours à la fois par emplacement,
+ * pour qu'un lot ne soit jamais ajusté deux fois.
  */
 class GestionInventaire
 {
@@ -39,11 +41,17 @@ class GestionInventaire
     /**
      * @throws StockException
      */
-    public function ouvrir(Pharmacie $pharmacie, PerimetreInventaire $perimetre, ?Etagere $etagere, ?Categorie $categorie): Inventaire
+    public function ouvrir(Pharmacie $pharmacie, PerimetreInventaire $perimetre, ?Etagere $etagere, ?Categorie $categorie, ?Entrepot $entrepot = null): Inventaire
     {
-        $enCours = $this->inventaires->enCours();
+        if (null !== $entrepot && (!$entrepot->isActif() || $entrepot->getPharmacie()?->getId() !== $pharmacie->getId())) {
+            throw new StockException('Cet entrepôt n\'est pas disponible.');
+        }
+        $enCours = $this->inventaires->enCours($entrepot);
         if (null !== $enCours) {
-            throw new StockException(\sprintf('L\'inventaire %s est en cours : validez-le ou annulez-le avant d\'en ouvrir un autre.', $enCours->getNumero()));
+            throw new StockException(\sprintf('L\'inventaire %s (%s) est en cours : validez-le ou annulez-le avant d\'en ouvrir un autre au même endroit.', $enCours->getNumero(), mb_strtolower($enCours->getLibelleEmplacement())));
+        }
+        if (null !== $entrepot && PerimetreInventaire::Etagere === $perimetre) {
+            throw new StockException('Les étagères sont celles de l\'officine : pour un entrepôt, choisissez un inventaire complet ou par catégorie.');
         }
         $etagere = PerimetreInventaire::Etagere === $perimetre ? $etagere : null;
         $categorie = PerimetreInventaire::Categorie === $perimetre ? $categorie : null;
@@ -54,12 +62,12 @@ class GestionInventaire
             throw new StockException('Choisissez la catégorie à inventorier.');
         }
 
-        $lots = $this->lots->pourInventaire($etagere, $categorie);
+        $lots = $this->lots->pourInventaire($etagere, $categorie, $entrepot);
         if ([] === $lots) {
-            throw new StockException('Aucun lot en stock dans ce périmètre : il n\'y a rien à compter.');
+            throw new StockException(null === $entrepot ? 'Aucun lot en stock dans ce périmètre : il n\'y a rien à compter.' : \sprintf('Aucun lot en stock dans ce périmètre de l\'entrepôt %s : il n\'y a rien à compter.', $entrepot->getNom()));
         }
 
-        return $this->stock->transaction(function () use ($pharmacie, $perimetre, $etagere, $categorie, $lots): Inventaire {
+        return $this->stock->transaction(function () use ($pharmacie, $perimetre, $etagere, $categorie, $entrepot, $lots): Inventaire {
             $inventaire = new Inventaire(
                 $this->numeroteur->suivant('INV', $pharmacie),
                 $perimetre,
@@ -67,6 +75,7 @@ class GestionInventaire
                 $this->tenantContext->getUtilisateur(),
                 $etagere,
                 $categorie,
+                $entrepot,
             );
             $inventaire->setPharmacie($pharmacie);
             foreach ($lots as $lot) {
@@ -143,6 +152,7 @@ class GestionInventaire
             $this->em->flush();
             $this->audit->journaliser(AuditLogger::INVENTAIRE_VALIDE, $inventaire->getPharmacie(), $inventaire, null, [
                 'numero' => $inventaire->getNumero(),
+                'emplacement' => $inventaire->getLibelleEmplacement(),
                 'perimetre' => $inventaire->getLibellePerimetre(),
                 'lots' => $inventaire->getLignes()->count(),
                 'ecarts' => \count($ecarts),

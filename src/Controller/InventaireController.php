@@ -6,6 +6,7 @@ use App\Entity\Inventaire;
 use App\Entity\Utilisateur;
 use App\Enum\PerimetreInventaire;
 use App\Form\NouvelInventaireType;
+use App\Repository\EntrepotRepository;
 use App\Repository\InventaireRepository;
 use App\Stock\GestionInventaire;
 use App\Stock\StockException;
@@ -20,7 +21,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Inventaires complets ou tournants (ST-06), par le propriétaire ou l'adjoint.
+ * Inventaires complets ou tournants (ST-06) de l'officine ou d'un entrepôt, par le propriétaire ou l'adjoint.
  */
 #[Route('/inventaires')]
 #[IsGranted(Utilisateur::ROLE_ADJOINT)]
@@ -34,15 +35,24 @@ final class InventaireController extends AbstractAppController
     public function index(
         Request $requete,
         InventaireRepository $inventaires,
+        EntrepotRepository $entrepots,
         #[MapQueryParameter] int $page = 1,
+        #[MapQueryParameter(flags: \FILTER_NULL_ON_FAILURE)] ?int $entrepot = null,
     ): Response {
-        $formulaire = $this->createForm(NouvelInventaireType::class, ['perimetre' => PerimetreInventaire::Complet]);
+        $actifs = $entrepots->actifs();
+        $donnees = ['perimetre' => PerimetreInventaire::Complet];
+        foreach ($actifs as $candidat) {
+            if ($candidat->getId() === $entrepot) {
+                $donnees['entrepot'] = $candidat;
+            }
+        }
+        $formulaire = $this->createForm(NouvelInventaireType::class, $donnees, ['avec_entrepots' => [] !== $actifs]);
         $formulaire->handleRequest($requete);
         if ($formulaire->isSubmitted() && $formulaire->isValid()) {
-            /** @var array{perimetre: PerimetreInventaire, etagere: \App\Entity\Etagere|null, categorie: \App\Entity\Categorie|null} $choix */
+            /** @var array{perimetre: PerimetreInventaire, etagere: \App\Entity\Etagere|null, categorie: \App\Entity\Categorie|null, entrepot?: \App\Entity\Entrepot|null} $choix */
             $choix = $formulaire->getData();
             try {
-                $inventaire = $this->gestion->ouvrir($this->pharmacie(), $choix['perimetre'], $choix['etagere'], $choix['categorie']);
+                $inventaire = $this->gestion->ouvrir($this->pharmacie(), $choix['perimetre'], $choix['etagere'], $choix['categorie'], $choix['entrepot'] ?? null);
                 $this->addFlash('success', \sprintf('Inventaire %s ouvert : %d lot(s) à compter.', $inventaire->getNumero(), $inventaire->getLignes()->count()));
 
                 return $this->redirectToRoute('app_inventaire_voir', ['id' => $inventaire->getId()]);
@@ -53,7 +63,8 @@ final class InventaireController extends AbstractAppController
 
         return $this->render('inventaire/index.html.twig', [
             'inventaires' => $inventaires->liste($page),
-            'en_cours' => $inventaires->enCours(),
+            'en_cours' => $inventaires->tousEnCours(),
+            'avec_entrepots' => [] !== $actifs,
             'formulaire' => $formulaire,
         ], self::reponseRefusSiSoumis($formulaire));
     }
