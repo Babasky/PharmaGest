@@ -57,7 +57,7 @@
                                             {% block message %}
                                                 <p>La vente ne sera jamais enregistrée : ni sortie de stock, ni recette. Les {{ vente.montant|fcfa }} encaissés apparaîtront en écart à la clôture de la caisse de {{ vente.vendeur.nom }}.</p>
                                                 <label class="form-label" for="motif-{{ vente.id }}">Motif (obligatoire)</label>
-                                                <textarea class="form-control" id="motif-{{ vente.id }}" name="motif" rows="2" required maxlength="255"></textarea>
+                                                <textarea class="form-control" id="motif-{{ vente.id }}" name="motif" rows="2" placeholder="Expliquez pourquoi la vente est refusée" required maxlength="255"></textarea>
                                             {% endblock %}
                                         {% endembed %}
                                     {% endif %}

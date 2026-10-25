@@ -54,7 +54,7 @@ const charger = (copie) => {
             <div class="col-6"><label class="form-label small mb-1" for="hl-mode-${m.code}">${echapper(m.libelle)}</label>
             <input class="form-control form-control-sm text-end hl-mode" data-mode="${m.code}" id="hl-mode-${m.code}" inputmode="numeric" placeholder="Montant"></div>
             <div class="col-6"><label class="form-label small mb-1" for="hl-ref-${m.code}">Référence</label>
-            <input class="form-control form-control-sm" data-reference="${m.code}" id="hl-ref-${m.code}" maxlength="60"></div>`).join('');
+            <input class="form-control form-control-sm" data-reference="${m.code}" id="hl-ref-${m.code}" maxlength="60" placeholder="${m.code === 'carte' ? 'N° du ticket carte' : 'Référence'}"></div>`).join('');
     }
     // Les produits du panier suivent la nouvelle copie (prix et stock à jour).
     etat.panier = etat.panier.filter((l) => etat.produits.has(l.produit));
@@ -138,7 +138,7 @@ const afficherPanier = () => {
             const base = prixPriseEnCharge(p, organisme);
             const auPrixAmo = couverte && base < prix ? ` (part AMO sur ${formatFcfa(base)})` : '';
             return `<tr><td>${echapper(p.nom)}${nonRembourse}<br><span class="small text-body-secondary">${formatFcfa(prix)}${auPrixAmo}</span></td>
-                <td><input class="form-control form-control-sm text-end" inputmode="numeric" value="${l.quantite}" data-quantite="${p.id}" aria-label="Quantité"></td>
+                <td><input class="form-control form-control-sm text-end" inputmode="numeric" value="${l.quantite}" data-quantite="${p.id}" aria-label="Quantité" placeholder="Qté"></td>
                 <td class="text-end">${formatFcfa(prix * l.quantite)}</td>
                 <td class="text-end"><button type="button" class="btn btn-sm btn-link text-danger" data-retirer="${p.id}" aria-label="Retirer"><i class="bi bi-x-lg"></i></button></td></tr>`;
         }).join('');

@@ -18,7 +18,7 @@ final class ReferentielCommunType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $builder->add('nom', TextType::class, ['label' => 'Nom']);
+        $builder->add('nom', TextType::class, ['attr' => ['placeholder' => 'Entrez le nom'], 'label' => 'Nom']);
         if ($options['data'] instanceof OrganismeAmo) {
             $builder->add('code', TextType::class, [
                 'label' => 'Code',

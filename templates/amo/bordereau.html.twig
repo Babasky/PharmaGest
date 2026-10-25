@@ -66,7 +66,7 @@
                             {% endif %}
                             {% if reglable %}
                                 {% if creance.reste > 0 %}
-                                    <td><input type="text" inputmode="numeric" class="form-control form-control-sm text-end" name="regle[{{ creance.id }}]" value="{{ creance.reste }}" style="min-width: 7rem" aria-label="Montant réglé pour {{ vente.numero }}"></td>
+                                    <td><input type="text" inputmode="numeric" class="form-control form-control-sm text-end" name="regle[{{ creance.id }}]" placeholder="Montant réglé" value="{{ creance.reste }}" style="min-width: 7rem" aria-label="Montant réglé pour {{ vente.numero }}"></td>
                                     <td class="pe-3"><input type="text" class="form-control form-control-sm" name="rejet[{{ creance.id }}]" maxlength="255" placeholder="Rejet du reste…" aria-label="Motif de rejet pour {{ vente.numero }}"></td>
                                 {% else %}
                                     <td></td><td class="pe-3"></td>
@@ -95,8 +95,8 @@
                 <input type="hidden" name="_token" value="{{ jeton }}">
                 <div class="row g-2 align-items-end">
                     <div class="col-6 col-md-3"><label class="form-label small" for="date-reglement">Reçu le</label><input type="date" class="form-control" id="date-reglement" name="date" value="{{ aujourdhui|date('Y-m-d') }}" max="{{ aujourdhui|date('Y-m-d') }}" required></div>
-                    <div class="col-6 col-md-3"><label class="form-label small" for="montant-recu">Montant reçu (FCFA)</label><input type="text" inputmode="numeric" class="form-control text-end" id="montant-recu" name="montant" value="{{ bordereau.reste }}" required></div>
-                    <div class="col-12 col-md-3"><label class="form-label small" for="reference">Référence (virement, chèque)</label><input type="text" class="form-control" id="reference" name="reference" maxlength="80"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small" for="montant-recu">Montant reçu (FCFA)</label><input type="text" inputmode="numeric" class="form-control text-end" id="montant-recu" placeholder="Montant reçu en FCFA" name="montant" value="{{ bordereau.reste }}" required></div>
+                    <div class="col-12 col-md-3"><label class="form-label small" for="reference">Référence (virement, chèque)</label><input type="text" class="form-control" id="reference" placeholder="Ex. : VIR-2026-0042" name="reference" maxlength="80"></div>
                     <div class="col-12 col-md-3"><button class="btn btn-success w-100" type="submit">Enregistrer</button></div>
                 </div>
                 <p class="form-text mb-0">Affectez le montant reçu créance par créance : le total affecté doit être égal au montant reçu. Un motif de rejet solde la créance : son reste ne sera plus attendu.</p>

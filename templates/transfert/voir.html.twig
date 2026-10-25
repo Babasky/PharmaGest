@@ -40,7 +40,7 @@
                                 <form method="post" action="{{ path('app_transfert_ajouter', {id: transfert.id}) }}" class="d-flex gap-2">
                                     <input type="hidden" name="_token" value="{{ jeton }}">
                                     <input type="hidden" name="produit" value="{{ produit.id }}">
-                                    <input type="number" min="1" max="100000" class="form-control form-control-sm text-end" style="width: 6rem" name="quantite" value="1" aria-label="Quantité de {{ produit.nomCommercial }}">
+                                    <input type="number" min="1" max="100000" class="form-control form-control-sm text-end" style="width: 6rem" name="quantite" value="1" placeholder="Qté" aria-label="Quantité de {{ produit.nomCommercial }}">
                                     <button class="btn btn-sm btn-success" type="submit">Ajouter</button>
                                 </form>
                             </li>
@@ -80,7 +80,7 @@
                             {% if sortant and not expedie %}<td class="text-end">{{ synthese[p.id].stock ?? 0 }}</td>{% endif %}
                             {% if modifiable %}
                                 <td>
-                                    <input type="number" min="0" max="100000" form="lignes-transfert" class="form-control form-control-sm text-end ms-auto" style="max-width: 6.5rem" name="quantite[{{ ligne.id }}]" value="{{ ligne.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}">
+                                    <input type="number" min="0" max="100000" form="lignes-transfert" class="form-control form-control-sm text-end ms-auto" style="max-width: 6.5rem" name="quantite[{{ ligne.id }}]" placeholder="Qté" value="{{ ligne.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}">
                                 </td>
                             {% else %}
                                 <td class="text-end fw-semibold">{{ ligne.quantite }}</td>

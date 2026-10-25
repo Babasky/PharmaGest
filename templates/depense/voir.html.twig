@@ -46,7 +46,7 @@
                         <form method="post" action="{{ path('app_depense_annuler', {id: depense.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('depense-' ~ depense.id) }}">
                             <label class="form-label" for="motif">Motif</label>
-                            <input class="form-control mb-2" id="motif" name="motif" maxlength="255">
+                            <input class="form-control mb-2" id="motif" name="motif" placeholder="Ex. : Erreur de saisie" maxlength="255">
                             <button class="btn btn-outline-danger" type="submit">Annuler la dépense</button>
                         </form>
                     </div>

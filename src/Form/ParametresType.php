@@ -24,16 +24,16 @@ final class ParametresType extends AbstractType
             ->add('plafondRemise', IntegerType::class, [
                 'label' => 'Plafond de remise (%)',
                 'help' => 'Au-delà, la vente attend l\'accord du propriétaire, donné depuis son compte. Seuls les clients privilégiés ont droit à une remise.',
-                'attr' => ['min' => 0, 'max' => 100],
+                'attr' => ['placeholder' => 'Ex. : 10', 'min' => 0, 'max' => 100],
             ])
             ->add('delaiAlertePeremption', IntegerType::class, [
                 'label' => 'Alerte de péremption (jours avant la date)',
-                'attr' => ['min' => 1, 'max' => 730],
+                'attr' => ['placeholder' => 'Ex. : 90', 'min' => 1, 'max' => 730],
             ])
             ->add('joursAvantRupture', IntegerType::class, [
                 'label' => 'Badge « Rupture » après (jours à zéro)',
                 'help' => 'Un produit à zéro a d\'abord un fond rouge ; le badge « Rupture » s\'ajoute après ce nombre de jours sans stock. Chaque produit peut avoir son propre délai (fiche produit).',
-                'attr' => ['min' => 1, 'max' => 365],
+                'attr' => ['placeholder' => 'Ex. : 5', 'min' => 1, 'max' => 365],
             ])
             ->add('politiqueSansOrdonnance', EnumType::class, [
                 'label' => 'Produit « ordonnance obligatoire » vendu sans ordonnance',
@@ -44,7 +44,7 @@ final class ParametresType extends AbstractType
             ->add('inactiviteCaisse', IntegerType::class, [
                 'label' => 'Déconnexion de la caisse après inactivité (minutes)',
                 'help' => 'S\'applique tant qu\'une session de caisse est ouverte. Ailleurs dans l\'application, la déconnexion intervient après 30 minutes d\'inactivité.',
-                'attr' => ['min' => 5, 'max' => 720],
+                'attr' => ['placeholder' => 'Ex. : 15', 'min' => 5, 'max' => 720],
             ])
             ->add('mentionsTicket', TextareaType::class, [
                 'label' => 'Mentions en bas du ticket',
@@ -54,12 +54,12 @@ final class ParametresType extends AbstractType
             ->add('joursAnalyseVentes', IntegerType::class, [
                 'label' => 'Commandes : ventes analysées (derniers jours)',
                 'help' => 'Les ventes moyennes par jour et la rotation des produits se calculent sur cette période.',
-                'attr' => ['min' => 7, 'max' => 365],
+                'attr' => ['placeholder' => 'Ex. : 30', 'min' => 7, 'max' => 365],
             ])
             ->add('joursCouverture', IntegerType::class, [
                 'label' => 'Commandes : jours de ventes à couvrir après la livraison',
                 'help' => 'La quantité suggérée couvre le délai de livraison du grossiste, puis ce nombre de jours de ventes.',
-                'attr' => ['min' => 1, 'max' => 180],
+                'attr' => ['placeholder' => 'Ex. : 15', 'min' => 1, 'max' => 180],
             ])
             ->add('heureCommandesAutomatiques', ChoiceType::class, [
                 'label' => 'Commandes automatiques : heure d\'envoi',

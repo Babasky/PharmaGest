@@ -29,13 +29,13 @@ final class PaiementType extends AbstractType
                 'query_builder' => static fn (OffreRepository $r) => $r->createQueryBuilder('o')->orderBy('o.ordre'),
                 'choice_label' => 'nom',
             ])
-            ->add('montant', IntegerType::class, ['label' => 'Montant reçu (FCFA)', 'attr' => ['min' => 0, 'step' => 1, 'inputmode' => 'numeric']])
+            ->add('montant', IntegerType::class, ['label' => 'Montant reçu (FCFA)', 'attr' => ['placeholder' => 'Montant en FCFA', 'min' => 0, 'step' => 1, 'inputmode' => 'numeric']])
             ->add('moyen', EnumType::class, [
                 'label' => 'Moyen de paiement',
                 'class' => MoyenPaiement::class,
                 'choice_label' => static fn (MoyenPaiement $m) => $m->libelle(),
             ])
-            ->add('reference', TextType::class, ['label' => 'Référence (n° de transaction, de virement…)', 'required' => false])
+            ->add('reference', TextType::class, ['attr' => ['placeholder' => 'Ex. : OM-123456'], 'label' => 'Référence (n° de transaction, de virement…)', 'required' => false])
             ->add('datePaiement', DateType::class, ['label' => 'Date du paiement', 'widget' => 'single_text', 'input' => 'datetime_immutable']);
     }
 

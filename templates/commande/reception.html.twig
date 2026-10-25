@@ -20,7 +20,7 @@
         <input type="hidden" name="_token" value="{{ csrf_token('commande-' ~ commande.id) }}">
         <div class="row g-2 mb-3" style="max-width: 36rem">
             <div class="col-6"><label class="form-label small" for="date">Reçue le</label><input type="date" class="form-control" id="date" name="date" value="{{ saisie.date ?? aujourdhui|date('Y-m-d') }}" max="{{ aujourdhui|date('Y-m-d') }}" required></div>
-            <div class="col-6"><label class="form-label small" for="bon-livraison">N° du bon de livraison</label><input type="text" class="form-control" id="bon-livraison" name="bon_livraison" maxlength="50" value="{{ saisie.bon_livraison ?? '' }}"></div>
+            <div class="col-6"><label class="form-label small" for="bon-livraison">N° du bon de livraison</label><input type="text" class="form-control" id="bon-livraison" placeholder="Ex. : BL-12345" name="bon_livraison" maxlength="50" value="{{ saisie.bon_livraison ?? '' }}"></div>
             {% if entrepots is not empty %}
                 <div class="col-12">
                     <label class="form-label small" for="entrepot">Livrée à</label>

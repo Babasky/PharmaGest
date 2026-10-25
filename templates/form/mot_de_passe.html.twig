@@ -1,0 +1,9 @@
+{# Champs mot de passe des formulaires : le champ est entouré pour accueillir le bouton afficher / masquer. #}
+{% extends 'bootstrap_5_layout.html.twig' %}
+
+{% block password_widget %}
+    <div class="pg-mdp">
+        {{- parent() -}}
+        {{- include('form/_bouton_mot_de_passe.html.twig') -}}
+    </div>
+{% endblock %}

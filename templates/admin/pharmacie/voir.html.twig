@@ -126,7 +126,7 @@
                                 <p>Vous allez suspendre l'accès de <strong>{{ pharmacie.nom }}</strong>.</p>
                                 <p class="text-body-secondary">Plus aucun membre de son équipe ne pourra se connecter tant que l'accès n'est pas réactivé. Ses données sont conservées.</p>
                                 <label for="motif" class="form-label">Motif de suspension (impayé, fraude…)</label>
-                                <input type="text" id="motif" name="motif" class="form-control" required maxlength="255">
+                                <input type="text" id="motif" name="motif" placeholder="Ex. : Abonnement impayé" class="form-control" required maxlength="255">
                             {% endblock %}
                         {% endembed %}
                     {% endif %}

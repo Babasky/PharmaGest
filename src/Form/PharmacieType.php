@@ -20,12 +20,12 @@ final class PharmacieType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom', TextType::class, ['label' => 'Nom de la pharmacie'])
-            ->add('numeroAutorisation', TextType::class, ['label' => 'N° d\'autorisation d\'exploitation'])
-            ->add('ville', TextType::class, ['label' => 'Ville'])
-            ->add('adresse', TextType::class, ['label' => 'Adresse', 'help' => 'Quartier, rue, porte.'])
+            ->add('nom', TextType::class, ['attr' => ['placeholder' => 'Ex. : Pharmacie du Fleuve'], 'label' => 'Nom de la pharmacie'])
+            ->add('numeroAutorisation', TextType::class, ['attr' => ['placeholder' => 'N° de l\'autorisation d\'ouverture'], 'label' => 'N° d\'autorisation d\'exploitation'])
+            ->add('ville', TextType::class, ['attr' => ['placeholder' => 'Ex. : Bamako'], 'label' => 'Ville'])
+            ->add('adresse', TextType::class, ['attr' => ['placeholder' => 'Quartier, rue, repère'], 'label' => 'Adresse', 'help' => 'Quartier, rue, porte.'])
             ->add('telephone', TelType::class, ['label' => 'Téléphone', 'attr' => ['placeholder' => '+223 XX XX XX XX']])
-            ->add('email', EmailType::class, ['label' => 'Email de la pharmacie', 'required' => false]);
+            ->add('email', EmailType::class, ['attr' => ['placeholder' => 'contact@pharmacie.ml'], 'label' => 'Email de la pharmacie', 'required' => false]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

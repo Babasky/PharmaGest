@@ -182,7 +182,7 @@
                                         <td class="text-end">{{ p.stockMax ?? '—' }}</td>
                                         <td class="text-end">{{ s.attendu ?: '—' }}</td>
                                         <td class="small text-body-secondary">{{ s.dernier_achat ? s.dernier_achat.quantite ~ ' le ' ~ s.dernier_achat.date|date('d/m/Y') : '—' }}</td>
-                                        <td class="pe-3"><input type="number" min="0" max="100000" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="quantite[{{ p.id }}]" value="{{ s.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
+                                        <td class="pe-3"><input type="number" min="0" max="100000" class="form-control form-control-sm text-end ms-auto" style="max-width: 7rem" name="quantite[{{ p.id }}]" placeholder="Qté" value="{{ s.quantite }}" aria-label="Quantité de {{ p.nomCommercial }}"></td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
