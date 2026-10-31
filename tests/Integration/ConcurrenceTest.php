@@ -104,20 +104,20 @@ final class ConcurrenceTest extends KernelTestCase
         $statuts = self::getContainer()->get(StatutVerrouille::class);
         $vente = $this->panier(1);
 
-        $this->em->getConnection()->transactional(function () use ($statuts, $vente): void {
+        $this->em->getConnection()->transactional(static function () use ($statuts, $vente): void {
             self::assertTrue($statuts->estParmi($vente, [StatutVente::EnCours, StatutVente::EnAttente]));
         });
 
         $this->statutEnBase($vente, StatutVente::Validee);
         self::assertSame(StatutVente::EnCours, $vente->getStatut());
-        $this->em->getConnection()->transactional(function () use ($statuts, $vente): void {
+        $this->em->getConnection()->transactional(static function () use ($statuts, $vente): void {
             self::assertFalse($statuts->estParmi($vente, [StatutVente::EnCours, StatutVente::EnAttente]));
             self::assertTrue($statuts->estParmi($vente, [StatutVente::Validee]));
         });
 
         // Un document pas encore enregistré n'a pas de concurrent.
         $nouvelle = new Vente($this->vendeur, new \DateTimeImmutable());
-        $this->em->getConnection()->transactional(function () use ($statuts, $nouvelle): void {
+        $this->em->getConnection()->transactional(static function () use ($statuts, $nouvelle): void {
             self::assertTrue($statuts->estParmi($nouvelle, [StatutVente::EnCours]));
         });
     }
