@@ -6,6 +6,7 @@ use App\Entity\LigneTransfert;
 use App\Entity\Pharmacie;
 use App\Entity\Produit;
 use App\Entity\TransfertStock;
+use App\Enum\StatutTransfert;
 use App\Enum\TypeMouvement;
 use App\Repository\AffectationRepository;
 use App\Repository\ProduitRepository;
@@ -13,6 +14,7 @@ use App\Repository\TransfertStockRepository;
 use App\Service\AuditLogger;
 use App\Service\GenerateurNotifications;
 use App\Service\Numeroteur;
+use App\Service\StatutVerrouille;
 use App\Tenant\TenantContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -39,6 +41,7 @@ class TransfertService
         private readonly AuditLogger $audit,
         private readonly GenerateurNotifications $notifications,
         private readonly ClockInterface $horloge,
+        private readonly StatutVerrouille $statuts,
     ) {
     }
 
@@ -228,6 +231,7 @@ class TransfertService
         }
 
         $this->stock->transaction(function () use ($transfert, $origine, $destination): void {
+            $this->exigerStatutEnBase($transfert, StatutTransfert::EnPreparation);
             foreach ($transfert->getLignes() as $ligne) {
                 foreach ($this->stock->prelever($ligne->getProduit(), $ligne->getQuantite(), TypeMouvement::Transfert, $transfert->getNumero()) as $prelevement) {
                     $this->em->persist($ligne->ajouterLot($prelevement->lot, $prelevement->quantite));
@@ -260,13 +264,17 @@ class TransfertService
             throw new StockException('Le motif de l\'annulation est obligatoire.');
         }
         $motif = mb_substr(trim($motif), 0, 255);
-        $transfert->annuler($this->tenantContext->getUtilisateur(), $this->horloge->now(), $motif);
-        $this->audit->journaliser(AuditLogger::TRANSFERT_ANNULE, $transfert->getPharmacieOrigine(), $transfert, null, [
-            'numero' => $transfert->getNumero(),
-            'destination' => $transfert->getPharmacieDestination()->getNom(),
-            'motif' => $motif,
-        ]);
-        $this->em->flush();
+        $this->stock->transaction(function () use ($transfert, $motif): void {
+            // Un transfert expédié au même moment ne doit pas passer « annulé » alors que son stock est sorti.
+            $this->exigerStatutEnBase($transfert, StatutTransfert::EnPreparation);
+            $transfert->annuler($this->tenantContext->getUtilisateur(), $this->horloge->now(), $motif);
+            $this->audit->journaliser(AuditLogger::TRANSFERT_ANNULE, $transfert->getPharmacieOrigine(), $transfert, null, [
+                'numero' => $transfert->getNumero(),
+                'destination' => $transfert->getPharmacieDestination()->getNom(),
+                'motif' => $motif,
+            ]);
+            $this->em->flush();
+        });
     }
 
     /**
@@ -289,6 +297,8 @@ class TransfertService
         $this->exigerMemeProprietaire($transfert->getPharmacieOrigine(), $destination);
 
         return $this->stock->transaction(function () use ($transfert, $destination): array {
+            // Deux confirmations simultanées (deux responsables, double envoi) ne font entrer le stock qu'une fois.
+            $this->exigerStatutEnBase($transfert, StatutTransfert::Expedie);
             $crees = [];
             $resume = [];
             foreach ($transfert->getLignes() as $ligne) {
@@ -358,6 +368,19 @@ class TransfertService
             'produit' => $l->getProduit()->getNomCommercial(),
             'quantite' => $l->getQuantite(),
         ])->toArray());
+    }
+
+    /**
+     * Dans la transaction : relit sous verrou le statut du transfert en base, qu'une autre requête a pu changer
+     * depuis le contrôle fait avant la transaction.
+     *
+     * @throws StockException
+     */
+    private function exigerStatutEnBase(TransfertStock $transfert, StatutTransfert $attendu): void
+    {
+        if (!$this->statuts->estParmi($transfert, [$attendu])) {
+            throw new StockException(\sprintf('Le transfert %s vient d\'être traité par ailleurs (autre onglet ou autre utilisateur) : rechargez la page.', $transfert->getNumero()));
+        }
     }
 
     private function exigerEnPreparation(TransfertStock $transfert): void

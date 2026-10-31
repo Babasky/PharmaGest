@@ -26,6 +26,7 @@ use App\Repository\VenteRepository;
 use App\Service\AuditLogger;
 use App\Service\Numeroteur;
 use App\Service\ParametresPharmacie;
+use App\Service\StatutVerrouille;
 use App\Stock\StockException;
 use App\Stock\StockService;
 use App\Tenant\TenantContext;
@@ -56,6 +57,7 @@ class VenteService
         private readonly CreanceAmoRepository $creances,
         private readonly CopieOrdonnance $copies,
         private readonly RecetteService $recettes,
+        private readonly StatutVerrouille $statuts,
     ) {
     }
 
@@ -386,6 +388,7 @@ class VenteService
 
         try {
             $this->stock->transaction(function () use ($vente, $vendeur, $session, $pharmacie, $paiements, $autorisePar, $controle): void {
+                $this->exigerEncoreModifiable($vente);
                 $totaux = $vente->calculer();
                 $numero = $this->numeroteur->suivant('V', $pharmacie);
                 $this->preleverStock($vente, $numero);
@@ -474,6 +477,7 @@ class VenteService
 
         try {
             $this->stock->transaction(function () use ($vente, $vendeur, $pharmacie, $autorisePar, $controle): void {
+                $this->exigerEncoreModifiable($vente);
                 $totaux = $vente->calculer();
                 $numero = $this->numeroteur->suivant('V', $pharmacie);
                 $this->preleverStock($vente, $numero);
@@ -549,6 +553,10 @@ class VenteService
         }
 
         $this->stock->transaction(function () use ($vente, $motif, $creance): void {
+            // Relu sous verrou : une annulation envoyée deux fois ne remet pas deux fois les produits en stock.
+            if (!$this->statuts->estParmi($vente, [StatutVente::Validee, StatutVente::AEncaisser])) {
+                throw new VenteException(\sprintf('La vente %s vient d\'être annulée ou encaissée par ailleurs : rechargez la page.', $vente->getNumero()));
+            }
             $numero = (string) $vente->getNumero();
             foreach ($vente->getLignes() as $ligne) {
                 foreach ($ligne->getLots() as $ligneLot) {
@@ -786,6 +794,20 @@ class VenteService
     {
         if (!$vente->estModifiable()) {
             throw new VenteException(\sprintf('La vente %s est validée : elle ne se modifie plus.', $vente->getNumero()));
+        }
+    }
+
+    /**
+     * Dans la transaction, avant le numéro et la sortie du stock : relit sous verrou le statut de la vente en base.
+     * Le même panier validé deux fois (double envoi, deux onglets) ne sort ainsi le stock et ne prend un numéro
+     * qu'une fois : la seconde requête attend la première, puis voit la vente déjà validée.
+     *
+     * @throws VenteException
+     */
+    private function exigerEncoreModifiable(Vente $vente): void
+    {
+        if (!$this->statuts->estParmi($vente, [StatutVente::EnCours, StatutVente::EnAttente])) {
+            throw new VenteException('Cette vente vient d\'être validée ou abandonnée sur un autre poste ou dans un autre onglet : rechargez la caisse.');
         }
     }
 }

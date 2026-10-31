@@ -44,6 +44,9 @@ Tests : `IsolationTenantTest`, `IsolationReferentielsTest`, `DroitsReferentielsT
 
 - Limitation des tentatives : 5 connexions ratées en 15 minutes (pare-feu), 5 codes PIN faux en 15 minutes.
 - Règles métier dans des services testés (FEFO, blocage des périmés, plafond de remise, numérotation sans trou).
+- Requêtes concurrentes ou rejouées (double envoi, deux onglets, deux utilisateurs) : le statut d'une vente, d'un
+  transfert ou d'une commande est relu sous verrou dans la transaction avant de sortir ou d'entrer du stock
+  (`StatutVerrouille`) ; la seconde requête attend la première puis s'arrête (`ConcurrenceTest`).
 - Journal d'audit en écriture seule (aucune route de modification, listener qui refuse mise à jour et suppression).
 
 ## A05 — Mauvaise configuration
