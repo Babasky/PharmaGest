@@ -13,6 +13,7 @@ use App\Entity\Produit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -103,6 +104,9 @@ class LotRepository extends ServiceEntityRepository
             ->andWhere('(l.datePeremption IS NULL OR l.datePeremption > :jour)')->setParameter('jour', $jour, Types::DATE_IMMUTABLE)
             ->addSelect(self::SANS_DATE)->orderBy('sansDate', 'ASC')->addOrderBy('l.datePeremption', 'ASC')->addOrderBy('l.id', 'ASC')
             ->getQuery()
+            // Quantités relues en base sous verrou, même pour un lot déjà chargé : sinon Doctrine garderait la valeur
+            // en mémoire, peut-être lue avant qu'une autre requête ne prélève dans ce lot.
+            ->setHint(Query::HINT_REFRESH, true)
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getResult();
     }

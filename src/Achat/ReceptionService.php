@@ -6,7 +6,9 @@ use App\Entity\Commande;
 use App\Entity\Entrepot;
 use App\Entity\LigneCommande;
 use App\Entity\Reception;
+use App\Enum\StatutCommande;
 use App\Enum\TypeMouvement;
+use App\Service\StatutVerrouille;
 use App\Stock\StockException;
 use App\Stock\StockService;
 use App\Tenant\TenantContext;
@@ -25,6 +27,7 @@ class ReceptionService
         private readonly StockService $stock,
         private readonly TenantContext $tenantContext,
         private readonly ClockInterface $horloge,
+        private readonly StatutVerrouille $statuts,
     ) {
     }
 
@@ -95,6 +98,15 @@ class ReceptionService
         $numeroBonLivraison = null === $numeroBonLivraison || '' === trim($numeroBonLivraison) ? null : mb_substr(trim($numeroBonLivraison), 0, 50);
 
         return $this->stock->transaction(function () use ($commande, $date, $numeroBonLivraison, $lignes, $entrepot): array {
+            // Relu sous verrou : deux réceptions simultanées de la même commande se suivent au lieu de se croiser, et
+            // une commande que l'autre réception vient de solder n'est plus réceptionnable.
+            if (!$this->statuts->estParmi($commande, [StatutCommande::Envoyee, StatutCommande::RecuePartiellement])) {
+                throw new AchatException(\sprintf('La commande %s vient d\'être réceptionnée ou annulée par ailleurs : rechargez la page.', $commande->getLibelle()));
+            }
+            foreach ($commande->getLignes() as $ligneCommande) {
+                // Quantités déjà reçues relues en base : la réception précédente a pu les changer.
+                $this->em->refresh($ligneCommande);
+            }
             $reception = new Reception($commande, $date, $numeroBonLivraison, $this->tenantContext->getUtilisateur(), $this->horloge->now());
             $this->em->persist($reception);
             $motif = null === $numeroBonLivraison ? 'Réception' : 'Réception, BL '.$numeroBonLivraison;
