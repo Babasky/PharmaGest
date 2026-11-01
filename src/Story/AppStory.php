@@ -346,7 +346,8 @@ final class AppStory extends Story
 
         $inps = $mariam->assurancePrincipale()?->getOrganisme();
         \assert($inps instanceof \App\Entity\OrganismeAmo);
-        $bordereau = $this->bordereaux->creer($inps, new \DateTimeImmutable('first day of this month'), new \DateTimeImmutable('today'));
+        // « midnight » : sans lui, la date garde l'heure courante et, le 1er du mois, le début tombe après la fin (aujourd'hui 0 h).
+        $bordereau = $this->bordereaux->creer($inps, new \DateTimeImmutable('midnight first day of this month'), new \DateTimeImmutable('today'));
         $this->bordereaux->transmettre($bordereau);
         $premiere = $bordereau->getCreances()->first();
         \assert($premiere instanceof \App\Entity\CreanceAmo);
@@ -414,7 +415,7 @@ final class AppStory extends Story
         foreach ($this->depenses->categories() as $categorie) {
             $categories[$categorie->getNom()] = $categorie;
         }
-        $debutMois = new \DateTimeImmutable('first day of this month');
+        $debutMois = new \DateTimeImmutable('midnight first day of this month');
         $aujourdhui = new \DateTimeImmutable('today');
         foreach ([
             [$debutMois->modify('-1 month'), 'Loyer', 'Loyer du local', 150000, ModeReglement::Virement, 'SCI Badalabougou'],
