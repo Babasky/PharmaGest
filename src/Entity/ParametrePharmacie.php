@@ -26,6 +26,8 @@ class ParametrePharmacie implements TenantAwareInterface
     public const JOURS_COUVERTURE_PAR_DEFAUT = 15;
     public const JOURS_AVANT_RUPTURE_PAR_DEFAUT = 5;
     public const HEURE_COMMANDES_PAR_DEFAUT = 21;
+    /** Délai d'annulation d'une vente le plus long qu'on puisse régler (minutes) : une journée. */
+    public const DELAI_ANNULATION_MAXIMAL = 1440;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -65,6 +67,14 @@ class ParametrePharmacie implements TenantAwareInterface
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Assert\Length(max: 500)]
     private ?string $mentionsTicket = null;
+
+    /**
+     * Délai (minutes) après la validation au-delà duquel une vente ne s'annule plus. Null : jusqu'à la fin de la
+     * journée où la vente a été validée (RG-12).
+     */
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(min: 1, max: self::DELAI_ANNULATION_MAXIMAL)]
+    private ?int $delaiAnnulationVente = null;
 
     /** Les suggestions de commande se calculent sur les ventes de ce nombre de derniers jours (ventes moyennes, rotation). */
     #[ORM\Column(options: ['default' => self::JOURS_ANALYSE_VENTES_PAR_DEFAUT])]
@@ -170,6 +180,24 @@ class ParametrePharmacie implements TenantAwareInterface
         $this->mentionsTicket = null !== $mentionsTicket && '' !== trim($mentionsTicket) ? trim($mentionsTicket) : null;
 
         return $this;
+    }
+
+    public function getDelaiAnnulationVente(): ?int
+    {
+        return $this->delaiAnnulationVente;
+    }
+
+    public function setDelaiAnnulationVente(?int $minutes): static
+    {
+        $this->delaiAnnulationVente = $minutes;
+
+        return $this;
+    }
+
+    /** « 30 minutes »… ou null sans délai réglé (fin de la journée). */
+    public static function libelleDelai(?int $minutes): ?string
+    {
+        return null === $minutes ? null : \sprintf('%d minute%s', $minutes, $minutes > 1 ? 's' : '');
     }
 
     public function getJoursAnalyseVentes(): int

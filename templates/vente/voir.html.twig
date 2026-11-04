@@ -171,16 +171,23 @@
                     </div>
                 </div>
             {% endif %}
-            {% if is_granted('ROLE_ADJOINT') and vente.statut.value == 'validee' and ecriture_autorisee() %}
+            {% if is_granted('ROLE_ADJOINT') and vente.statut.value == 'validee' and ecriture_autorisee() and annulation_possible %}
                 <form method="post" action="{{ path('app_vente_annuler', {id: vente.id}) }}" class="card shadow-sm border-danger" id="annulation">
                     <input type="hidden" name="_token" value="{{ csrf_token('annuler-vente-' ~ vente.id) }}">
                     <div class="card-body">
                         <label class="form-label small" for="motif">Motif de l'annulation</label>
                         <input type="text" class="form-control form-control-sm mb-2" placeholder="Entrez le motif de l'annulation" id="motif" name="motif" maxlength="255" required>
                         <button class="btn btn-sm btn-outline-danger" type="submit" data-turbo-confirm="Annuler la vente {{ vente.numero }} ? Les produits reviendront en stock.">Annuler la vente</button>
-                        <div class="form-text">Possible le jour même, avant la clôture de la caisse ; ensuite il faut un avoir.</div>
+                        <div class="form-text" id="delai-annulation">
+                            {% if delai_annulation %}Possible pendant {{ delai_annulation }} après la validation, jusqu'au {{ fin_annulation|date('d/m/Y à H:i') }},{% else %}Possible le jour même,{% endif %}
+                            avant la clôture de la caisse ; ensuite il faut un avoir.
+                        </div>
                     </div>
                 </form>
+            {% elseif is_granted('ROLE_ADJOINT') and vente.statut.value == 'validee' %}
+                <p class="small text-body-secondary" id="annulation-impossible">
+                    {% if delai_annulation and vente.session and vente.session.estOuverte %}Le délai d'annulation ({{ delai_annulation }} après la validation) est dépassé{% elseif delai_annulation is null and vente.session and vente.session.estOuverte %}Une vente ne s'annule que le jour même{% else %}La session de caisse de cette vente est clôturée{% endif %} : pour la reprendre, il faut établir un avoir.
+                </p>
             {% endif %}
         </div>
     </div>

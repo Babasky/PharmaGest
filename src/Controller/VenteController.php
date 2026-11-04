@@ -54,7 +54,7 @@ final class VenteController extends AbstractAppController
     }
 
     #[Route('/{id}', name: 'app_vente_voir', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function voir(Vente $vente, CreanceAmoRepository $creances, #[MapQueryParameter] bool $caisse = false): Response
+    public function voir(Vente $vente, CreanceAmoRepository $creances, VenteService $service, #[MapQueryParameter] bool $caisse = false): Response
     {
         $this->exigerVenteEnregistree($vente);
         $creance = $creances->pourVente($vente);
@@ -65,6 +65,9 @@ final class VenteController extends AbstractAppController
             'creance' => $creance,
             // La copie jointe à un bordereau transmis ne change plus (RG-11).
             'copie_modifiable' => null !== $vente->getOrdonnance() && !($creance?->getBordereau()?->estTransmis() ?? false),
+            'annulation_possible' => $service->annulationPossible($vente),
+            'fin_annulation' => $vente->estValidee() ? $service->finDelaiAnnulation($vente) : null,
+            'delai_annulation' => $service->libelleDelaiAnnulation($vente),
         ]);
     }
 

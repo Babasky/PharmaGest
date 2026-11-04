@@ -9,6 +9,7 @@ use App\Entity\CreanceAmo;
 use App\Entity\LigneVente;
 use App\Entity\Ordonnance;
 use App\Entity\OrganismeAmo;
+use App\Entity\ParametrePharmacie;
 use App\Entity\Pharmacie;
 use App\Entity\Produit;
 use App\Entity\SessionCaisse;
@@ -526,7 +527,8 @@ class VenteService
     }
 
     /**
-     * Annule une vente le jour même, avant la clôture de sa session de caisse (VE-09, RG-12), ou une vente
+     * Annule une vente dans le délai d'annulation (le jour même, ou le délai choisi par le propriétaire) et avant la
+     * clôture de sa session de caisse (VE-09, RG-12), ou une vente
      * envoyée à la caisse que le client n'a pas payée : les produits retournent dans leurs lots d'origine,
      * la vente reste numérotée avec le statut « annulée ».
      *
@@ -543,8 +545,8 @@ class VenteService
         }
         // Une vente envoyée à la caisse et jamais payée s'annule tant qu'elle attend, même les jours suivants :
         // rien n'a été encaissé, et ses produits doivent revenir en stock.
-        if ($vente->estValidee() && (!($vente->getSession()?->estOuverte() ?? false) || $vente->getValideeLe()?->format('Y-m-d') !== $this->horloge->now()->format('Y-m-d'))) {
-            throw new VenteException('Une vente ne s\'annule que le jour même, avant la clôture de sa session de caisse. Au-delà, il faut établir un avoir.');
+        if ($vente->estValidee() && !$this->annulationPossible($vente)) {
+            throw new VenteException($this->motifAnnulationImpossible($vente));
         }
         $creance = $this->creances->pourVente($vente);
         $bordereau = $creance?->getBordereau();
@@ -578,7 +580,54 @@ class VenteService
         });
     }
 
+    /**
+     * Fin du délai d'annulation d'une vente validée (RG-12) : la fin de la journée de la vente, ou le délai choisi
+     * par le propriétaire (Paramètres › Règles de gestion), compté depuis la validation.
+     */
+    public function finDelaiAnnulation(Vente $vente): ?\DateTimeImmutable
+    {
+        $validee = $vente->getValideeLe();
+        if (null === $validee) {
+            return null;
+        }
+        $delai = $this->parametres->pour($vente->getPharmacie())->getDelaiAnnulationVente();
+
+        return null === $delai ? $validee->setTime(0, 0)->modify('+1 day') : $validee->modify(\sprintf('+%d minutes', $delai));
+    }
+
+    /**
+     * Une vente envoyée à la caisse et pas encore payée s'annule toujours ; une vente encaissée, dans le délai
+     * d'annulation et avant la clôture de sa session de caisse.
+     */
+    public function annulationPossible(Vente $vente): bool
+    {
+        if ($vente->estAEncaisser()) {
+            return true;
+        }
+        $fin = $this->finDelaiAnnulation($vente);
+
+        return $vente->estValidee() && ($vente->getSession()?->estOuverte() ?? false) && null !== $fin && $this->horloge->now() < $fin;
+    }
+
+    /** Délai d'annulation choisi par le propriétaire (« 30 minutes »…), ou null : le jour même. */
+    public function libelleDelaiAnnulation(Vente $vente): ?string
+    {
+        return ParametrePharmacie::libelleDelai($this->parametres->pour($vente->getPharmacie())->getDelaiAnnulationVente());
+    }
+
     // --- Outils ---------------------------------------------------------------------------------
+
+    private function motifAnnulationImpossible(Vente $vente): string
+    {
+        if (!($vente->getSession()?->estOuverte() ?? false)) {
+            return 'La session de caisse de cette vente est clôturée : la vente ne s\'annule plus, il faut établir un avoir.';
+        }
+        $delai = $this->libelleDelaiAnnulation($vente);
+
+        return null === $delai
+            ? 'Une vente ne s\'annule que le jour même, avant la clôture de sa session de caisse. Au-delà, il faut établir un avoir.'
+            : \sprintf('Le délai d\'annulation de %s après la validation est dépassé (vente validée le %s) : il faut établir un avoir.', $delai, $vente->getValideeLe()?->format('d/m/Y à H:i'));
+    }
 
     /**
      * Contrôles avant validation et autorisation du propriétaire par code PIN si besoin. Le taux AMO

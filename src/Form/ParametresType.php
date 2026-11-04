@@ -41,6 +41,12 @@ final class ParametresType extends AbstractType
                 'choice_label' => static fn (PolitiqueSansOrdonnance $p) => $p->libelle(),
                 'expanded' => true,
             ])
+            ->add('delaiAnnulationVente', IntegerType::class, [
+                'label' => 'Délai d\'annulation d\'une vente (minutes après la validation)',
+                'required' => false,
+                'attr' => ['placeholder' => 'Vide : le jour même', 'min' => 1, 'max' => ParametrePharmacie::DELAI_ANNULATION_MAXIMAL],
+                'help' => 'Laissez vide pour permettre l\'annulation jusqu\'à la fin de la journée de la vente. Passé ce délai, ou après la clôture de la session de caisse, la vente ne s\'annule plus : il faut établir un avoir. Une vente envoyée à la caisse et pas encore payée s\'annule toujours.',
+            ])
             ->add('inactiviteCaisse', IntegerType::class, [
                 'label' => 'Déconnexion de la caisse après inactivité (minutes)',
                 'help' => 'S\'applique tant qu\'une session de caisse est ouverte. Ailleurs dans l\'application, la déconnexion intervient après 30 minutes d\'inactivité.',
