@@ -48,7 +48,7 @@ final class PlaceholdersTest extends AppWebTestCase
 
         $pages = [
             '/admin/pharmacies/nouvelle', '/admin/pharmacies/'.$officine->pharmacie->getId().'/edit',
-            '/admin/offres/'.$officine->pharmacie->getOffre()->getId().'/edit', '/admin/referentiels/organismes-amo/new', '/admin/referentiels/formes-galeniques/new',
+            '/admin/offres/'.$officine->pharmacie->getOffre()->getId().'/edit', '/admin/offres/new', '/admin/referentiels/organismes-amo/new', '/admin/referentiels/formes-galeniques/new',
             '/admin/referentiels/categories-depenses/new', '/admin/super-admins/nouveau', '/admin/support',
         ];
         foreach ($pages as $page) {

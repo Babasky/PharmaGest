@@ -24,6 +24,12 @@ class OffreRepository extends ServiceEntityRepository
         return $this->findBy([], ['ordre' => 'ASC']);
     }
 
+    /** Rang d'une nouvelle offre : après toutes les autres dans les listes. */
+    public function ordreSuivant(): int
+    {
+        return 1 + (int) $this->createQueryBuilder('o')->select('COALESCE(MAX(o.ordre), 0)')->getQuery()->getSingleScalarResult();
+    }
+
     public function parCode(string $code): Offre
     {
         return $this->findOneBy(['code' => $code])
