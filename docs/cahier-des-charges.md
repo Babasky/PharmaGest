@@ -321,7 +321,7 @@ Ces règles s'appliquent partout dans l'application ; chaque règle de calcul fa
 | RG-09 | Sur une vente AMO, la remise ne s'applique qu'à la part assuré. La part AMO est toujours calculée sans remise (sur le prix AMO ou le prix plein, selon RG-07). |
 | RG-10 | Recette automatique = montant réellement encaissé (après remise, part assuré seulement pour l'AMO). La part AMO devient une créance, puis une recette à son règlement. |
 | RG-11 | Une créance AMO n'appartient qu'à un seul bordereau à la fois. Un bordereau transmis n'est plus modifiable. |
-| RG-12 | Annulation : possible le jour même, avant la clôture de la session de caisse. Ensuite, seul un avoir est possible. Les deux remettent les produits dans leurs lots d'origine et contre-passent la recette. |
+| RG-12 | Annulation : possible le jour même, ou pendant le délai en minutes réglé par le propriétaire (Paramètres › Règles de gestion), et toujours avant la clôture de la session de caisse. Ensuite, seul un avoir est possible. Les deux remettent les produits dans leurs lots d'origine et contre-passent la recette. |
 | RG-13 | Clôture de caisse : écart = espèces comptées − (fond de caisse + encaissements espèces − décaissements espèces). Un écart non nul exige une justification. |
 | RG-14 | Abonnement : nouvelle date de fin = plus tardive des deux dates (aujourd'hui, date de fin en cours) + 12 mois. |
 | RG-15 | Une donnée déjà utilisée (produit vendu, client, fournisseur) ne se supprime pas : elle est archivée et disparaît des listes de sélection. |

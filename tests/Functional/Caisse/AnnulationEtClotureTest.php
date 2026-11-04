@@ -12,6 +12,7 @@ use App\Tests\Factory\LotFactory;
 use App\Tests\Factory\ProduitFactory;
 use App\Vente\GestionCaisse;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\DomCrawler\Crawler;
 use Twig\Environment;
 
@@ -21,6 +22,52 @@ use Twig\Environment;
  */
 final class AnnulationEtClotureTest extends CaisseTestCase
 {
+    use ClockSensitiveTrait;
+
+    public function testDelaiDAnnulationReglableParLeProprietaire(): void
+    {
+        self::mockTime('2026-11-04 10:00:00');
+        $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1000]);
+        LotFactory::createOne(['produit' => $produit, 'quantiteInitiale' => 20, 'datePeremption' => new \DateTimeImmutable('2027-06-30')]);
+
+        // Par défaut : le jour même. Le propriétaire choisit 15 minutes après la validation.
+        $this->connecter($this->officine->proprietaire)->request('GET', '/parametres?onglet=regles');
+        self::assertInputValueSame('parametres[delaiAnnulationVente]', '', 'Vide par défaut : le jour même.');
+        $this->client->submitForm('Enregistrer les règles', ['parametres[delaiAnnulationVente]' => '0']);
+        self::assertResponseStatusCodeSame(422);
+        $this->client->submitForm('Enregistrer les règles', ['parametres[delaiAnnulationVente]' => '15']);
+        self::assertResponseRedirects('/parametres?onglet=regles');
+        $this->client->followRedirect();
+        self::assertInputValueSame('parametres[delaiAnnulationVente]', '15');
+
+        $this->ouvrirCaisse($this->officine->adjoint);
+        $this->ajouter($produit, 2);
+        $this->encaisser(['especes' => ['remis' => '2000']]);
+        $premiere = $this->derniereVente();
+        $this->ajouter($produit, 3);
+        $this->encaisser(['especes' => ['remis' => '3000']]);
+        $seconde = $this->derniereVente();
+
+        // Dix minutes plus tard : encore possible, la page indique l'échéance.
+        self::mockTime('2026-11-04 10:10:00');
+        $this->client->request('GET', '/ventes/'.$premiere->getId());
+        self::assertSelectorTextContains('#delai-annulation', 'Possible pendant 15 minutes après la validation, jusqu\'au 04/11/2026 à 10:15');
+        $this->client->submitForm('Annuler la vente', ['motif' => 'Erreur de produit']);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-success', 'annulée');
+
+        // La page de la seconde vente est ouverte dans le délai, le formulaire n'est envoyé qu'après.
+        $crawler = $this->client->request('GET', '/ventes/'.$seconde->getId());
+        $formulaire = $crawler->selectButton('Annuler la vente')->form(['motif' => 'Trop tard']);
+        self::mockTime('2026-11-04 10:20:00');
+        $this->client->submit($formulaire);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.alert-danger', 'Le délai d\'annulation de 15 minutes après la validation est dépassé');
+        self::assertSelectorNotExists('#annulation');
+        self::assertSelectorTextContains('#annulation-impossible', 'Le délai d\'annulation (15 minutes après la validation) est dépassé');
+        self::assertSame(StatutVente::Validee, $this->derniereVente()->getStatut());
+    }
+
     public function testR08AnnulationLeJourMemeRemetLeStockDansLesLotsDOrigine(): void
     {
         $produit = ProduitFactory::createOne(['pharmacie' => $this->officine->pharmacie, 'prixVente' => 1000]);
@@ -141,9 +188,8 @@ final class AnnulationEtClotureTest extends CaisseTestCase
         $this->client->request('GET', '/caisse');
         self::assertSelectorExists('form[action="/caisse/ouvrir"]');
         $this->connecter($this->officine->proprietaire)->request('GET', '/ventes/'.$vente->getId());
-        $this->client->submitForm('Annuler la vente', ['motif' => 'Trop tard']);
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-danger', 'il faut établir un avoir');
+        self::assertSelectorNotExists('#annulation');
+        self::assertSelectorTextContains('#annulation-impossible', 'session de caisse de cette vente est clôturée : pour la reprendre, il faut établir un avoir');
     }
 
     public function testLAdjointVoitAussiLesEspecesAttendues(): void
