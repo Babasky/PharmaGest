@@ -45,7 +45,8 @@
                                 {% if ligne %}{% include 'commande/_ligne_reception.html.twig' with {i: i, ligne: ligne, s: s} %}{% endif %}
                             {% endfor %}
                         {% else %}
-                            {% for ligne in commande.lignes %}
+                            {# Un produit déjà entièrement livré n'est plus attendu : il n'est plus proposé. #}
+                            {% for ligne in commande.lignes|filter(l => l.reste > 0) %}
                                 {% include 'commande/_ligne_reception.html.twig' with {i: loop.index0, ligne: ligne, s: {quantite: ligne.reste ?: '', prix: ligne.prixEstime}} %}
                             {% endfor %}
                         {% endif %}
