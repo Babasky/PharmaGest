@@ -261,8 +261,46 @@ final class PharmacieAdminTest extends AppWebTestCase
 
         $this->client->request('POST', '/admin/offres/'.OffreFactory::parCode(Offre::STANDARD)->getId().'/delete');
         self::assertResponseStatusCodeSame(403, 'Une offre se modifie, elle ne se supprime pas.');
+    }
+
+    public function testLeSuperAdminCreeUneOffre(): void
+    {
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/offres');
+        $this->client->click($crawler->selectLink('Créer une offre')->link());
+        self::assertResponseIsSuccessful();
+
+        $formulaire = $this->client->getCrawler()->filter('button[value="saveAndReturn"]')->form();
+        $valeurs = $formulaire->getPhpValues();
+        $valeurs['Offre'] = array_merge($valeurs['Offre'], [
+            'nom' => '  Premium Plus ',
+            'maxUtilisateurs' => '',
+            'maxPharmacies' => '5',
+            'tarifAnnuel' => '450000',
+            'fonctions' => ['Toutes les fonctions Premium', ' ', 'Accompagnement sur site'],
+        ]);
+        $this->client->request('POST', $formulaire->getUri(), $valeurs);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#main', 'Premium Plus');
+
+        $offre = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->getRepository(Offre::class)->findOneBy(['nom' => 'Premium Plus']));
+        self::assertInstanceOf(Offre::class, $offre);
+        self::assertSame(['premium-plus', null, 5, 450000, ['Toutes les fonctions Premium', 'Accompagnement sur site']], [$offre->getCode(), $offre->getMaxUtilisateurs(), $offre->getMaxPharmacies(), $offre->getTarifAnnuel(), $offre->getFonctions()]);
+        self::assertGreaterThan(OffreFactory::parCode(Offre::PREMIUM)->getOrdre(), $offre->getOrdre(), 'Rangée après les offres existantes.');
+        self::assertSame(1, $this->compterAudit(AuditLogger::OFFRE_CREEE));
+
+        // Aussitôt proposée à la création d'une pharmacie.
+        $this->client->request('GET', '/admin/pharmacies/nouvelle');
+        self::assertSelectorTextContains('#nouvelle_pharmacie_offre', 'Premium Plus');
+
+        // Deux offres ne portent pas le même nom.
         $this->client->request('GET', '/admin/offres/new');
-        self::assertResponseStatusCodeSame(403);
+        $this->client->submit($this->client->getCrawler()->filter('button[value="saveAndReturn"]')->form(), [
+            'Offre[nom]' => 'Premium Plus',
+            'Offre[maxPharmacies]' => '1',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('#main', 'Une offre porte déjà ce nom.');
     }
 
     public function testLeSuperAdminModifieUneOffre(): void

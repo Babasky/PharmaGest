@@ -5,12 +5,15 @@ namespace App\Entity;
 use App\Repository\OffreRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Offre commerciale (Essentiel, Standard, Premium). Les limites se règlent ici, sans toucher au code.
+ * Offre commerciale (Essentiel, Standard, Premium à l'installation ; le super admin en crée d'autres). Les limites
+ * se règlent ici, sans toucher au code.
  */
 #[ORM\Entity(repositoryClass: OffreRepository::class)]
+#[UniqueEntity(fields: ['nom'], message: 'Une offre porte déjà ce nom.')]
 class Offre
 {
     public const ESSENTIEL = 'essentiel';
@@ -26,6 +29,8 @@ class Offre
     private string $code;
 
     #[ORM\Column(length: 60)]
+    #[Assert\NotBlank(message: 'Donnez un nom à l\'offre.')]
+    #[Assert\Length(max: 60)]
     private string $nom;
 
     /** Nombre maximum d'utilisateurs actifs par pharmacie (propriétaire compris). Null = illimité. */
@@ -68,9 +73,26 @@ class Offre
         return $this->code;
     }
 
+    /**
+     * Code technique d'une offre créée par le super admin, tiré de son nom (« Premium Plus » → premium-plus).
+     *
+     * @internal réservé à {@see \App\Controller\Admin\OffreCrudController}
+     */
+    public function attribuerCode(string $code): void
+    {
+        $this->code = $code;
+    }
+
     public function getNom(): string
     {
         return $this->nom;
+    }
+
+    public function setNom(?string $nom): static
+    {
+        $this->nom = trim((string) $nom);
+
+        return $this;
     }
 
     public function getMaxUtilisateurs(): ?int

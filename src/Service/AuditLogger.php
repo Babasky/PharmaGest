@@ -26,6 +26,7 @@ class AuditLogger
     public const PHARMACIE_ARCHIVEE = 'pharmacie.archivee';
     public const ABONNEMENT_PAIEMENT = 'abonnement.paiement';
     public const OFFRE_MODIFIEE = 'offre.modifiee';
+    public const OFFRE_CREEE = 'offre.creee';
     public const SUPPORT_MODIFIE = 'support.modifie';
     public const SUPER_ADMIN_CREE = 'super_admin.cree';
     public const STOCK_ENTREE = 'stock.entree';
@@ -63,7 +64,7 @@ class AuditLogger
     /** Actions de la plateforme : les seules que le super admin consulte (il ne voit jamais l'activité d'une officine). */
     public const ACTIONS_PLATEFORME = [
         self::PHARMACIE_CREEE, self::PHARMACIE_SUSPENDUE, self::PHARMACIE_REACTIVEE, self::PHARMACIE_ARCHIVEE,
-        self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT, self::OFFRE_MODIFIEE, self::SUPPORT_MODIFIE,
+        self::PHARMACIE_ARCHIVAGE_ANNONCE, self::ABONNEMENT_PAIEMENT, self::OFFRE_CREEE, self::OFFRE_MODIFIEE, self::SUPPORT_MODIFIE,
         self::SUPER_ADMIN_CREE, self::PROPRIETAIRE_AJOUTE, self::PROPRIETAIRE_RETIRE,
     ];
 
@@ -79,6 +80,7 @@ class AuditLogger
         self::PHARMACIE_REACTIVEE => 'Pharmacie réactivée',
         self::PHARMACIE_ARCHIVEE => 'Pharmacie archivée',
         self::ABONNEMENT_PAIEMENT => "Paiement d'abonnement",
+        self::OFFRE_CREEE => 'Offre créée',
         self::OFFRE_MODIFIEE => 'Offre modifiée',
         self::SUPPORT_MODIFIE => 'Support client modifié',
         self::SUPER_ADMIN_CREE => 'Super admin créé',
