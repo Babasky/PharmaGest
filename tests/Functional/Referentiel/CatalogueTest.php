@@ -154,8 +154,10 @@ final class CatalogueTest extends AppWebTestCase
 
     public function testEtagereCodeUnique(): void
     {
-        $this->connecter($this->officine->adjoint)->request('GET', '/etageres');
-        $this->client->submitForm('Créer', ['etagere[code]' => 'f1-r2', 'etagere[libelle]' => 'Vaccins', 'etagere[zone]' => 'refrigerateur']);
+        $crawler = $this->connecter($this->officine->adjoint)->request('GET', '/etageres');
+        self::assertSelectorTextContains('#etagere_zone option[selected]', 'Comptoir', 'Les zones d\'origine sont créées d\'office ; le comptoir est proposé.');
+        $refrigerateur = (string) $crawler->filter('#etagere_zone option')->reduce(static fn ($o) => 'Réfrigérateur' === $o->text())->attr('value');
+        $this->client->submitForm('Créer', ['etagere[code]' => 'f1-r2', 'etagere[libelle]' => 'Vaccins', 'etagere[zone]' => $refrigerateur]);
         $this->client->followRedirect();
         self::assertSelectorTextContains('main', 'F1-R2');
         self::assertSelectorTextContains('main', 'Réfrigérateur');

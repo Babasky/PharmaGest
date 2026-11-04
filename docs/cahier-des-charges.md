@@ -166,7 +166,7 @@ Chaque exigence porte un identifiant et une priorité : MVP (indispensable au la
 | ID | Exigence | Priorité |
 |---|---|---|
 | RF-01 | Catégories de produits sur deux niveaux | MVP |
-| RF-02 | Étagères : code (ex. E1-R3), libellé, zone (comptoir, réserve, réfrigérateur) | MVP |
+| RF-02 | Étagères : code (ex. E1-R3), libellé, zone de rangement. Chaque pharmacie crée ses zones (comptoir, réserve et réfrigérateur sont créées d'office), les renomme et les archive | MVP |
 | RF-03 | Produits : nom commercial, DCI, forme, dosage, conditionnement, code-barres, catégorie, étagère, fournisseur habituel, prix d'achat, prix de vente, seuil d'alerte, stock maximum, ordonnance obligatoire, remboursable AMO, taux de TVA, actif/inactif | MVP |
 | RF-04 | Produits équivalents : regroupement par DCI + dosage + forme pour proposer un générique à la caisse | V1 |
 | RF-05 | Fournisseurs : nom, contact, téléphone, email, adresse, délai de livraison habituel, conditions de paiement | MVP |

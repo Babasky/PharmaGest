@@ -50,6 +50,7 @@ final class Navigation
                 ['libelle' => 'Fournisseurs', 'icone' => 'building', 'route' => 'app_fournisseur_index', 'role' => 'ROLE_VENDEUR'],
                 ['libelle' => 'Catégories', 'icone' => 'diagram-3', 'route' => 'app_categorie_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Étagères', 'icone' => 'bookshelf', 'route' => 'app_etagere_index', 'role' => 'ROLE_ADJOINT'],
+                ['libelle' => 'Zones de rangement', 'icone' => 'geo-alt', 'route' => 'app_zone_index', 'role' => 'ROLE_ADJOINT'],
                 ['libelle' => 'Inventaires', 'icone' => 'clipboard-check', 'route' => 'app_inventaire_index', 'role' => 'ROLE_ADJOINT'],
             ],
         ],

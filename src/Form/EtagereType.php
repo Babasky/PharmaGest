@@ -3,9 +3,10 @@
 namespace App\Form;
 
 use App\Entity\Etagere;
-use App\Enum\ZoneEtagere;
+use App\Entity\ZoneRangement;
+use App\Repository\ZoneRangementRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -32,10 +33,14 @@ final class EtagereType extends AbstractType
                 ],
             ]
             )
-            ->add('zone', EnumType::class, [
+            ->add('zone', EntityType::class, [
                 'label' => 'Zone',
-                'class' => ZoneEtagere::class,
-                'choice_label' => static fn (ZoneEtagere $z) => $z->libelle(),
+                'class' => ZoneRangement::class,
+                'query_builder' => static fn (ZoneRangementRepository $zones) => $zones->choix($options['data']?->getZone()),
+                'choice_label' => 'nom',
+                'required' => false,
+                'placeholder' => 'Sans zone',
+                'help' => 'Les zones (comptoir, réserve, vitrine…) se gèrent depuis « Zones de rangement ».',
             ]);
     }
 
