@@ -1,0 +1,55 @@
+{% extends 'layout/app.html.twig' %}
+
+{% block title %}Zones de rangement{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_etagere_index') }}"><i class="bi bi-bookshelf"></i> Étagères</a>
+{% endblock %}
+
+{% block content %}
+    <p class="text-body-secondary small">
+        Les zones regroupent vos étagères (comptoir, réserve, réfrigérateur, vitrine…). Créez celles de votre officine :
+        elles sont proposées sur chaque étagère. Une zone archivée n'est plus proposée, ses étagères la gardent.
+    </p>
+    <div class="row g-3">
+        <div class="col-12 col-lg-7 order-2 order-lg-1">
+            <div class="card shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="zones">
+                        <thead class="table-light"><tr><th class="ps-3">Zone</th><th class="text-end">Étagères</th><th class="pe-3"><span class="visually-hidden">Actions</span></th></tr></thead>
+                        <tbody>
+                            {% for zone in zones %}
+                                <tr class="{{ zone.actif ? '' : 'text-body-secondary' }}">
+                                    <td class="ps-3 fw-semibold"><i class="bi bi-geo-alt"></i> {{ zone.nom }}{% if not zone.actif %} <span class="badge text-bg-secondary">Archivée</span>{% endif %}</td>
+                                    <td class="text-end">{{ etageres[zone.id] ?? 0 }}</td>
+                                    <td class="pe-3 text-end text-nowrap">
+                                        {% if ecriture_autorisee() %}
+                                            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_zone_modifier', {id: zone.id}) }}" title="Renommer"><i class="bi bi-pencil"></i><span class="visually-hidden">Renommer {{ zone.nom }}</span></a>
+                                            <form method="post" action="{{ path('app_zone_archiver', {id: zone.id}) }}" class="d-inline">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('archiver-zone-' ~ zone.id) }}">
+                                                <button class="btn btn-sm btn-outline-{{ zone.actif ? 'danger' : 'success' }}" title="{{ zone.actif ? 'Archiver' : 'Restaurer' }}"><i class="bi bi-{{ zone.actif ? 'archive' : 'arrow-counterclockwise' }}"></i><span class="visually-hidden">{{ zone.actif ? 'Archiver' : 'Restaurer' }} {{ zone.nom }}</span></button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% if ecriture_autorisee() %}
+            <div class="col-12 col-lg-5 order-1 order-lg-2">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-body fw-semibold">Nouvelle zone</div>
+                    <div class="card-body">
+                        {{ form_start(formulaire) }}
+                        {{ form_widget(formulaire) }}
+                        <button class="btn btn-success" type="submit">Créer la zone</button>
+                        {{ form_end(formulaire) }}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

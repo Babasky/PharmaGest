@@ -2,6 +2,10 @@
 
 {% block title %}Étagères{% endblock %}
 
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{{ path('app_zone_index') }}" id="lien-zones"><i class="bi bi-geo-alt"></i> Zones de rangement</a>
+{% endblock %}
+
 {% block content %}
     <div class="row g-3">
         <div class="col-12 col-lg-7 order-2 order-lg-1">
@@ -14,7 +18,7 @@
                                 <tr class="{{ etagere.actif ? '' : 'text-body-secondary' }}">
                                     <td class="ps-3 fw-semibold text-nowrap">{{ etagere.code }}{% if not etagere.actif %} <span class="badge text-bg-secondary">Archivée</span>{% endif %}</td>
                                     <td>{{ etagere.libelle }}</td>
-                                    <td><i class="bi bi-{{ {comptoir: 'shop', reserve: 'box-seam', refrigerateur: 'snow'}[etagere.zone.value] }}"></i> {{ etagere.zone.libelle }}</td>
+                                    <td>{% if etagere.zone %}<i class="bi bi-geo-alt"></i> {{ etagere.zone.nom }}{% else %}<span class="text-body-secondary">—</span>{% endif %}</td>
                                     <td class="pe-3 text-end text-nowrap">
                                         {% if ecriture_autorisee() %}
                                             <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_etagere_modifier', {id: etagere.id}) }}" title="Modifier"><i class="bi bi-pencil"></i><span class="visually-hidden">Modifier {{ etagere.code }}</span></a>

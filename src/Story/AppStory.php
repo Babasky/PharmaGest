@@ -11,7 +11,6 @@ use App\Enum\ModeReglement;
 use App\Enum\MoyenPaiement;
 use App\Enum\TypeRemise;
 use App\Enum\TypeVente;
-use App\Enum\ZoneEtagere;
 use App\Finance\GestionDepenses;
 use App\Finance\RecetteService;
 use App\Form\Model\SaisieDepense;
@@ -174,8 +173,15 @@ final class AppStory extends Story
         $categories['Parapharmacie'] = CategorieFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'Parapharmacie']);
 
         $etageres = [];
-        foreach ([['E1-R1', 'Antalgiques', ZoneEtagere::Comptoir], ['E1-R2', 'Antibiotiques', ZoneEtagere::Comptoir], ['E2-R1', 'Antipaludiques', ZoneEtagere::Comptoir], ['R1', 'Réserve principale', ZoneEtagere::Reserve], ['F1', 'Réfrigérateur', ZoneEtagere::Refrigerateur]] as [$code, $libelle, $zone]) {
-            $etageres[$code] = EtagereFactory::createOne(['pharmacie' => $pharmacie, 'code' => $code, 'libelle' => $libelle, 'zone' => $zone]);
+        // Les trois zones d'origine et une zone créée par la pharmacie (« Vitrine »).
+        $zones = [];
+        foreach ([...\App\Stock\ZonesRangement::PAR_DEFAUT, 'Vitrine'] as $nom) {
+            $zones[$nom] = (new \App\Entity\ZoneRangement())->setNom($nom)->setPharmacie($pharmacie);
+            $this->em->persist($zones[$nom]);
+        }
+        $this->em->flush();
+        foreach ([['E1-R1', 'Antalgiques', 'Comptoir'], ['E1-R2', 'Antibiotiques', 'Comptoir'], ['E2-R1', 'Antipaludiques', 'Comptoir'], ['R1', 'Réserve principale', 'Réserve'], ['F1', 'Réfrigérateur', 'Réfrigérateur'], ['V1', 'Parapharmacie et cosmétiques', 'Vitrine']] as [$code, $libelle, $zone]) {
+            $etageres[$code] = EtagereFactory::createOne(['pharmacie' => $pharmacie, 'code' => $code, 'libelle' => $libelle, 'zone' => $zones[$zone]]);
         }
 
         $ppm = FournisseurFactory::createOne(['pharmacie' => $pharmacie, 'nom' => 'PPM', 'contact' => 'Service commandes', 'telephone' => '+22320225050', 'email' => 'commandes@ppm.example', 'delaiLivraison' => 2, 'conditionsPaiement' => 'Comptant']);

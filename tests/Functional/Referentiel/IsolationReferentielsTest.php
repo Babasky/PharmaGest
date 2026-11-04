@@ -10,6 +10,7 @@ use App\Tests\Factory\ClientFactory;
 use App\Tests\Factory\EtagereFactory;
 use App\Tests\Factory\FournisseurFactory;
 use App\Tests\Factory\ProduitFactory;
+use App\Tests\Factory\ZoneRangementFactory;
 use App\Tests\Support\AppWebTestCase;
 use App\Tests\Support\Officine;
 use Doctrine\ORM\EntityManagerInterface;
@@ -40,6 +41,7 @@ final class IsolationReferentielsTest extends AppWebTestCase
             'fournisseur' => FournisseurFactory::createOne(['pharmacie' => $this->b->pharmacie, 'nom' => 'Grossiste B'])->getId(),
             'produit' => ProduitFactory::createOne(['pharmacie' => $this->b->pharmacie, 'nomCommercial' => 'ProduitDeB', 'categorie' => $categorie])->getId(),
             'client' => ClientFactory::createOne(['pharmacie' => $this->b->pharmacie, 'nom' => 'Client de B'])->getId(),
+            'zone' => ZoneRangementFactory::createOne(['pharmacie' => $this->b->pharmacie, 'nom' => 'Zone de B'])->getId(),
         ];
     }
 
@@ -56,6 +58,8 @@ final class IsolationReferentielsTest extends AppWebTestCase
         yield 'archiver une catégorie' => ['POST', '/categories/%d/archiver', 'categorie'];
         yield 'modifier une étagère' => ['GET', '/etageres/%d/modifier', 'etagere'];
         yield 'archiver une étagère' => ['POST', '/etageres/%d/archiver', 'etagere'];
+        yield 'renommer une zone' => ['GET', '/etageres/zones/%d/modifier', 'zone'];
+        yield 'archiver une zone' => ['POST', '/etageres/zones/%d/archiver', 'zone'];
         yield 'modifier un fournisseur' => ['GET', '/fournisseurs/%d/modifier', 'fournisseur'];
         yield 'archiver un fournisseur' => ['POST', '/fournisseurs/%d/archiver', 'fournisseur'];
         yield 'modifier un client' => ['GET', '/clients/%d/modifier', 'client'];
@@ -76,7 +80,7 @@ final class IsolationReferentielsTest extends AppWebTestCase
         ProduitFactory::createOne(['pharmacie' => $this->a->pharmacie, 'nomCommercial' => 'ProduitDeA']);
         $this->connecter($this->a->proprietaire);
 
-        foreach (['/produits' => 'ProduitDeB', '/categories' => 'Secret B', '/etageres' => 'B-SECRET', '/fournisseurs' => 'Grossiste B', '/clients' => 'Client de B'] as $url => $intrus) {
+        foreach (['/produits' => 'ProduitDeB', '/categories' => 'Secret B', '/etageres' => 'B-SECRET', '/etageres/zones' => 'Zone de B', '/fournisseurs' => 'Grossiste B', '/clients' => 'Client de B'] as $url => $intrus) {
             $this->client->request('GET', $url);
             self::assertResponseIsSuccessful();
             self::assertSelectorTextNotContains('main', $intrus, $url);

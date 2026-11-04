@@ -12,6 +12,8 @@ use App\Repository\EtagereRepository;
 use App\Repository\FormeGaleniqueRepository;
 use App\Repository\FournisseurRepository;
 use App\Repository\ProduitRepository;
+use App\Repository\ZoneRangementRepository;
+use App\Stock\ZonesRangement;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -42,6 +44,7 @@ final class ImportProduits extends AbstractDefinitionImport
         private readonly EtagereRepository $etageres,
         private readonly FournisseurRepository $fournisseurs,
         private readonly FormeGaleniqueRepository $formesRepository,
+        private readonly ZoneRangementRepository $zones,
     ) {
         parent::__construct($em, $validateur);
     }
@@ -206,7 +209,9 @@ final class ImportProduits extends AbstractDefinitionImport
         $cle = 'etagere:'.$code;
         $etagere = $this->crees[$cle] ?? $this->trouver($cle, fn () => $this->etageres->findOneBy(['code' => $code]));
         if (!$etagere instanceof Etagere) {
-            $etagere = (new Etagere())->setCode($code)->setLibelle($code);
+            // Rangée au comptoir s'il existe : la zone se change ensuite depuis la page des étagères.
+            $etagere = (new Etagere())->setCode($code)->setLibelle($code)
+                ->setZone($this->zones->findOneBy(['nom' => ZonesRangement::COMPTOIR, 'actif' => true]));
             $this->creer($cle, $etagere, $simulation);
             $remarques[] = \sprintf('Étagère %s créée.', $code);
         }

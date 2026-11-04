@@ -2,7 +2,6 @@
 
 namespace App\Entity;
 
-use App\Enum\ZoneEtagere;
 use App\Referentiel\ArchivableTrait;
 use App\Repository\EtagereRepository;
 use App\Tenant\TenantAwareInterface;
@@ -37,8 +36,9 @@ class Etagere implements TenantAwareInterface
     #[Assert\Length(max: 100)]
     private string $libelle = '';
 
-    #[ORM\Column(length: 20, enumType: ZoneEtagere::class)]
-    private ZoneEtagere $zone = ZoneEtagere::Comptoir;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
+    private ?ZoneRangement $zone = null;
 
     public function getId(): ?int
     {
@@ -69,12 +69,12 @@ class Etagere implements TenantAwareInterface
         return $this;
     }
 
-    public function getZone(): ZoneEtagere
+    public function getZone(): ?ZoneRangement
     {
         return $this->zone;
     }
 
-    public function setZone(ZoneEtagere $zone): static
+    public function setZone(?ZoneRangement $zone): static
     {
         $this->zone = $zone;
 

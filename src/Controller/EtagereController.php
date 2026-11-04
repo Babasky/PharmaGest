@@ -6,6 +6,7 @@ use App\Entity\Etagere;
 use App\Entity\Utilisateur;
 use App\Form\EtagereType;
 use App\Repository\EtagereRepository;
+use App\Stock\ZonesRangement;
 use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,9 +22,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class EtagereController extends AbstractAppController
 {
     #[Route('', name: 'app_etagere_index', methods: ['GET', 'POST'])]
-    public function index(Request $requete, EtagereRepository $etageres): Response
+    public function index(Request $requete, EtagereRepository $etageres, ZonesRangement $zones): Response
     {
-        $etagere = new Etagere();
+        $etagere = (new Etagere())->setZone($zones->parDefaut($this->pharmacie()));
         $formulaire = $this->createForm(EtagereType::class, $etagere);
         $formulaire->handleRequest($requete);
 
