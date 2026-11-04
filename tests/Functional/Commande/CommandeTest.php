@@ -242,6 +242,40 @@ final class CommandeTest extends CommandeTestCase
         self::assertSelectorTextNotContains('#suggestions', 'Doliprane');
     }
 
+    public function testUnProduitEntierementLivreNEstPlusProposeALaReceptionSuivante(): void
+    {
+        $this->connecter($this->officine->adjoint);
+        $id = $this->creerBrouillon($this->ppm, [[$this->doliprane, 50], [$this->coartem, 20]]);
+        $this->client->request('GET', '/commandes/'.$id);
+        $this->cliquer('Passer sans email');
+
+        // Première livraison : tout le Doliprane, pas de Coartem.
+        $crawler = $this->client->clickLink('Réceptionner');
+        $formulaire = $crawler->filter('#reception')->form();
+        $formulaire['lignes[0][quantite]'] = '50';
+        $formulaire['lignes[0][lot]'] = 'DP2701';
+        $formulaire['lignes[1][quantite]'] = '';
+        $this->client->submit($formulaire);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#statut', 'Reçue partiellement');
+
+        // Seconde livraison : seul le Coartem, encore attendu, est proposé.
+        $crawler = $this->client->request('GET', '/commandes/'.$id.'/reception');
+        self::assertCount(1, $crawler->filter('#lignes-reception tbody tr'));
+        self::assertSelectorExists('#lignes-reception tr[data-produit="'.$this->coartem->getNomCommercial().'"]');
+        self::assertSelectorNotExists('#lignes-reception tr[data-produit="'.$this->doliprane->getNomCommercial().'"]');
+        self::assertInputValueSame('lignes[0][quantite]', '20', 'Le reste attendu du Coartem est proposé.');
+
+        $formulaire = $crawler->filter('#reception')->form();
+        $formulaire['lignes[0][lot]'] = 'CO2701';
+        $this->client->submit($formulaire);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#statut', 'Reçue');
+        self::assertSelectorNotExists('a[href$="/reception"]');
+    }
+
     public function testReceptionRefuseeSansLotNiPeremptionValide(): void
     {
         $this->connecter($this->officine->adjoint);
