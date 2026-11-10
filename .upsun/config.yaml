@@ -71,7 +71,9 @@ applications:
 
 services:
   db:
-    type: 'mysql:8.0'
+    # Oracle MySQL 8.4 (même famille que le MySQL 8.0 de développement).
+    # Sur Upsun, « mysql » n'est pas un type de service valide et MySQL 8.0 n'est plus proposé.
+    type: 'oracle-mysql:8.4'
 
 routes:
   "https://{default}/":
