@@ -1,0 +1,82 @@
+# PharmaGest — Déploiement Upsun
+# Stack : Symfony 7.4 · PHP 8.3 · MySQL 8.0 · worker Messenger/Scheduler · assets asset-mapper.
+#
+# Les secrets NE sont PAS dans ce fichier (il est versionné). Ils se définissent en variables Upsun :
+#   upsun variable:create --level project --name env:APP_SECRET --sensitive true --value "<64 hex>"
+#   upsun variable:create --level project --name env:MAILER_DSN  --sensitive true --value "smtp://..."
+#   upsun variable:create --level project --name env:DEFAULT_URI  --value "https://<votre-domaine>"
+#   upsun variable:create --level project --name env:APP_ENV      --value prod
+# (DATABASE_URL est fourni automatiquement par la relation « database » ci-dessous.)
+
+applications:
+  pharmagest:
+    source:
+      root: "/"
+
+    type: 'php:8.3'
+
+    # Extensions nécessaires au-delà du socle PHP d'Upsun.
+    runtime:
+      extensions:
+        - sodium   # hachage Argon2 (mots de passe et codes PIN)
+        - gd       # images : dompdf (tickets/factures PDF) et PhpSpreadsheet
+        - zip      # export Excel (.xlsx) via PhpSpreadsheet
+        - intl     # formatage i18n (symfony/intl, formulaires, EasyAdmin)
+
+    # La relation « database » expose automatiquement DATABASE_URL (version + charset inclus),
+    # lu par Doctrine via %env(resolve:DATABASE_URL)%.
+    relationships:
+      database:
+        service: db
+        endpoint: mysql
+
+    # Le système de fichiers est en lecture seule, sauf les montages déclarés ici.
+    # /var couvre le cache, les logs, les sessions et les copies d'ordonnances (APP_SHARE_DIR=var/share).
+    mounts:
+      "/var":
+        source: storage
+        source_path: var
+
+    web:
+      locations:
+        "/":
+          root: "public"
+          expires: 1h
+          passthru: "/index.php"
+
+    hooks:
+      # Build : système de fichiers accessible en écriture, SANS accès aux services (pas de base de données).
+      build: |
+        set -eux
+        export APP_ENV=prod APP_DEBUG=0
+        composer install --no-dev --optimize-autoloader --no-interaction --no-progress --classmap-authoritative
+        # Compilation des assets (asset-mapper) : importmap:install puis asset-map:compile → public/assets/.
+        php bin/console importmap:install
+        php bin/console asset-map:compile
+      # Deploy : services disponibles (base de données), système de fichiers en lecture seule sauf /var.
+      deploy: |
+        set -eux
+        export APP_ENV=prod APP_DEBUG=0
+        php bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing
+        php bin/console messenger:setup-transports
+        php bin/console cache:clear
+
+    # Worker : emails asynchrones, notifications et tâches planifiées (symfony/scheduler).
+    # Équivalent du superviseur de deploy/supervisor-messenger.conf. Redémarré automatiquement s'il s'arrête.
+    workers:
+      queue:
+        commands:
+          start: |
+            php bin/console messenger:consume async scheduler_default --time-limit=3600 --memory-limit=256M -v
+
+services:
+  db:
+    type: 'mysql:8.0'
+
+routes:
+  "https://{default}/":
+    type: upstream
+    upstream: "pharmagest:http"
+  "https://www.{default}/":
+    type: redirect
+    to: "https://{default}/"
