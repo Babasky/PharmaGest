@@ -1,0 +1,24 @@
+# Variables d'environnement Upsun, sourcées avant les hooks (build/deploy) et à l'exécution.
+# Elles sont exportées comme vraies variables d'environnement : Symfony (Dotenv) ne les écrase
+# donc pas avec les valeurs du .env versionné.
+
+export APP_ENV=prod
+export APP_DEBUG=0
+
+# APP_SECRET : valeur aléatoire, unique et stable par projet fournie par Upsun.
+# Signe les liens de réinitialisation et les jetons CSRF. On respecte une valeur déjà définie
+# (variable de projet) si elle existe.
+if [ -z "${APP_SECRET:-}" ] && [ -n "${PLATFORM_PROJECT_ENTROPY:-}" ]; then
+    export APP_SECRET="$PLATFORM_PROJECT_ENTROPY"
+fi
+
+# DATABASE_URL construit depuis la relation « database » (service oracle-mysql, endpoint mysql).
+if [ -n "${PLATFORM_RELATIONSHIPS:-}" ]; then
+    export DATABASE_URL="$(printf '%s' "$PLATFORM_RELATIONSHIPS" | base64 -d | php -r '
+        $rels = json_decode(file_get_contents("php://stdin"), true);
+        if (!isset($rels["database"][0])) { exit(0); }
+        $db = $rels["database"][0];
+        printf("%s://%s:%s@%s:%d/%s?serverVersion=8.4&charset=utf8mb4",
+            $db["scheme"], $db["username"], $db["password"], $db["host"], $db["port"], ltrim($db["path"], "/"));
+    ')"
+fi
