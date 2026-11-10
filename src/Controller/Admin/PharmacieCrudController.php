@@ -16,6 +16,7 @@ use App\Mailer\PlateformeMailer;
 use App\Repository\AbonnementRepository;
 use App\Repository\AffectationRepository;
 use App\Repository\OffreRepository;
+use App\Repository\UtilisateurRepository;
 use App\Service\AbonnementService;
 use App\Service\CreationPharmacie;
 use App\Service\CreationPharmacieException;
@@ -30,6 +31,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\KeyValueStore;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
@@ -37,11 +39,18 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TelephoneField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\ExpressionLanguage\Expression;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Constraints\Email;
+use Symfony\Component\Validator\Constraints\Length;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 /**
  * Pharmacies clientes : création avec le propriétaire, fiche, paiements, suspension, archivage (SA-01 à SA-03).
@@ -59,6 +68,7 @@ final class PharmacieCrudController extends AbstractCrudController
         private readonly AffectationRepository $affectations,
         private readonly TenantContext $tenantContext,
         private readonly GestionProprietaires $proprietaires,
+        private readonly UtilisateurRepository $utilisateurs,
     ) {
     }
 
@@ -119,6 +129,80 @@ final class PharmacieCrudController extends AbstractCrudController
 
                 return \sprintf('<span class="badge text-bg-%s">%s</span>', $etat->statut->couleur(), htmlspecialchars($etat->statut->libelle()));
             });
+
+        // Propriétaire titulaire : nom et email éditables depuis le formulaire de modification. Champs non
+        // mappés sur la pharmacie (ils portent sur le compte du propriétaire), pré-remplis et enregistrés
+        // dans createEditFormBuilder(). Affichés seulement si la pharmacie a déjà un propriétaire.
+        $instance = $this->getContext()?->getEntity()->getInstance();
+        if (Crud::PAGE_EDIT === $pageName && $instance instanceof Pharmacie && null !== $this->titulaire($instance)) {
+            yield FormField::addFieldset('Propriétaire titulaire');
+            yield TextField::new('proprietaireNom', 'Prénom et nom du titulaire')
+                ->setFormTypeOption('mapped', false)
+                ->setFormTypeOption('constraints', [new NotBlank(message: 'Le nom du propriétaire est obligatoire.'), new Length(max: 120)])
+                ->setFormTypeOption('attr', ['placeholder' => 'Entrez le prénom et le nom du titulaire']);
+            yield EmailField::new('proprietaireEmail', 'Email du titulaire')
+                ->setFormTypeOption('mapped', false)
+                ->setFormTypeOption('constraints', [new NotBlank(message: 'L\'email du propriétaire est obligatoire.'), new Email()])
+                ->setHelp('C\'est son identifiant de connexion. Le changer met à jour son compte pour toutes ses pharmacies.');
+        }
+    }
+
+    /**
+     * Ajoute au formulaire de modification le nom et l'email du propriétaire titulaire : pré-remplis à
+     * l'ouverture, enregistrés sur son compte à la soumission (la pharmacie elle-même est enregistrée par
+     * EasyAdmin dans la même transaction).
+     *
+     * @return FormBuilderInterface<Pharmacie>
+     */
+    public function createEditFormBuilder(EntityDto $entityDto, KeyValueStore $formOptions, AdminContext $context): FormBuilderInterface
+    {
+        $builder = parent::createEditFormBuilder($entityDto, $formOptions, $context);
+
+        $builder->addEventListener(FormEvents::POST_SET_DATA, function (FormEvent $event): void {
+            $form = $event->getForm();
+            $pharmacie = $event->getData();
+            if (!$pharmacie instanceof Pharmacie || !$form->has('proprietaireNom')) {
+                return;
+            }
+            $titulaire = $this->titulaire($pharmacie);
+            $form->get('proprietaireNom')->setData($titulaire?->getNom());
+            $form->get('proprietaireEmail')->setData($titulaire?->getEmail());
+        });
+
+        $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event): void {
+            $form = $event->getForm();
+            $pharmacie = $event->getData();
+            if (!$pharmacie instanceof Pharmacie || !$form->has('proprietaireNom')) {
+                return;
+            }
+            $nom = trim((string) $form->get('proprietaireNom')->getData());
+            $email = mb_strtolower(trim((string) $form->get('proprietaireEmail')->getData()));
+            if ('' === $nom || '' === $email) {
+                return; // Champs vides : les contraintes NotBlank s'en chargent.
+            }
+            $titulaire = $this->titulaire($pharmacie);
+            if (null === $titulaire) {
+                $form->get('proprietaireNom')->addError(new FormError('Cette pharmacie n\'a pas de propriétaire à modifier.'));
+
+                return;
+            }
+            $autre = $this->utilisateurs->parEmail($email);
+            if (null !== $autre && $autre->getId() !== $titulaire->getId()) {
+                $form->get('proprietaireEmail')->addError(new FormError('Cet email est déjà utilisé par un autre compte.'));
+
+                return;
+            }
+            // Entité gérée : la modification est enregistrée par le flush d'EasyAdmin si le formulaire est valide.
+            $titulaire->setNom($nom)->setEmail($email);
+        });
+
+        return $builder;
+    }
+
+    /** Propriétaire titulaire (premier propriétaire actif) d'une pharmacie, hors filtre tenant. */
+    private function titulaire(Pharmacie $pharmacie): ?Utilisateur
+    {
+        return $this->tenantContext->sansFiltre(fn () => $this->affectations->proprietaires($pharmacie))[0] ?? null;
     }
 
     public function configureResponseParameters(KeyValueStore $responseParameters): KeyValueStore

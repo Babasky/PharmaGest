@@ -10,6 +10,7 @@ use App\Entity\Utilisateur;
 use App\Service\AuditLogger;
 use App\Tests\Factory\OffreFactory;
 use App\Tests\Factory\PharmacieFactory;
+use App\Tests\Factory\UtilisateurFactory;
 use App\Tests\Support\AppWebTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -248,6 +249,45 @@ final class PharmacieAdminTest extends AppWebTestCase
         $this->client->request('GET', '/admin/pharmacies/'.$pharmacie->getId().'/edit');
         $this->client->submit($this->client->getCrawler()->filter('button[value="saveAndReturn"]')->form(), ['Pharmacie[telephone]' => '123']);
         self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testLaModificationMetAJourLeProprietaireTitulaire(): void
+    {
+        $officine = $this->creerOfficine();
+
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/pharmacies/'.$officine->pharmacie->getId().'/edit');
+        self::assertResponseIsSuccessful();
+        // Les champs du propriétaire sont pré-remplis avec le titulaire.
+        self::assertSame($officine->proprietaire->getNom(), $crawler->filter('input[name="Pharmacie[proprietaireNom]"]')->attr('value'));
+        self::assertSame($officine->proprietaire->getEmail(), $crawler->filter('input[name="Pharmacie[proprietaireEmail]"]')->attr('value'));
+
+        $this->client->submit($crawler->filter('button[value="saveAndReturn"]')->form(), [
+            'Pharmacie[proprietaireNom]' => 'Oumar Diarra',
+            'Pharmacie[proprietaireEmail]' => 'o.diarra@officine.ml',
+        ]);
+        self::assertResponseRedirects();
+
+        $proprietaire = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Utilisateur::class, $officine->proprietaire->getId()));
+        self::assertInstanceOf(Utilisateur::class, $proprietaire);
+        self::assertSame('Oumar Diarra', $proprietaire->getNom());
+        self::assertSame('o.diarra@officine.ml', $proprietaire->getEmail());
+    }
+
+    public function testLaModificationRefuseUnEmailProprietaireDejaUtilise(): void
+    {
+        $officine = $this->creerOfficine();
+        UtilisateurFactory::createOne(['email' => 'occupe@officine.ml']);
+
+        $crawler = $this->connecter($this->admin)->request('GET', '/admin/pharmacies/'.$officine->pharmacie->getId().'/edit');
+        $this->client->submit($crawler->filter('button[value="saveAndReturn"]')->form(), [
+            'Pharmacie[proprietaireEmail]' => 'occupe@officine.ml',
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('#main', 'déjà utilisé par un autre compte');
+
+        $proprietaire = $this->sansFiltre(static fn (EntityManagerInterface $em) => $em->find(Utilisateur::class, $officine->proprietaire->getId()));
+        self::assertNotSame('occupe@officine.ml', $proprietaire?->getEmail());
     }
 
     public function testRienNeSeSupprimeDepuisLEspacePlateforme(): void
