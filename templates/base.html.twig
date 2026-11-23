@@ -35,6 +35,8 @@
                     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
                 });
             }
+            {# Capture l'invite d'installation même si elle arrive avant le contrôleur Stimulus du bouton. #}
+            window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__pgInstallPrompt = e; });
         </script>
     </head>
     <body class="{% block body_class %}{% endblock %}">

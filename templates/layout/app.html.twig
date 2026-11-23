@@ -118,6 +118,10 @@
                         </div>
                     {% endif %}
 
+                    <button class="btn pg-topbar-btn" type="button" {{ stimulus_controller('installation') }} data-action="installation#installer" aria-label="Installer l'application" title="Installer l'application" hidden>
+                        <i class="bi bi-download"></i>
+                    </button>
+
                     <button class="btn pg-topbar-btn" type="button" {{ stimulus_controller('theme') }} data-action="theme#basculer" aria-label="Basculer le thème clair / sombre" title="Thème clair / sombre">
                         <i class="bi bi-moon-stars pg-icone-sombre"></i><i class="bi bi-sun pg-icone-clair"></i>
                     </button>
