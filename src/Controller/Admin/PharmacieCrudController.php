@@ -143,6 +143,7 @@ final class PharmacieCrudController extends AbstractCrudController
             yield EmailField::new('proprietaireEmail', 'Email du titulaire')
                 ->setFormTypeOption('mapped', false)
                 ->setFormTypeOption('constraints', [new NotBlank(message: 'L\'email du propriétaire est obligatoire.'), new Email()])
+                ->setFormTypeOption('attr', ['placeholder' => 'Entrez l\'email du titulaire'])
                 ->setHelp('C\'est son identifiant de connexion. Le changer met à jour son compte pour toutes ses pharmacies.');
         }
     }
