@@ -43,6 +43,11 @@ applications:
           root: "public"
           expires: 1h
           passthru: "/index.php"
+          rules:
+            # Sert le manifest PWA avec le bon type (sinon application/octet-stream).
+            '\.webmanifest$':
+              headers:
+                Content-Type: application/manifest+json
 
     hooks:
       # Build : système de fichiers accessible en écriture, SANS accès aux services (pas de base de données).
