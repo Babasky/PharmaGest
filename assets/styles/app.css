@@ -56,6 +56,9 @@ body {
 .pg-main {
     flex-grow: 1;
     min-width: 0;
+    /* Empêche un défilement horizontal de la page sur petit écran (ex. libellés .visually-hidden
+       des boutons près du bord droit). Les tableaux gardent leur propre défilement via .table-responsive. */
+    overflow-x: clip;
     padding: 1.5rem;
 }
 

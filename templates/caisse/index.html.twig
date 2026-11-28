@@ -96,15 +96,15 @@
 
             {# --- Panier --- #}
             <div class="card shadow-sm" id="panier">
-                <div class="card-header bg-body d-flex justify-content-between align-items-center">
+                <div class="card-header bg-body d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="fw-semibold">
                         <i class="bi bi-cart3"></i> Panier
-                        {% if panier and panier.lignes is not empty %} 
+                        {% if panier and panier.lignes is not empty %}
                             · {{ panier.nombreArticles }} article(s)
                         {% endif %}
                     </span>
                     {% if panier %}
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 flex-wrap">
                             <form method="post" action="{{ path('app_caisse_attente') }}" class="d-flex gap-1">
                                 <input type="hidden" name="_token" value="{{ token }}">
                                 <input type="text" name="repere" class="form-control form-control-sm" placeholder="Repère (facultatif)" maxlength="60" aria-label="Repère de la vente mise en attente" style="width: 10rem">
